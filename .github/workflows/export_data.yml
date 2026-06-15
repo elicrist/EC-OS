@@ -1,0 +1,54 @@
+name: Export Supabase Data
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch data from Supabase
+        env:
+          SB_URL: ${{ secrets.SUPABASE_URL }}
+          SB_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          mkdir -p public
+
+          SAVINGS=$(curl -s "$SB_URL/rest/v1/ec_savings?select=*&order=date.asc" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          GYM=$(curl -s "$SB_URL/rest/v1/ec_gym?select=*&order=date.asc" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          GOLF=$(curl -s "$SB_URL/rest/v1/ec_golf?select=*&order=date.asc" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          TENNIS=$(curl -s "$SB_URL/rest/v1/ec_tennis?select=*&order=date.asc" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          HABITS=$(curl -s "$SB_URL/rest/v1/ec_habits?select=*&order=date.asc" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          CONFIG=$(curl -s "$SB_URL/rest/v1/ec_config?select=*" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          NOTES=$(curl -s "$SB_URL/rest/v1/ec_notes?select=*&order=date.desc" \
+            -H "apikey: $SB_KEY" -H "Authorization: Bearer $SB_KEY")
+
+          echo "{\"savings\":$SAVINGS,\"gym\":$GYM,\"golf\":$GOLF,\"tennis\":$TENNIS,\"habits\":$HABITS,\"config\":$CONFIG,\"notes\":$NOTES,\"exported\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/data.json
+
+      - name: Commit and push data.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data.json
+          git diff --staged --quiet || git commit -m "auto: export Supabase data $(date -u +%Y-%m-%d\ %H:%M)"
+          git push
