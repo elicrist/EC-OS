@@ -55,6 +55,10 @@ select option{background:var(--surface)}
 .btn-primary{background:var(--activity-bg);border-color:var(--activity);color:var(--activity)}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-danger{border-color:var(--danger);color:var(--danger)}
+#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(14,14,15,.95);z-index:999;backdrop-filter:blur(4px);padding:1rem}
+#login-screen.hidden{display:none}
+#login-screen .card{max-width:360px;width:100%}
+#login-screen input{background:var(--surface);border:1px solid var(--border-light);color:var(--text);}
 .log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
 .log-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--border);font-weight:500}
 .log-table td{padding:7px 7px;border-bottom:1px solid var(--faint);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle}
@@ -136,6 +140,8 @@ select option{background:var(--surface)}
   <div style="display:flex;align-items:center;gap:10px">
     <div class="header-meta" id="hdr-date"></div>
     <div class="header-meta" id="sync-status">synced</div>
+    <div class="header-meta" id="auth-user" style="display:none"></div>
+    <button class="btn btn-sm" id="sign-out-btn" onclick="signOut()" style="display:none">Sign out</button>
   </div>
 </header>
 <div class="tab-bar">
@@ -150,6 +156,19 @@ select option{background:var(--surface)}
   <button class="tab-btn" onclick="showTab('notes',this)">Notes</button>
   <button class="tab-btn" onclick="showTab('settings',this)">Settings</button>
 </div>
+
+<div id="login-screen">
+  <div class="card">
+    <div class="section-title">Sign in</div>
+    <p style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter the app password to unlock the dashboard.</p>
+    <div class="form-row" style="margin-bottom:1rem">
+      <input type="password" id="login-password" placeholder="Password" onkeydown="if(event.key==='Enter') handleLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;" onclick="handleLogin()">Unlock</button>
+    <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:18px"></div>
+  </div>
+</div>
+
 <div class="content">
 
 <!-- ══ DASHBOARD ══ -->
@@ -494,8 +513,87 @@ const SS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 // Supabase sync
 const SB_URL="https://bezcgrtihvmktxjkbfrl.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlemNncnRpaHZta3R4amtiZnJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzQ2OTQsImV4cCI6MjA5Njg1MDY5NH0.7BhpVFAsjW0fDDvk1r9RMITYtzoosLHqsX80AAQSqA8";
+const LOGIN_EMAIL='elicrist@icloud.com'; // Update this to the Supabase user's email.
+let authSession=LS('sb_session',null);
 const SB_HDR={"Content-Type":"application/json","apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`};
 let syncStatus='synced';
+const buildHeaders=(opts={})=>({
+  'apikey':SB_KEY,
+  'Authorization':`Bearer ${authSession?.access_token||SB_KEY}`,
+  'Content-Type':opts.contentType||'application/json',
+  ...opts.extra
+});
+const setLoginVisible=visible=>{
+  const login=document.getElementById('login-screen');
+  const header=document.querySelector('header');
+  const tabBar=document.querySelector('.tab-bar');
+  const content=document.querySelector('.content');
+  if(login) login.style.display=visible?'flex':'none';
+  if(header) header.style.display=visible?'none':'flex';
+  if(tabBar) tabBar.style.display=visible?'none':'flex';
+  if(content) content.style.display=visible?'none':'block';
+};
+const setAuthUser=email=>{
+  const el=document.getElementById('auth-user');
+  if(el){el.textContent=email?`signed in as ${email}`:'';el.style.display=email?'block':'none';}
+  const btn=document.getElementById('sign-out-btn');
+  if(btn){btn.style.display=email?'inline-flex':'none';}
+};
+const setAuthSession=ses=>{
+  authSession=ses;
+  if(ses){SS('sb_session',ses);setAuthUser(ses.user?.email||LOGIN_EMAIL);}else{SS('sb_session',null);setAuthUser('');}
+};
+const signOut=()=>{
+  setAuthSession(null);
+  setSyncStatus('signed out');
+  setLoginVisible(true);
+};
+const refreshSession=async()=>{
+  if(!authSession?.refresh_token) return false;
+  try{
+    const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:authSession.refresh_token});
+    const resp=await fetch(`${SB_URL}/auth/v1/token`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    if(!resp.ok){throw new Error('Refresh failed');}
+    const data=await resp.json();
+    setAuthSession({
+      access_token:data.access_token,
+      refresh_token:data.refresh_token||authSession.refresh_token,
+      expires_at:Date.now()+data.expires_in*1000,
+      user:data.user,
+    });
+    return true;
+  }catch(e){
+    console.warn('Auth refresh failed',e);
+    setAuthSession(null);
+    return false;
+  }
+};
+const initAuth=async()=>{
+  if(!authSession){setLoginVisible(true);return false;}
+  if(authSession.expires_at && Date.now()>authSession.expires_at-60000){
+    const refreshed=await refreshSession();
+    if(!refreshed){setLoginVisible(true);return false;}
+  }
+  setAuthUser(authSession.user?.email||LOGIN_EMAIL);
+  setLoginVisible(false);
+  return true;
+};
+const handleLogin=async()=>{
+  const errEl=document.getElementById('login-error');
+  const pw=document.getElementById('login-password').value.trim();
+  errEl.textContent='';
+  if(!pw){errEl.textContent='Enter your password.';return;}
+  try{
+    const body=new URLSearchParams({grant_type:'password',email:LOGIN_EMAIL,password:pw});
+    const resp=await fetch(`${SB_URL}/auth/v1/token`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    const data=await resp.json();
+    if(!resp.ok){throw new Error(data?.error_description||data?.error||'Login failed');}
+    setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
+    setLoginVisible(false);
+    await sbLoadAll();
+    renderDash();renderSched(curDay);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
+  }catch(e){console.error('Login error',e);errEl.textContent=e.message||'Login failed.';}
+};
 
 const setSyncStatus=(status)=>{syncStatus=status;const el=document.getElementById('sync-status');if(el)el.textContent=status;};
 const reportSyncError=(context,e)=>{
@@ -504,8 +602,8 @@ const reportSyncError=(context,e)=>{
 };
 
 const sbFetchJson=async(url)=>{
-  console.log('sbFetchJson',url,SB_HDR);
-  const resp=await fetch(url,{headers:SB_HDR});
+  console.log('sbFetchJson',url);
+  const resp=await fetch(url,{headers:buildHeaders()});
   if(!resp.ok){
     console.error('sbFetchJson failed',url,resp.status,await resp.text().catch(()=>''));
     throw new Error(`Supabase fetch failed: ${resp.status}`);
@@ -519,7 +617,7 @@ const sbUpsert=async(table,rows)=>{
   console.log('sbUpsert start',table,rows.length,rows);
   setSyncStatus('syncing');
   try{
-    const resp=await fetch(`${SB_URL}/rest/v1/${table}`,{method:"POST",headers:{...SB_HDR,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(rows)});
+    const resp=await fetch(`${SB_URL}/rest/v1/${table}`,{method:'POST',headers:buildHeaders({extra:{'Prefer':'resolution=merge-duplicates'}}),body:JSON.stringify(rows)});
     if(!resp.ok){
       console.error('sbUpsert failed',table,resp.status,await resp.text().catch(()=>''));
       throw new Error(`Upsert ${table} failed: ${resp.status}`);
@@ -532,7 +630,7 @@ const sbDelete=async(table,id)=>{
   console.log('sbDelete start',table,id);
   setSyncStatus('syncing');
   try{
-    const resp=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{method:"DELETE",headers:SB_HDR});
+    const resp=await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});
     if(!resp.ok){
       console.error('sbDelete failed',table,id,resp.status,await resp.text().catch(()=>''));
       throw new Error(`Delete ${table} failed: ${resp.status}`);
@@ -545,7 +643,7 @@ const sbUpsertHabits=async(date,data)=>{
   console.log('sbUpsertHabits start',date,data);
   setSyncStatus('syncing');
   try{
-    const resp=await fetch(`${SB_URL}/rest/v1/ec_habits`,{method:"POST",headers:{...SB_HDR,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify([{date,data}])});
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_habits`,{method:'POST',headers:buildHeaders({extra:{'Prefer':'resolution=merge-duplicates'}}),body:JSON.stringify([{date,data}])});
     if(!resp.ok){
       console.error('sbUpsertHabits failed',date,resp.status,await resp.text().catch(()=>''));
       throw new Error(`Upsert ec_habits failed: ${resp.status}`);
@@ -559,7 +657,7 @@ const sbUpsertConfig=async(cfg)=>{
   console.log('sbUpsertConfig start',rows);
   setSyncStatus('syncing');
   try{
-    const resp=await fetch(`${SB_URL}/rest/v1/ec_config`,{method:"POST",headers:{...SB_HDR,"Prefer":"resolution=merge-duplicates"},body:JSON.stringify(rows)});
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_config`,{method:'POST',headers:buildHeaders({extra:{'Prefer':'resolution=merge-duplicates'}}),body:JSON.stringify(rows)});
     if(!resp.ok){
       console.error('sbUpsertConfig failed',resp.status,await resp.text().catch(()=>''));
       throw new Error(`Upsert ec_config failed: ${resp.status}`);
@@ -825,7 +923,7 @@ async function delNote(id){
 async function sbUpsertNotes(notes){
   setSyncStatus('syncing');
   try{
-    const resp=await fetch(`${SB_URL}/rest/v1/ec_notes`,{method:'POST',headers:{...SB_HDR,'Prefer':'resolution=merge-duplicates'},body:JSON.stringify(notes.map(n=>({id:n.id,date:n.date,title:n.title,body:n.body})))});
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_notes`,{method:'POST',headers:buildHeaders({extra:{'Prefer':'resolution=merge-duplicates'}}),body:JSON.stringify(notes.map(n=>({id:n.id,date:n.date,title:n.title,body:n.body}))) });
     if(!resp.ok)throw new Error(`Upsert ec_notes failed: ${resp.status}`);
     setSyncStatus('synced');
   }catch(e){reportSyncError('sbUpsertNotes',e);throw e;}
@@ -1457,7 +1555,10 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
   chips.forEach((c,i)=>c.classList.toggle('active',i===sd));
 
   try{
-    await sbLoadAll();
+    const authed=await initAuth();
+    if(authed){
+      await sbLoadAll();
+    }
   }catch(e){
     console.error('Startup sync failed',e);
   }
