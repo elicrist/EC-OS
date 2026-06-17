@@ -552,9 +552,15 @@ const refreshSession=async()=>{
   if(!authSession?.refresh_token) return false;
   try{
     const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:authSession.refresh_token});
-    const resp=await fetch(`${SB_URL}/auth/v1/token`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-    if(!resp.ok){throw new Error('Refresh failed');}
-    const data=await resp.json();
+    const url=`${SB_URL}/auth/v1/token`;
+    console.log('refreshSession request', {url,headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    const data=await resp.json().catch(()=>null);
+    console.log('refreshSession response', {status:resp.status,statusText:resp.statusText,data});
+    if(!resp.ok){
+      const errMsg=data?.error_description||data?.error||`Refresh failed (${resp.status})`;
+      throw new Error(errMsg);
+    }
     setAuthSession({
       access_token:data.access_token,
       refresh_token:data.refresh_token||authSession.refresh_token,
@@ -569,10 +575,20 @@ const refreshSession=async()=>{
   }
 };
 const initAuth=async()=>{
-  if(!authSession){setLoginVisible(true);return false;}
+  if(!authSession){
+    console.log('initAuth: no session stored, showing login screen');
+    setLoginVisible(true);
+    return false;
+  }
+  console.log('initAuth: found stored session', authSession);
   if(authSession.expires_at && Date.now()>authSession.expires_at-60000){
+    console.log('initAuth: session expired or expiring soon, refreshing token');
     const refreshed=await refreshSession();
-    if(!refreshed){setLoginVisible(true);return false;}
+    if(!refreshed){
+      console.log('initAuth: refresh failed, showing login');
+      setLoginVisible(true);
+      return false;
+    }
   }
   setAuthUser(authSession.user?.email||LOGIN_EMAIL);
   setLoginVisible(false);
@@ -585,14 +601,23 @@ const handleLogin=async()=>{
   if(!pw){errEl.textContent='Enter your password.';return;}
   try{
     const body=new URLSearchParams({grant_type:'password',email:LOGIN_EMAIL,password:pw});
-    const resp=await fetch(`${SB_URL}/auth/v1/token`,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-    const data=await resp.json();
-    if(!resp.ok){throw new Error(data?.error_description||data?.error||'Login failed');}
+    const url=`${SB_URL}/auth/v1/token`;
+    console.log('handleLogin request', {url,headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString(),email:LOGIN_EMAIL});
+    const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
+    const data=await resp.json().catch(()=>null);
+    console.log('handleLogin response', {status:resp.status,statusText:resp.statusText,data});
+    if(!resp.ok){
+      const errMsg=data?.error_description||data?.error||`Login failed (${resp.status})`;
+      throw new Error(errMsg);
+    }
     setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
     setLoginVisible(false);
     await sbLoadAll();
     renderDash();renderSched(curDay);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
-  }catch(e){console.error('Login error',e);errEl.textContent=e.message||'Login failed.';}
+  }catch(e){
+    console.error('Login error',e);
+    errEl.textContent=e.message||'Login failed.';
+  }
 };
 
 const setSyncStatus=(status)=>{syncStatus=status;const el=document.getElementById('sync-status');if(el)el.textContent=status;};
