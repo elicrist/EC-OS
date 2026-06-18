@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC OS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EC OS">
+<meta name="theme-color" content="#0e0e0f">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --summer:#e07b4a;--summer-bg:#2e1a0e;
+  --gt:#B3A369;--gt-bg:#1e1c0a;
+  --mission:#9AAFBF;--mission-bg:#0f1a22;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.4px}
+.logo span{color:var(--muted);font-weight:300}
+.hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 2rem;gap:2.5rem}
+.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);font-family:'DM Mono',monospace}
+.os-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;width:100%;max-width:920px}
+.os-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:2rem 1.75rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:all .2s}
+.os-card:hover{transform:translateY(-3px)}
+.os-card.s:hover{border-color:var(--summer);box-shadow:0 8px 36px rgba(224,123,74,.1)}
+.os-card.g:hover{border-color:var(--gt);box-shadow:0 8px 36px rgba(179,163,105,.1)}
+.os-card.m:hover{border-color:var(--mission);box-shadow:0 8px 36px rgba(154,175,191,.1)}
+.os-phase{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:.6rem;display:flex;align-items:center;gap:6px}
+.s .os-phase{color:var(--summer)}.g .os-phase{color:var(--gt)}.m .os-phase{color:var(--mission)}
+.pulse{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:pulse 2s ease-in-out infinite}
+.s .pulse{background:var(--summer)}.g .pulse{background:var(--gt)}.m .pulse{background:var(--mission)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.os-name{font-size:22px;font-weight:600;letter-spacing:-.4px;margin-bottom:.4rem}
+.os-tags{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.8}
+.os-cd{margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)}
+.cd-num{font-size:32px;font-weight:600;letter-spacing:-.6px;line-height:1}
+.s .cd-num{color:var(--summer)}.g .cd-num{color:var(--gt)}.m .cd-num{color:var(--mission)}
+.cd-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:5px}
+.os-open{margin-top:1.5rem;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);transition:color .15s}
+.os-card:hover .os-open{color:var(--text)}
+footer{padding:1rem 2rem;border-top:1px solid var(--border);font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center}
+@media(max-width:700px){.os-grid{grid-template-columns:1fr}main{justify-content:flex-start;padding-top:2rem}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">EC OS <span>/ Eli Crist</span></div>
+  <div class="hdr-meta" id="hdr-date"></div>
+</header>
+<main>
+  <div class="eyebrow">select your operating system</div>
+  <div class="os-grid">
+    <a class="os-card s" href="index.html">
+      <div class="os-phase"><span class="pulse"></span>active · summer 2026</div>
+      <div class="os-name">Summer OS</div>
+      <div class="os-tags">habits · gym · golf<br>tennis · savings · notes</div>
+      <div class="os-cd">
+        <div class="cd-num" id="cd-s">—</div>
+        <div class="cd-label">days until GT move-in</div>
+      </div>
+      <div class="os-open">open Summer OS →</div>
+    </a>
+    <a class="os-card g" href="gt.html">
+      <div class="os-phase">georgia tech · fall 2026</div>
+      <div class="os-name">GT OS</div>
+      <div class="os-tags">courses · case comps<br>networking · finance · hustle</div>
+      <div class="os-cd">
+        <div class="cd-num" id="cd-g">—</div>
+        <div class="cd-label">days until move-in</div>
+      </div>
+      <div class="os-open">open GT OS →</div>
+    </a>
+    <a class="os-card m" href="mission.html">
+      <div class="os-phase">lds mission · 2027 — 2029</div>
+      <div class="os-name">Mission OS</div>
+      <div class="os-tags">prep · language · habits<br>mission fund · notes</div>
+      <div class="os-cd">
+        <div class="cd-num" id="cd-m">—</div>
+        <div class="cd-label" id="cd-m-label">days until set apart</div>
+      </div>
+      <div class="os-open">open Mission OS →</div>
+    </a>
+  </div>
+</main>
+<footer>ec os · elicrist · built summer 2026</footer>
+<script>
+const today=new Date();today.setHours(0,0,0,0);
+const GT=new Date('2026-08-17');
+const MS=localStorage.getItem('lds_mission_date');
+const MISSION=MS?new Date(MS):null;
+function days(d){return d?Math.ceil((d-today)/86400000):null;}
+const dG=days(GT);
+document.getElementById('cd-s').textContent=dG??'—';
+document.getElementById('cd-g').textContent=dG??'—';
+const dM=days(MISSION);
+document.getElementById('cd-m').textContent=dM??'TBD';
+if(!dM)document.getElementById('cd-m-label').textContent='set date in Mission OS';
+document.getElementById('hdr-date').textContent=today.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+</script>
+</body>
+</html>
