@@ -937,12 +937,18 @@ async function saveNote(){
 }
 
 async function delNote(id){
+  const prevNotes=notes;
   notes=notes.filter(n=>n.id!==id);
   SS('ec_notes',notes);
   try{
-    await sbUpsertNotes(notes);
+    await sbDelete('ec_notes',id);
     renderNotes();
-  }catch(e){alert('Note delete sync failed.');}
+  }catch(e){
+    notes=prevNotes;
+    SS('ec_notes',notes);
+    renderNotes();
+    alert('Note delete sync failed.');
+  }
 }
 
 async function sbUpsertNotes(notes){
