@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission OS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mission OS">
+<meta name="theme-color" content="#0e0e0f">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --accent:#9AAFBF;--accent-bg:#0f1a22;--accent-light:#bdd0dc;
+  --ok:#5cb87a;--ok-bg:#0e261a;--danger:#e05b5b;--amber:#e8c56a;--amber-bg:#28200a;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-left:52px}
+header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.4px}
+.logo span{color:var(--muted);font-weight:300}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.hub-link{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-decoration:none;transition:color .15s}
+.hub-link:hover{color:var(--text)}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{padding:10px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
+.content{flex:1;overflow-y:auto;padding:1.5rem 2rem}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+.stat-label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.stat-value{font-size:26px;font-weight:600;letter-spacing:-.5px;margin-top:4px}
+.stat-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+.blue{color:var(--accent)}.ok{color:var(--ok)}.amber{color:var(--amber)}.danger{color:var(--danger)}
+.progress-wrap{background:var(--border);border-radius:100px;height:8px;margin:10px 0}
+.progress-bar{height:100%;border-radius:100px;background:var(--accent);transition:width .4s ease}
+.form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:90px}
+.field label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+input,select,textarea{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface)}
+textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
+.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
+.log-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--border);font-weight:500}
+.log-table td{padding:7px 7px;border-bottom:1px solid var(--faint);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:var(--surface)}
+.del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 3px}
+.del:hover{color:var(--danger)}
+.empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:12px}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--faint)}
+.check-row:last-child{border-bottom:none}
+.hcheck{width:22px;height:22px;border-radius:6px;border:1px solid var(--border-light);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;margin-top:1px}
+.hcheck.on{background:var(--ok-bg);border-color:var(--ok)}
+.hcheck.on::after{content:'✓';font-size:12px;color:var(--ok)}
+.habit-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--faint)}
+.habit-row:last-child{border-bottom:none}
+.habit-name{flex:1;font-size:13px}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:4px}
+.wcell{width:100%;aspect-ratio:1;border-radius:4px;border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.wcell.on{background:var(--ok);border-color:var(--ok)}
+.wlabel{font-size:10px;color:var(--muted);text-align:center;font-family:'DM Mono',monospace;margin-bottom:3px}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;background:var(--accent-bg);border:1px solid var(--accent);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent)}
+@media(max-width:720px){.grid-2,.grid-4{grid-template-columns:1fr}.content{padding:1rem}header{padding:.9rem 1rem}}
+/* === OS SIDEBAR === */
+.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease;overflow:hidden}
+.os-sb.open{width:168px;align-items:flex-start;padding:14px 10px}
+.sb-toggle{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .15s;margin-bottom:6px;flex-shrink:0;background:none;border:none}
+.sb-toggle:hover{background:var(--faint);color:var(--text)}
+.sb-div{width:24px;height:1px;background:var(--border);margin:4px auto;flex-shrink:0;transition:width .2s}
+.os-sb.open .sb-div{width:100%}
+.sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .15s;width:36px;overflow:hidden;white-space:nowrap;flex-shrink:0}
+.os-sb.open .sb-item{width:148px;padding:9px 10px}
+.sb-item:hover{background:var(--faint);color:var(--text)}
+.sb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-s{background:#e07b4a}.dot-g{background:#B3A369}.dot-m{background:#9AAFBF}
+.sb-label{font-size:12px;font-weight:500;opacity:0;transition:opacity .15s;font-family:'DM Sans',sans-serif}
+.os-sb.open .sb-label{opacity:1}
+.sb-cur-s{color:#e07b4a!important;background:rgba(224,123,74,.08)!important}
+.sb-cur-g{color:#B3A369!important;background:rgba(179,163,105,.08)!important}
+.sb-cur-m{color:#9AAFBF!important;background:rgba(154,175,191,.08)!important}
+@media(max-width:600px){.os-sb{display:none}body{padding-left:0!important}}
+</style>
+</head>
+<body>
+<div class="os-sb" id="os-sb">
+  <button class="sb-toggle" onclick="document.getElementById('os-sb').classList.toggle('open')">≡</button>
+  <div class="sb-div"></div>
+  <a class="sb-item" href="index.html"><span class="sb-dot dot-s"></span><span class="sb-label">Summer OS</span></a>
+  <a class="sb-item" href="gt.html"><span class="sb-dot dot-g"></span><span class="sb-label">GT OS</span></a>
+  <a class="sb-item sb-cur-m" href="mission.html"><span class="sb-dot dot-m"></span><span class="sb-label">Mission OS</span></a>
+</div>
+<header>
+  <div class="logo">Mission OS <span>/ Eli Crist</span></div>
+  <div class="hdr-right">
+    <div class="hdr-meta" id="hdr-date"></div>
+    <a class="hub-link" href="hub.html">← hub</a>
+  </div>
+</header>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button class="tab-btn" onclick="showTab('prep',this)">Prep</button>
+  <button class="tab-btn" onclick="showTab('language',this)">Language</button>
+  <button class="tab-btn" onclick="showTab('habits',this)">Habits</button>
+  <button class="tab-btn" onclick="showTab('fund',this)">Fund</button>
+  <button class="tab-btn" onclick="showTab('notes',this)">Notes</button>
+</div>
+<div class="content">
+
+<!-- ══ DASHBOARD ══ -->
+<div class="tab-panel active" id="panel-dashboard">
+  <div class="grid-4" style="margin-bottom:1rem">
+    <div class="stat"><div class="stat-label">mission countdown</div><div class="stat-value blue" id="d-countdown">TBD</div><div class="stat-sub" id="d-countdown-sub">set date in settings below</div></div>
+    <div class="stat"><div class="stat-label">prep complete</div><div class="stat-value amber" id="d-prep">0%</div><div class="stat-sub" id="d-prep-sub">— / — items</div></div>
+    <div class="stat"><div class="stat-label">study streak</div><div class="stat-value ok" id="d-streak">0</div><div class="stat-sub">days language study</div></div>
+    <div class="stat"><div class="stat-label">mission fund</div><div class="stat-value blue" id="d-fund">$0</div><div class="stat-sub" id="d-fund-sub">of $12,000 goal</div></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+      <div class="section-title" style="margin:0">fund progress</div>
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="d-fund-pct">0%</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="d-fund-bar" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">
+      <span>$0</span><span id="d-fund-goal-label">$12,000</span>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">today's habits</div>
+      <div id="d-habits"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">mission settings</div>
+      <div class="form-row">
+        <div class="field"><label>mission start date</label><input type="date" id="cfg-date" onchange="saveCfg()"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>target language</label>
+          <select id="cfg-lang" onchange="saveCfg()">
+            <option value="">Not yet assigned</option>
+            <option>Spanish</option><option>Portuguese</option><option>French</option>
+            <option>Mandarin</option><option>Cantonese</option><option>Japanese</option>
+            <option>Korean</option><option>Russian</option><option>German</option>
+            <option>Italian</option><option>Arabic</option><option>Hindi</option>
+            <option>Tagalog</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>fund goal ($)</label><input type="number" id="cfg-goal" placeholder="12000" onchange="saveCfg()"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">mission date also updates the hub countdown</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PREP CHECKLIST ══ -->
+<div class="tab-panel" id="panel-prep">
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">pre-mission checklist</div>
+      <div id="prep-list"></div>
+      <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.9rem">
+        <div class="section-title">add custom item</div>
+        <div class="form-row">
+          <div class="field"><input type="text" id="prep-new" placeholder="Custom prep item..."></div>
+          <button class="btn btn-primary" onclick="addPrepItem()">Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">completion</div>
+      <div style="margin-bottom:1rem">
+        <div style="font-size:48px;font-weight:600;color:var(--accent);letter-spacing:-.5px" id="prep-pct-big">0%</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace" id="prep-count">0 of 0 complete</div>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" id="prep-bar" style="width:0%"></div></div>
+      <div style="margin-top:1.5rem;font-size:12px;color:var(--muted);line-height:1.8;font-family:'DM Mono',monospace">
+        check items off as you complete them.<br>
+        the clock starts when you submit papers.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LANGUAGE ══ -->
+<div class="tab-panel" id="panel-language">
+  <div class="grid-2" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="section-title">log study session</div>
+      <div class="form-row">
+        <div class="field"><label>date</label><input type="date" id="lang-date"></div>
+        <div class="field"><label>minutes studied</label><input type="number" id="lang-min" placeholder="30" min="1"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>what you studied</label><input type="text" id="lang-what" placeholder="Vocab, grammar, Duolingo, scripture..."></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>notes</label><input type="text" id="lang-notes" placeholder="Key words learned, difficulty, etc."></div>
+      </div>
+      <button class="btn btn-primary" onclick="addLangSession()">Log Session</button>
+    </div>
+    <div class="card">
+      <div class="section-title">progress</div>
+      <div style="display:flex;gap:2rem;margin-bottom:1.25rem">
+        <div>
+          <div style="font-size:32px;font-weight:600;color:var(--accent)" id="lang-total-min">0</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">total minutes</div>
+        </div>
+        <div>
+          <div style="font-size:32px;font-weight:600;color:var(--ok)" id="lang-streak">0</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">day streak</div>
+        </div>
+        <div>
+          <div style="font-size:32px;font-weight:600;color:var(--amber)" id="lang-sessions">0</div>
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">sessions</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace" id="lang-label">language: not set</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">session history</div>
+    <div style="overflow-x:auto">
+      <table class="log-table">
+        <thead><tr><th>Date</th><th>Minutes</th><th>What</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="lang-body"></tbody>
+      </table>
+      <div class="empty" id="lang-empty">No sessions logged yet.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HABITS ══ -->
+<div class="tab-panel" id="panel-habits">
+  <div class="grid-2" style="margin-bottom:1rem">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
+        <div class="section-title" style="margin:0">today — <span id="h-date"></span></div>
+        <div id="h-streak-badge"></div>
+      </div>
+      <div id="h-list"></div>
+      <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.9rem">
+        <div class="section-title">add habit</div>
+        <div class="form-row">
+          <div class="field"><input type="text" id="h-new" placeholder="New habit..." onkeydown="if(event.key==='Enter')addHabit()"></div>
+          <button class="btn btn-primary" onclick="addHabit()">Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">this week</div>
+      <div id="h-week"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FUND ══ -->
+<div class="tab-panel" id="panel-fund">
+  <div class="grid-4" style="margin-bottom:1rem">
+    <div class="stat"><div class="stat-label">current balance</div><div class="stat-value ok" id="f-bal">$0</div><div class="stat-sub" id="f-rem">—</div></div>
+    <div class="stat"><div class="stat-label">goal</div><div class="stat-value blue" id="f-goal-stat">$12,000</div><div class="stat-sub">2-year mission</div></div>
+    <div class="stat"><div class="stat-label">progress</div><div class="stat-value amber" id="f-pct-stat">0%</div><div class="stat-sub" id="f-until">—</div></div>
+    <div class="stat"><div class="stat-label">days to fund</div><div class="stat-value" id="f-days" style="color:var(--muted)">—</div><div class="stat-sub" id="f-rate-sub">set mission date</div></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+      <div class="section-title" style="margin:0">fund progress</div>
+      <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)" id="f-pct-bar">0%</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" id="f-bar" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">
+      <span>$0</span><span id="f-bar-goal">$12,000</span>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">log entry</div>
+      <div class="form-row">
+        <div class="field"><label>date</label><input type="date" id="fund-date"></div>
+        <div class="field"><label>type</label>
+          <select id="fund-type">
+            <option value="deposit">Deposit</option>
+            <option value="balance">Balance update</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>amount ($)</label><input type="number" id="fund-amt" placeholder="0.00" step="0.01"></div>
+        <div class="field"><label>note</label><input type="text" id="fund-note" placeholder="optional"></div>
+        <button class="btn btn-primary" onclick="logFund()">Log</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">history</div>
+      <div style="overflow-x:auto">
+        <table class="log-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+          <tbody id="fund-body"></tbody>
+        </table>
+        <div class="empty" id="fund-empty">No entries yet.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NOTES ══ -->
+<div class="tab-panel" id="panel-notes">
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">new note</div>
+      <div class="form-row">
+        <div class="field"><label>title</label><input type="text" id="n-title" placeholder="Thought, scripture, reflection..."></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>body</label><textarea id="n-body" placeholder="Write it out." rows="6"></textarea></div>
+      </div>
+      <button class="btn btn-primary" onclick="addNote()">Save Note</button>
+    </div>
+    <div><div id="n-list"></div></div>
+  </div>
+</div>
+
+</div><!-- /content -->
+<script>
+const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
+const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
+
+// State
+let cfg=GS('lds_cfg',{date:'',lang:'',goal:12000});
+let prepItems=GS('lds_prep',null);
+let langLog=GS('lds_lang',[]);
+let habits=GS('lds_habits',null);
+let habitLog=GS('lds_habit_log',{});
+let fundLog=GS('lds_fund',[]);
+let mNotes=GS('lds_notes',[]);
+
+// Default prep checklist
+const DEFAULT_PREP=[
+  {id:'p1',l:'Submit mission papers',done:false},
+  {id:'p2',l:'Medical clearance complete',done:false},
+  {id:'p3',l:'Dental clearance complete',done:false},
+  {id:'p4',l:'Temple recommend obtained',done:false},
+  {id:'p5',l:'Temple endowment received',done:false},
+  {id:'p6',l:'Mission call received',done:false},
+  {id:'p7',l:'Passport obtained',done:false},
+  {id:'p8',l:'Immunizations up to date',done:false},
+  {id:'p9',l:'Missionary wardrobe acquired',done:false},
+  {id:'p10',l:'Farewell talk given',done:false},
+  {id:'p11',l:'Mission fund fully funded',done:false},
+  {id:'p12',l:'Language study begun',done:false},
+];
+if(!prepItems)prepItems=JSON.parse(JSON.stringify(DEFAULT_PREP));
+
+// Default habits
+const DEFAULT_HABITS=[
+  {id:'h_scr',l:'Morning scripture study'},
+  {id:'h_pam',l:'Morning prayer'},
+  {id:'h_ppm',l:'Evening prayer'},
+  {id:'h_jnl',l:'Personal journal'},
+  {id:'h_pln',l:'Weekly planning (Sunday)'},
+];
+if(!habits)habits=JSON.parse(JSON.stringify(DEFAULT_HABITS));
+
+function showTab(id,el){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+function todayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/Denver'});}
+function weekDates(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const day=t.getDay();const mon=new Date(t);mon.setDate(t.getDate()-(day===0?6:day-1));
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d.toLocaleDateString('en-CA');});
+}
+
+// Config
+function saveCfg(){
+  cfg.date=document.getElementById('cfg-date').value;
+  cfg.lang=document.getElementById('cfg-lang').value;
+  cfg.goal=parseFloat(document.getElementById('cfg-goal').value)||12000;
+  SS('lds_cfg',cfg);
+  // Shared key for hub countdown
+  if(cfg.date)localStorage.setItem('lds_mission_date',cfg.date);
+  renderAll();
+}
+
+// Dashboard
+function renderDash(){
+  const now=new Date();now.setHours(0,0,0,0);
+  if(cfg.date){
+    const ms=new Date(cfg.date);
+    const d=Math.ceil((ms-now)/86400000);
+    document.getElementById('d-countdown').textContent=d>0?d:'Set Apart!';
+    document.getElementById('d-countdown').style.color='var(--accent)';
+    document.getElementById('d-countdown-sub').textContent=cfg.date;
+  }
+  // Prep %
+  const done=prepItems.filter(p=>p.done).length;
+  const pct=prepItems.length?Math.round((done/prepItems.length)*100):0;
+  document.getElementById('d-prep').textContent=pct+'%';
+  document.getElementById('d-prep-sub').textContent=done+' / '+prepItems.length+' items';
+  // Streak
+  document.getElementById('d-streak').textContent=calcLangStreak();
+  // Fund
+  const bal=calcFundBal();
+  document.getElementById('d-fund').textContent='$'+bal.toFixed(0);
+  document.getElementById('d-fund-sub').textContent='of $'+cfg.goal.toFixed(0)+' goal';
+  const fpct=cfg.goal?Math.min(100,(bal/cfg.goal)*100):0;
+  document.getElementById('d-fund-pct').textContent=Math.round(fpct)+'%';
+  document.getElementById('d-fund-bar').style.width=fpct+'%';
+  document.getElementById('d-fund-goal-label').textContent='$'+cfg.goal.toFixed(0);
+  // Today habits
+  const k=todayStr();const th=habitLog[k]||{};
+  document.getElementById('d-habits').innerHTML=habits.map(h=>`
+    <div class="habit-row">
+      <div class="habit-name">${h.l}</div>
+      <div class="hcheck ${th[h.id]?'on':''}" onclick="toggleH('${h.id}')"></div>
+    </div>`).join('');
+}
+
+// Prep
+function togglePrep(id){
+  const p=prepItems.find(p=>p.id===id);
+  if(p){p.done=!p.done;SS('lds_prep',prepItems);renderPrep();renderDash();}
+}
+function addPrepItem(){
+  const l=document.getElementById('prep-new').value.trim();
+  if(!l)return;
+  prepItems.push({id:'p_'+Date.now(),l,done:false,custom:true});
+  SS('lds_prep',prepItems);
+  document.getElementById('prep-new').value='';
+  renderPrep();
+}
+function delPrepItem(id){
+  const p=prepItems.find(i=>i.id===id);
+  if(!p||!p.custom)return;
+  prepItems=prepItems.filter(i=>i.id!==id);
+  SS('lds_prep',prepItems);renderPrep();
+}
+function renderPrep(){
+  const done=prepItems.filter(p=>p.done).length;
+  const pct=prepItems.length?Math.round((done/prepItems.length)*100):0;
+  document.getElementById('prep-pct-big').textContent=pct+'%';
+  document.getElementById('prep-count').textContent=done+' of '+prepItems.length+' complete';
+  document.getElementById('prep-bar').style.width=pct+'%';
+  document.getElementById('prep-list').innerHTML=prepItems.map(p=>`
+    <div class="check-row">
+      <div class="hcheck ${p.done?'on':''}" onclick="togglePrep('${p.id}')"></div>
+      <div style="flex:1;font-size:13px;${p.done?'text-decoration:line-through;color:var(--muted)':''}">${p.l}</div>
+      ${p.custom?`<button class="del" onclick="delPrepItem('${p.id}')">×</button>`:''}
+    </div>`).join('');
+}
+
+// Language
+function calcLangStreak(){
+  if(!langLog.length)return 0;
+  const dates=new Set(langLog.map(s=>s.date));
+  const t=new Date();t.setHours(0,0,0,0);
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const d=new Date(t);d.setDate(t.getDate()-i);
+    const k=d.toLocaleDateString('en-CA');
+    if(dates.has(k))streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+function addLangSession(){
+  const date=document.getElementById('lang-date').value;
+  const min=parseInt(document.getElementById('lang-min').value);
+  if(!date||!min)return;
+  langLog.push({id:Date.now(),date,min,what:document.getElementById('lang-what').value.trim(),notes:document.getElementById('lang-notes').value.trim()});
+  SS('lds_lang',langLog);
+  ['lang-min','lang-what','lang-notes'].forEach(id=>{document.getElementById(id).value='';});
+  renderLang();
+}
+function delLang(id){langLog=langLog.filter(s=>s.id!==id);SS('lds_lang',langLog);renderLang();}
+function renderLang(){
+  const total=langLog.reduce((s,l)=>s+l.min,0);
+  const streak=calcLangStreak();
+  document.getElementById('lang-total-min').textContent=total;
+  document.getElementById('lang-streak').textContent=streak;
+  document.getElementById('lang-sessions').textContent=langLog.length;
+  document.getElementById('lang-label').textContent='language: '+(cfg.lang||'not set');
+  const sorted=[...langLog].sort((a,b)=>b.id-a.id);
+  const empty=document.getElementById('lang-empty');
+  const body=document.getElementById('lang-body');
+  if(!sorted.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  body.innerHTML=sorted.map(s=>`<tr>
+    <td>${s.date}</td><td>${s.min} min</td><td>${s.what||'—'}</td><td>${s.notes||'—'}</td>
+    <td><button class="del" onclick="delLang(${s.id})">×</button></td>
+  </tr>`).join('');
+  renderDash();
+}
+
+// Habits
+function toggleH(id){
+  const k=todayStr();if(!habitLog[k])habitLog[k]={};
+  habitLog[k][id]=!habitLog[k][id];
+  SS('lds_habit_log',habitLog);renderHabits();renderDash();
+}
+function toggleHDate(id,k){
+  if(!habitLog[k])habitLog[k]={};
+  habitLog[k][id]=!habitLog[k][id];
+  SS('lds_habit_log',habitLog);renderHabits();
+}
+function addHabit(){
+  const l=document.getElementById('h-new').value.trim();
+  if(!l)return;
+  habits.push({id:'h_'+Date.now(),l});SS('lds_habits',habits);
+  document.getElementById('h-new').value='';renderHabits();
+}
+function renderHabits(){
+  const k=todayStr();const th=habitLog[k]||{};
+  document.getElementById('h-date').textContent=k;
+  document.getElementById('h-list').innerHTML=habits.map(h=>`
+    <div class="habit-row">
+      <div class="habit-name">${h.l}</div>
+      <div class="hcheck ${th[h.id]?'on':''}" onclick="toggleH('${h.id}')"></div>
+    </div>`).join('');
+  // Streak badge
+  const dates=weekDates();const today=todayStr();
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
+    const dk=d.toLocaleDateString('en-CA');
+    if(habitLog[dk]&&Object.values(habitLog[dk]).some(v=>v))streak++;
+    else if(i>0)break;
+  }
+  document.getElementById('h-streak-badge').innerHTML=streak>=2?`<div class="streak-badge">🔥 ${streak}</div>`:'';
+  // Week grid
+  const dl=['M','T','W','T','F','S','S'];
+  document.getElementById('h-week').innerHTML=habits.map(h=>`
+    <div style="margin-bottom:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px;font-family:'DM Mono',monospace">${h.l}</div>
+      <div class="week-grid">${dl.map((l,i)=>{
+        const dk=dates[i];const done=habitLog[dk]&&habitLog[dk][h.id];
+        return `<div><div class="wlabel">${l}</div><div class="wcell ${done?'on':''}" onclick="toggleHDate('${h.id}','${dk}')"></div></div>`;
+      }).join('')}</div>
+    </div>`).join('');
+}
+
+// Fund
+function calcFundBal(){
+  let bal=0;
+  fundLog.forEach(e=>{
+    if(e.type==='balance')bal=e.amt;
+    else if(e.type==='deposit')bal+=e.amt;
+    else if(e.type==='expense')bal-=e.amt;
+  });
+  return bal;
+}
+function logFund(){
+  const date=document.getElementById('fund-date').value;
+  const amt=parseFloat(document.getElementById('fund-amt').value);
+  if(!date||!amt)return;
+  fundLog.push({id:Date.now(),date,type:document.getElementById('fund-type').value,amt,note:document.getElementById('fund-note').value.trim()});
+  SS('lds_fund',fundLog);
+  document.getElementById('fund-amt').value='';
+  document.getElementById('fund-note').value='';
+  renderFund();
+}
+function delFund(id){fundLog=fundLog.filter(e=>e.id!==id);SS('lds_fund',fundLog);renderFund();}
+function renderFund(){
+  const bal=calcFundBal();
+  const goal=cfg.goal||12000;
+  const pct=goal?Math.min(100,(bal/goal)*100):0;
+  const rem=Math.max(0,goal-bal);
+  document.getElementById('f-bal').textContent='$'+bal.toFixed(0);
+  document.getElementById('f-rem').textContent='$'+rem.toFixed(0)+' remaining';
+  document.getElementById('f-goal-stat').textContent='$'+goal.toFixed(0);
+  document.getElementById('f-pct-stat').textContent=Math.round(pct)+'%';
+  document.getElementById('f-bar').style.width=pct+'%';
+  document.getElementById('f-pct-bar').textContent=Math.round(pct)+'%';
+  document.getElementById('f-bar-goal').textContent='$'+goal.toFixed(0);
+  // Days stat
+  const now=new Date();now.setHours(0,0,0,0);
+  if(cfg.date&&rem>0){
+    const ms=new Date(cfg.date);
+    const dLeft=Math.ceil((ms-now)/86400000);
+    document.getElementById('f-days').textContent=dLeft>0?dLeft:'—';
+    document.getElementById('f-rate-sub').textContent=dLeft>0?'$'+(rem/dLeft*30).toFixed(0)+'/mo needed':'—';
+  }
+  document.getElementById('f-until').textContent=pct>=100?'Funded ✓':'$'+rem.toFixed(0)+' to go';
+  const sorted=[...fundLog].sort((a,b)=>b.id-a.id);
+  const empty=document.getElementById('fund-empty');
+  document.getElementById('fund-body').innerHTML=sorted.length?sorted.map(e=>{
+    const sign=e.type==='expense'?'-':'+';;
+    const clr=e.type==='expense'?'var(--danger)':'var(--ok)';
+    return `<tr>
+      <td>${e.date}</td><td>${e.type}</td>
+      <td style="color:${clr};font-family:'DM Mono',monospace">${sign}$${e.amt.toFixed(2)}</td>
+      <td>${e.note||'—'}</td>
+      <td><button class="del" onclick="delFund(${e.id})">×</button></td>
+    </tr>`;
+  }).join(''):'';
+  empty.style.display=sorted.length?'none':'block';
+  renderDash();
+}
+
+// Notes
+function addNote(){
+  const title=document.getElementById('n-title').value.trim();
+  const body=document.getElementById('n-body').value.trim();
+  if(!title&&!body)return;
+  mNotes.unshift({id:Date.now(),date:todayStr(),title:title||'Untitled',body});
+  SS('lds_notes',mNotes);
+  document.getElementById('n-title').value='';
+  document.getElementById('n-body').value='';
+  renderNotes();
+}
+function delNote(id){mNotes=mNotes.filter(n=>n.id!==id);SS('lds_notes',mNotes);renderNotes();}
+function renderNotes(){
+  document.getElementById('n-list').innerHTML=mNotes.length?mNotes.map(n=>`
+    <div class="card" style="margin-bottom:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <div style="font-size:13px;font-weight:500">${n.title}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${n.date}</div>
+          <button class="del" onclick="delNote(${n.id})">×</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;font-family:'DM Mono',monospace;line-height:1.6">${n.body}</div>
+    </div>`).join(''):'<div class="empty">No notes yet.</div>';
+}
+
+function renderAll(){renderDash();renderPrep();renderLang();renderHabits();renderFund();renderNotes();}
+
+// Init
+(function(){
+  const t=todayStr();
+  ['lang-date','fund-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  const now=new Date();
+  document.getElementById('hdr-date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  // Load config into form
+  if(cfg.date)document.getElementById('cfg-date').value=cfg.date;
+  document.getElementById('cfg-lang').value=cfg.lang||'';
+  document.getElementById('cfg-goal').value=cfg.goal||12000;
+  renderAll();
+})();
+</script>
+</body>
+</html>
