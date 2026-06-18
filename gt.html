@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GT OS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GT OS">
+<meta name="theme-color" content="#0e0e0f">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --accent:#B3A369;--accent-bg:#1e1c0a;--accent-light:#d4c98a;
+  --danger:#e05b5b;--ok:#5cb87a;--ok-bg:#0e261a;--blue:#5b8dee;--blue-bg:#1a2540;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-left:52px}
+header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.4px}
+.logo span{color:var(--muted);font-weight:300}
+.hdr-right{display:flex;align-items:center;gap:12px}
+.hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.hub-link{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-decoration:none;transition:color .15s}
+.hub-link:hover{color:var(--text)}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{padding:10px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
+.content{flex:1;overflow-y:auto;padding:1.5rem 2rem}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+.stat-label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.stat-value{font-size:26px;font-weight:600;letter-spacing:-.5px;margin-top:4px}
+.stat-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+.gold{color:var(--accent)}.ok{color:var(--ok)}.blue{color:var(--blue)}.danger{color:var(--danger)}
+.progress-wrap{background:var(--border);border-radius:100px;height:8px;margin:10px 0}
+.progress-bar{height:100%;border-radius:100px;background:var(--accent);transition:width .4s ease}
+.form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:90px}
+.field label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+input,select,textarea{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface)}
+textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
+.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-danger{border-color:var(--danger);color:var(--danger)}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
+.log-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--border);font-weight:500}
+.log-table td{padding:7px 7px;border-bottom:1px solid var(--faint);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:var(--surface)}
+.del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 3px}
+.del:hover{color:var(--danger)}
+.empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:12px}
+.hcheck{width:22px;height:22px;border-radius:6px;border:1px solid var(--border-light);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.hcheck.on{background:var(--ok-bg);border-color:var(--ok)}
+.hcheck.on::after{content:'✓';font-size:12px;color:var(--ok)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-family:'DM Mono',monospace}
+.badge-gold{background:var(--accent-bg);border:1px solid var(--accent);color:var(--accent)}
+.badge-ok{background:var(--ok-bg);border:1px solid var(--ok);color:var(--ok)}
+.badge-blue{background:var(--blue-bg);border:1px solid var(--blue);color:var(--blue)}
+.window-banner{background:var(--accent-bg);border:1px solid var(--accent);border-radius:10px;padding:.9rem 1.25rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between}
+.window-banner-text{font-size:12px;color:var(--accent-light)}
+.window-banner-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:3px}
+@media(max-width:720px){.grid-2,.grid-4{grid-template-columns:1fr}.content{padding:1rem}header{padding:.9rem 1rem}}
+/* === OS SIDEBAR === */
+.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease;overflow:hidden}
+.os-sb.open{width:168px;align-items:flex-start;padding:14px 10px}
+.sb-toggle{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .15s;margin-bottom:6px;flex-shrink:0;background:none;border:none}
+.sb-toggle:hover{background:var(--faint);color:var(--text)}
+.sb-div{width:24px;height:1px;background:var(--border);margin:4px auto;flex-shrink:0;transition:width .2s}
+.os-sb.open .sb-div{width:100%}
+.sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .15s;width:36px;overflow:hidden;white-space:nowrap;flex-shrink:0}
+.os-sb.open .sb-item{width:148px;padding:9px 10px}
+.sb-item:hover{background:var(--faint);color:var(--text)}
+.sb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-s{background:#e07b4a}.dot-g{background:#B3A369}.dot-m{background:#9AAFBF}
+.sb-label{font-size:12px;font-weight:500;opacity:0;transition:opacity .15s;font-family:'DM Sans',sans-serif}
+.os-sb.open .sb-label{opacity:1}
+.sb-cur-s{color:#e07b4a!important;background:rgba(224,123,74,.08)!important}
+.sb-cur-g{color:#B3A369!important;background:rgba(179,163,105,.08)!important}
+.sb-cur-m{color:#9AAFBF!important;background:rgba(154,175,191,.08)!important}
+@media(max-width:600px){.os-sb{display:none}body{padding-left:0!important}}
+</style>
+</head>
+<body>
+<div class="os-sb" id="os-sb">
+  <button class="sb-toggle" onclick="document.getElementById('os-sb').classList.toggle('open')">≡</button>
+  <div class="sb-div"></div>
+  <a class="sb-item" href="index.html"><span class="sb-dot dot-s"></span><span class="sb-label">Summer OS</span></a>
+  <a class="sb-item sb-cur-g" href="gt.html"><span class="sb-dot dot-g"></span><span class="sb-label">GT OS</span></a>
+  <a class="sb-item" href="mission.html"><span class="sb-dot dot-m"></span><span class="sb-label">Mission OS</span></a>
+</div>
+<header>
+  <div class="logo">GT OS <span id="hdr-sub">/ Eli Crist</span></div>
+  <div class="hdr-right">
+    <div class="hdr-meta" id="hdr-date"></div>
+    <a class="hub-link" href="hub.html">← hub</a>
+  </div>
+</header>
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button class="tab-btn" onclick="showTab('courses',this)">Courses</button>
+  <button class="tab-btn" onclick="showTab('hustle',this)">Hustle</button>
+  <button class="tab-btn" onclick="showTab('finance',this)">Finance</button>
+  <button class="tab-btn" onclick="showTab('notes',this)">Notes</button>
+</div>
+<div class="content">
+
+<!-- ══ DASHBOARD ══ -->
+<div class="tab-panel active" id="panel-dashboard">
+  <div class="window-banner">
+    <div>
+      <div class="window-banner-text">one year window — make it count</div>
+      <div class="window-banner-sub">fall 2026 → spring 2027 → mission · every semester decision matters</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:22px;font-weight:600;color:var(--accent)" id="d-window-days">—</div>
+      <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">days at GT</div>
+    </div>
+  </div>
+  <div class="grid-4" style="margin-bottom:1rem">
+    <div class="stat"><div class="stat-label">days until GT</div><div class="stat-value gold" id="d-gt">—</div><div class="stat-sub">move-in Aug 17</div></div>
+    <div class="stat"><div class="stat-label">semester GPA</div><div class="stat-value gold" id="d-gpa">—</div><div class="stat-sub" id="d-gpa-sub">no grades yet</div></div>
+    <div class="stat"><div class="stat-label">credits enrolled</div><div class="stat-value blue" id="d-credits">—</div><div class="stat-sub">target: 15–17</div></div>
+    <div class="stat"><div class="stat-label">mission in</div><div class="stat-value" id="d-mission" style="color:var(--muted)">TBD</div><div class="stat-sub" id="d-mission-sub">set in Mission OS</div></div>
+  </div>
+  <div class="grid-2" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="section-title">hustle snapshot</div>
+      <div style="display:flex;gap:1.5rem">
+        <div>
+          <div style="font-size:24px;font-weight:600;color:var(--accent)" id="d-comps">0</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">case comps</div>
+        </div>
+        <div>
+          <div style="font-size:24px;font-weight:600;color:var(--accent)" id="d-contacts">0</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">contacts made</div>
+        </div>
+        <div>
+          <div style="font-size:24px;font-weight:600;color:var(--accent)" id="d-placed">0</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">comp placements</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">semester timeline</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:11px;font-family:'DM Mono',monospace">
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--accent)">●</span><span>Aug 17 — Move-in</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--muted)">●</span><span>Aug 19 — Classes begin</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--muted)">●</span><span>Dec — Fall finals</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--muted)">●</span><span>Jan — Spring semester</span></div>
+        <div style="display:flex;align-items:center;gap:8px"><span style="color:var(--muted)">●</span><span>May — Mission countdown</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">courses at a glance</div>
+    <div id="d-courses-snap"><div class="empty">No courses added yet — go to Courses tab.</div></div>
+  </div>
+</div>
+
+<!-- ══ COURSES ══ -->
+<div class="tab-panel" id="panel-courses">
+  <div class="grid-2" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="section-title">add course</div>
+      <div class="form-row">
+        <div class="field"><label>course name</label><input type="text" id="c-name" placeholder="ACCT 2101"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>instructor</label><input type="text" id="c-prof" placeholder="Prof. Smith"></div>
+        <div class="field" style="max-width:80px"><label>credits</label><input type="number" id="c-cr" placeholder="3" min="1" max="6" value="3"></div>
+        <div class="field" style="max-width:80px"><label>grade</label>
+          <select id="c-grade">
+            <option value="">—</option>
+            <option>A</option><option>A-</option><option>B+</option><option>B</option>
+            <option>B-</option><option>C+</option><option>C</option><option>C-</option>
+            <option>D+</option><option>D</option><option>F</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <button class="btn btn-primary" style="width:100%" onclick="addCourse()">Add Course</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">semester summary</div>
+      <div style="display:flex;gap:2rem;margin-bottom:1.25rem">
+        <div>
+          <div style="font-size:32px;font-weight:600;color:var(--accent)" id="c-gpa">—</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">semester GPA</div>
+        </div>
+        <div>
+          <div style="font-size:32px;font-weight:600;color:var(--blue)" id="c-total-cr">0</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">total credits</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px">target GPA</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="c-target" placeholder="3.8" step="0.1" min="0" max="4" style="max-width:90px" oninput="renderCourses()">
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">Dean's Scholar = 3.5 min</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">enrolled courses</div>
+    <div style="overflow-x:auto">
+      <table class="log-table">
+        <thead><tr><th>Course</th><th>Instructor</th><th>Credits</th><th>Grade</th><th>Quality Pts</th><th></th></tr></thead>
+        <tbody id="c-body"><tr><td colspan="6" class="empty">No courses added yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HUSTLE ══ -->
+<div class="tab-panel" id="panel-hustle">
+  <div class="grid-2" style="margin-bottom:1rem">
+    <!-- Case Comps -->
+    <div class="card">
+      <div class="section-title">log case comp</div>
+      <div class="form-row">
+        <div class="field"><label>competition name</label><input type="text" id="comp-name" placeholder="Scheller Case Classic"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>date</label><input type="date" id="comp-date"></div>
+        <div class="field"><label>team / partners</label><input type="text" id="comp-team" placeholder="Solo / teammate names"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>result / placement</label><input type="text" id="comp-result" placeholder="1st / Finals / Semifinal"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>notes</label><input type="text" id="comp-notes" placeholder="Key takeaways"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addComp()">Log Comp</button>
+    </div>
+    <!-- Networking -->
+    <div class="card">
+      <div class="section-title">log contact</div>
+      <div class="form-row">
+        <div class="field"><label>name</label><input type="text" id="ct-name" placeholder="Jane Smith"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>where / context</label><input type="text" id="ct-where" placeholder="AKPsi info night · Scheller event"></div>
+        <div class="field" style="max-width:140px"><label>date</label><input type="date" id="ct-date"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>next step</label><input type="text" id="ct-next" placeholder="Follow up on LinkedIn"></div>
+      </div>
+      <button class="btn btn-primary" onclick="addContact()">Log Contact</button>
+    </div>
+  </div>
+  <!-- Comp log -->
+  <div class="card" style="margin-bottom:1rem">
+    <div class="section-title">case comp history</div>
+    <div style="overflow-x:auto">
+      <table class="log-table">
+        <thead><tr><th>Competition</th><th>Date</th><th>Team</th><th>Result</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="comp-body"></tbody>
+      </table>
+      <div class="empty" id="comp-empty">No case comps logged yet.</div>
+    </div>
+  </div>
+  <!-- Contacts -->
+  <div class="card">
+    <div class="section-title">networking contacts</div>
+    <div id="ct-list"></div>
+  </div>
+</div>
+
+<!-- ══ FINANCE ══ -->
+<div class="tab-panel" id="panel-finance">
+  <div class="grid-2" style="margin-bottom:1rem">
+    <div class="card">
+      <div class="section-title">monthly budget</div>
+      <div id="f-budget-inputs"></div>
+      <button class="btn btn-primary" style="margin-top:.5rem" onclick="saveBudget()">Save Budget</button>
+    </div>
+    <div class="card">
+      <div class="section-title">spending vs budget</div>
+      <div id="f-progress"></div>
+      <div style="border-top:1px solid var(--border);padding-top:.75rem;margin-top:.5rem;display:flex;justify-content:space-between;font-size:12px;font-family:'DM Mono',monospace">
+        <span style="color:var(--muted)">total spent</span>
+        <span style="color:var(--accent)" id="f-total-spent">$0</span>
+      </div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">log expense</div>
+      <div class="form-row">
+        <div class="field"><label>date</label><input type="date" id="ex-date"></div>
+        <div class="field"><label>category</label>
+          <select id="ex-cat">
+            <option value="food">Food & Dining</option>
+            <option value="books">Books & Supplies</option>
+            <option value="transport">Transportation</option>
+            <option value="housing">Housing & Misc</option>
+            <option value="social">Social & Fun</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>amount ($)</label><input type="number" id="ex-amt" placeholder="0.00" step="0.01"></div>
+        <div class="field"><label>note</label><input type="text" id="ex-note" placeholder="optional"></div>
+        <button class="btn btn-primary" onclick="addExpense()">Log</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">expense history</div>
+      <div style="overflow-x:auto">
+        <table class="log-table">
+          <thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+          <tbody id="ex-body"></tbody>
+        </table>
+        <div class="empty" id="ex-empty" style="display:none">No expenses logged.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NOTES ══ -->
+<div class="tab-panel" id="panel-notes">
+  <div class="grid-2">
+    <div class="card">
+      <div class="section-title">new note</div>
+      <div class="form-row">
+        <div class="field"><label>title</label><input type="text" id="n-title" placeholder="Reflection, idea, observation..."></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>body</label><textarea id="n-body" placeholder="Write it out." rows="6"></textarea></div>
+      </div>
+      <button class="btn btn-primary" onclick="addNote()">Save Note</button>
+    </div>
+    <div>
+      <div id="n-list"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+<script>
+const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
+const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
+const GT_START=new Date('2026-08-17');
+const GT_END=new Date('2027-05-10'); // approx spring finals
+const GRADE_PTS={'A':4.0,'A-':3.7,'B+':3.3,'B':3.0,'B-':2.7,'C+':2.3,'C':2.0,'C-':1.7,'D+':1.3,'D':1.0,'F':0.0};
+const CATS=['food','books','transport','housing','social','other'];
+const CAT_LABELS={food:'Food & Dining',books:'Books & Supplies',transport:'Transportation',housing:'Housing & Misc',social:'Social & Fun',other:'Other'};
+
+let courses=GS('gt_courses',[]);
+let comps=GS('gt_comps',[]);
+let contacts=GS('gt_contacts',[]);
+let expenses=GS('gt_expenses',[]);
+let budget=GS('gt_budget',{food:400,books:200,transport:100,housing:100,social:150,other:100});
+let gtNotes=GS('gt_notes',[]);
+
+function showTab(id,el){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+function todayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
+
+function calcGPA(){
+  const graded=courses.filter(c=>GRADE_PTS[c.grade]!==undefined);
+  if(!graded.length)return null;
+  const pts=graded.reduce((s,c)=>s+GRADE_PTS[c.grade]*c.credits,0);
+  const cr=graded.reduce((s,c)=>s+c.credits,0);
+  return cr?(pts/cr).toFixed(2):null;
+}
+
+// Dashboard
+function renderDash(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const dGT=Math.ceil((GT_START-now)/86400000);
+  document.getElementById('d-gt').textContent=dGT>0?dGT:'Here!';
+
+  // Window: days between GT start and GT end if now is in that range
+  if(now>=GT_START&&now<=GT_END){
+    document.getElementById('d-window-days').textContent=Math.ceil((GT_END-now)/86400000)+' left';
+  } else if(now<GT_START){
+    document.getElementById('d-window-days').textContent=Math.round((GT_END-GT_START)/86400000);
+  } else {
+    document.getElementById('d-window-days').textContent='done';
+  }
+
+  const mDate=localStorage.getItem('lds_mission_date');
+  if(mDate){
+    const dM=Math.ceil((new Date(mDate)-now)/86400000);
+    document.getElementById('d-mission').textContent=dM;
+    document.getElementById('d-mission').style.color='var(--accent)';
+    document.getElementById('d-mission-sub').textContent='days until set apart';
+  }
+
+  const gpa=calcGPA();
+  document.getElementById('d-gpa').textContent=gpa||'—';
+  const target=parseFloat(document.getElementById('c-target')?document.getElementById('c-target').value:0)||3.8;
+  if(gpa){
+    const ok=parseFloat(gpa)>=target;
+    document.getElementById('d-gpa').style.color=ok?'var(--ok)':'var(--danger)';
+    document.getElementById('d-gpa-sub').textContent=ok?'on track':'below target';
+  }
+
+  const totalCr=courses.reduce((s,c)=>s+c.credits,0);
+  document.getElementById('d-credits').textContent=totalCr||'—';
+  document.getElementById('d-comps').textContent=comps.length;
+  document.getElementById('d-contacts').textContent=contacts.length;
+  document.getElementById('d-placed').textContent=comps.filter(c=>c.result&&!['DNP','—'].includes(c.result)).length;
+
+  // Course snapshot
+  const snap=document.getElementById('d-courses-snap');
+  if(!courses.length){snap.innerHTML='<div class="empty">No courses added yet — go to Courses tab.</div>';return;}
+  snap.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:.5rem">${courses.map(c=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px">
+      <div style="font-size:12px;font-weight:500">${c.name}</div>
+      <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">${c.credits} cr · ${c.grade||'no grade'}</div>
+    </div>`).join('')}</div>`;
+}
+
+// Courses
+function addCourse(){
+  const name=document.getElementById('c-name').value.trim();
+  if(!name)return;
+  const credits=parseInt(document.getElementById('c-cr').value)||3;
+  const prof=document.getElementById('c-prof').value.trim();
+  const grade=document.getElementById('c-grade').value;
+  courses.push({id:Date.now(),name,credits,prof,grade});
+  SS('gt_courses',courses);
+  document.getElementById('c-name').value='';
+  document.getElementById('c-prof').value='';
+  document.getElementById('c-grade').value='';
+  renderCourses();
+}
+
+function delCourse(id){courses=courses.filter(c=>c.id!==id);SS('gt_courses',courses);renderCourses();}
+
+function updateGrade(id,grade){
+  const c=courses.find(c=>c.id===id);
+  if(c){c.grade=grade;SS('gt_courses',courses);renderCourses();}
+}
+
+function renderCourses(){
+  const gpa=calcGPA();
+  const totalCr=courses.reduce((s,c)=>s+c.credits,0);
+  document.getElementById('c-gpa').textContent=gpa||'—';
+  document.getElementById('c-total-cr').textContent=totalCr;
+  if(gpa){
+    const target=parseFloat(document.getElementById('c-target').value)||3.8;
+    document.getElementById('c-gpa').style.color=parseFloat(gpa)>=target?'var(--ok)':'var(--danger)';
+  } else {
+    document.getElementById('c-gpa').style.color='var(--accent)';
+  }
+  const tbody=document.getElementById('c-body');
+  if(!courses.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No courses added yet.</td></tr>';renderDash();return;}
+  tbody.innerHTML=courses.map(c=>{
+    const pts=GRADE_PTS[c.grade];
+    const ptStr=pts!==undefined?(pts*c.credits).toFixed(1):'—';
+    const clr=pts!==undefined?(pts>=3.7?'var(--ok)':pts>=3.0?'var(--accent)':'var(--danger)'):'var(--muted)';
+    return `<tr>
+      <td>${c.name}</td><td>${c.prof||'—'}</td>
+      <td style="text-align:center;font-family:'DM Mono',monospace">${c.credits}</td>
+      <td><select style="width:70px;padding:4px 6px;font-size:11px" onchange="updateGrade(${c.id},this.value)">
+        <option value="">—</option>
+        ${Object.keys(GRADE_PTS).map(g=>`<option ${c.grade===g?'selected':''}>${g}</option>`).join('')}
+      </select></td>
+      <td style="font-family:'DM Mono',monospace;color:${clr};font-weight:600">${ptStr}</td>
+      <td><button class="del" onclick="delCourse(${c.id})">×</button></td>
+    </tr>`;
+  }).join('');
+  renderDash();
+}
+
+// Hustle
+function addComp(){
+  const name=document.getElementById('comp-name').value.trim();
+  if(!name)return;
+  comps.push({id:Date.now(),name,date:document.getElementById('comp-date').value,team:document.getElementById('comp-team').value.trim(),result:document.getElementById('comp-result').value.trim(),notes:document.getElementById('comp-notes').value.trim()});
+  SS('gt_comps',comps);
+  ['comp-name','comp-team','comp-result','comp-notes'].forEach(id=>{document.getElementById(id).value='';});
+  renderHustle();
+}
+function delComp(id){comps=comps.filter(c=>c.id!==id);SS('gt_comps',comps);renderHustle();}
+
+function addContact(){
+  const name=document.getElementById('ct-name').value.trim();
+  if(!name)return;
+  contacts.push({id:Date.now(),name,where:document.getElementById('ct-where').value.trim(),date:document.getElementById('ct-date').value,next:document.getElementById('ct-next').value.trim(),done:false});
+  SS('gt_contacts',contacts);
+  ['ct-name','ct-where','ct-next'].forEach(id=>{document.getElementById(id).value='';});
+  renderHustle();
+}
+function delContact(id){contacts=contacts.filter(c=>c.id!==id);SS('gt_contacts',contacts);renderHustle();}
+function toggleContact(id){const c=contacts.find(c=>c.id===id);if(c){c.done=!c.done;SS('gt_contacts',contacts);renderHustle();}}
+
+function renderHustle(){
+  const tbody=document.getElementById('comp-body');
+  const empty=document.getElementById('comp-empty');
+  if(!comps.length){tbody.innerHTML='';empty.style.display='block';}
+  else{
+    empty.style.display='none';
+    tbody.innerHTML=[...comps].sort((a,b)=>b.id-a.id).map(c=>`<tr>
+      <td>${c.name}</td><td>${c.date||'—'}</td><td>${c.team||'—'}</td>
+      <td><span class="${c.result?'badge badge-gold':''}">${c.result||'—'}</span></td>
+      <td>${c.notes||'—'}</td>
+      <td><button class="del" onclick="delComp(${c.id})">×</button></td>
+    </tr>`).join('');
+  }
+  document.getElementById('ct-list').innerHTML=contacts.length?[...contacts].sort((a,b)=>b.id-a.id).map(c=>`
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--faint)">
+      <div class="hcheck ${c.done?'on':''}" onclick="toggleContact(${c.id})" style="margin-top:2px"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500;${c.done?'text-decoration:line-through;opacity:.5':''}">${c.name}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${[c.where,c.date].filter(Boolean).join(' · ')}</div>
+        ${c.next?`<div style="font-size:11px;color:var(--accent);font-family:'DM Mono',monospace;margin-top:3px">→ ${c.next}</div>`:''}
+      </div>
+      <button class="del" onclick="delContact(${c.id})">×</button>
+    </div>`).join(''):'<div class="empty">No contacts logged yet.</div>';
+  renderDash();
+}
+
+// Finance
+function addExpense(){
+  const date=document.getElementById('ex-date').value;
+  const amt=parseFloat(document.getElementById('ex-amt').value);
+  if(!date||!amt)return;
+  expenses.push({id:Date.now(),date,cat:document.getElementById('ex-cat').value,amt,note:document.getElementById('ex-note').value.trim()});
+  SS('gt_expenses',expenses);
+  document.getElementById('ex-amt').value='';
+  document.getElementById('ex-note').value='';
+  renderFinance();
+}
+function delExpense(id){expenses=expenses.filter(e=>e.id!==id);SS('gt_expenses',expenses);renderFinance();}
+
+function saveBudget(){
+  CATS.forEach(c=>{const el=document.getElementById('b-'+c);if(el)budget[c]=parseFloat(el.value)||0;});
+  SS('gt_budget',budget);renderFinance();
+}
+
+function renderFinance(){
+  const spent={};
+  CATS.forEach(c=>spent[c]=0);
+  expenses.forEach(e=>{if(spent[e.cat]!==undefined)spent[e.cat]+=e.amt;});
+  const totalSpent=Object.values(spent).reduce((s,v)=>s+v,0);
+  document.getElementById('f-total-spent').textContent='$'+totalSpent.toFixed(2);
+
+  document.getElementById('f-budget-inputs').innerHTML=CATS.map(c=>`
+    <div class="form-row" style="margin-bottom:6px">
+      <div class="field"><label>${CAT_LABELS[c]}</label>
+        <input type="number" id="b-${c}" placeholder="0" value="${budget[c]||0}" min="0">
+      </div>
+    </div>`).join('');
+
+  document.getElementById('f-progress').innerHTML=CATS.map(c=>{
+    const b=budget[c]||0;const s=spent[c]||0;
+    const pct=b?Math.min(100,(s/b)*100):0;
+    const over=b&&s>b;
+    return `<div style="margin-bottom:.9rem">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:var(--muted)">${CAT_LABELS[c]}</span>
+        <span style="font-family:'DM Mono',monospace;color:${over?'var(--danger)':'var(--muted)'}">$${s.toFixed(0)} / $${b}</span>
+      </div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%;background:${over?'var(--danger)':'var(--accent)'}"></div></div>
+    </div>`;
+  }).join('');
+
+  const exBody=document.getElementById('ex-body');
+  const sorted=[...expenses].sort((a,b)=>b.id-a.id);
+  exBody.innerHTML=sorted.length?sorted.map(e=>`<tr>
+    <td>${e.date}</td><td>${CAT_LABELS[e.cat]||e.cat}</td>
+    <td>$${e.amt.toFixed(2)}</td><td>${e.note||'—'}</td>
+    <td><button class="del" onclick="delExpense(${e.id})">×</button></td>
+  </tr>`).join(''):'<tr><td colspan="5" class="empty">No expenses logged.</td></tr>';
+  document.getElementById('ex-empty').style.display='none';
+}
+
+// Notes
+function addNote(){
+  const title=document.getElementById('n-title').value.trim();
+  const body=document.getElementById('n-body').value.trim();
+  if(!title&&!body)return;
+  gtNotes.unshift({id:Date.now(),date:todayStr(),title:title||'Untitled',body});
+  SS('gt_notes',gtNotes);
+  document.getElementById('n-title').value='';
+  document.getElementById('n-body').value='';
+  renderNotes();
+}
+function delNote(id){gtNotes=gtNotes.filter(n=>n.id!==id);SS('gt_notes',gtNotes);renderNotes();}
+function renderNotes(){
+  document.getElementById('n-list').innerHTML=gtNotes.length?gtNotes.map(n=>`
+    <div class="card" style="margin-bottom:.75rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
+        <div style="font-size:13px;font-weight:500">${n.title}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${n.date}</div>
+          <button class="del" onclick="delNote(${n.id})">×</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;font-family:'DM Mono',monospace;line-height:1.6">${n.body}</div>
+    </div>`).join(''):'<div class="empty">No notes yet.</div>';
+}
+
+// Init
+(function(){
+  const t=todayStr();
+  ['ex-date','comp-date','ct-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
+  const now=new Date();
+  document.getElementById('hdr-date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  renderDash();renderCourses();renderHustle();renderFinance();renderNotes();
+})();
+</script>
+</body>
+</html>
