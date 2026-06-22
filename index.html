@@ -136,6 +136,8 @@ select option{background:var(--surface)}
 </head>
 <body>
   <div class="os-sb" aria-label="OS sidebar">
+    <button class="sb-toggle" type="button" aria-label="Toggle sidebar">≡</button>
+    <div class="sb-div"></div>
     <a class="sb-item sb-cur-s" href="index.html"><span class="sb-dot dot-s"></span><span class="sb-label">Summer OS</span></a>
     <a class="sb-item sb-cur-g" href="gt.html"><span class="sb-dot dot-g"></span><span class="sb-label">GT OS</span></a>
     <a class="sb-item sb-cur-m" href="mission.html"><span class="sb-dot dot-m"></span><span class="sb-label">Mission OS</span></a>
@@ -143,6 +145,7 @@ select option{background:var(--surface)}
 <header>
   <div class="logo" id="app-logo">Summer OS <span id="app-name-sub">/ Eli</span></div>
   <div style="display:flex;align-items:center;gap:10px">
+    <a class="header-meta" href="hub.html">← hub</a>
     <div class="header-meta" id="hdr-date"></div>
     <div class="header-meta" id="sync-status">synced</div>
     <div class="header-meta" id="auth-user" style="display:none"></div>
@@ -1606,6 +1609,10 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
 <style>
 .os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease;overflow:hidden}
 .os-sb.open{width:168px;align-items:flex-start;padding:14px 10px}
+.sb-toggle{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .15s;margin-bottom:6px;flex-shrink:0;background:none;border:none}
+.sb-toggle:hover{background:var(--faint);color:var(--text)}
+.sb-div{width:24px;height:1px;background:var(--border);margin:4px auto;flex-shrink:0;transition:width .2s}
+.os-sb.open .sb-div{width:100%}
 .sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .15s;width:36px;overflow:hidden;white-space:nowrap}
 .os-sb.open .sb-item{width:148px;padding:9px 10px}
 .sb-item:hover{background:var(--faint);color:var(--text)}
