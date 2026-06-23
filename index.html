@@ -55,10 +55,11 @@ select option{background:var(--surface)}
 .btn-primary{background:var(--activity-bg);border-color:var(--activity);color:var(--activity)}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-danger{border-color:var(--danger);color:var(--danger)}
-#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(14,14,15,.95);z-index:999;backdrop-filter:blur(4px);padding:1rem}
+#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(14,14,15,.95);z-index:1100;backdrop-filter:blur(4px);padding:1rem}
 #login-screen.hidden{display:none}
 #login-screen .card{max-width:360px;width:100%}
 #login-screen input{background:var(--surface);border:1px solid var(--border-light);color:var(--text);}
+.sync-warn{color:var(--danger);cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
 .log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
 .log-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--border);font-weight:500}
 .log-table td{padding:7px 7px;border-bottom:1px solid var(--faint);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle}
@@ -238,7 +239,7 @@ select option{background:var(--surface)}
   <div style="display:flex;align-items:center;gap:10px">
     <a class="header-meta" href="hub.html">← hub</a>
     <div class="header-meta" id="hdr-date"></div>
-    <div class="header-meta" id="sync-status">synced</div>
+    <div class="header-meta" id="sync-status">checking…</div>
   </div>
 </header>
 <div class="tab-bar">
@@ -584,7 +585,7 @@ const SS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 // initAuth all come from public/auth.js, shared with gt.html and mission.html)
 const LOGIN_EMAIL='elicrist@icloud.com'; // Update this to the Supabase user's email.
 const SB_HDR={"Content-Type":"application/json","apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`};
-let syncStatus='synced';
+let syncStatus='checking';
 const setLoginVisible=visible=>{
   const login=document.getElementById('login-screen');
   const header=document.querySelector('header');
@@ -594,6 +595,11 @@ const setLoginVisible=visible=>{
   if(header) header.style.display=visible?'none':'flex';
   if(tabBar) tabBar.style.display=visible?'none':'flex';
   if(content) content.style.display=visible?'none':'block';
+  if(visible){
+    // Defensive: an open overlay (z-index 1000) must never be left covering
+    // the login screen — this is the only way back to a working session.
+    document.querySelectorAll('.overlay.active').forEach(o=>{o.classList.remove('active');o.setAttribute('aria-hidden','true');});
+  }
 };
 const renderAuthStatus=()=>{
   const statusEl=document.getElementById('set-auth-status');
@@ -610,7 +616,7 @@ const renderAuthStatus=()=>{
 const signOut=()=>{
   setAuthSession(null);
   renderAuthStatus();
-  setSyncStatus('signed out');
+  setSyncNotSignedIn();
   setLoginVisible(true);
   closeSettingsOverlay();
 };
@@ -641,7 +647,25 @@ const handleLogin=async()=>{
   }
 };
 
-const setSyncStatus=(status)=>{syncStatus=status;const el=document.getElementById('sync-status');if(el)el.textContent=status;};
+const setSyncStatus=(status)=>{
+  syncStatus=status;
+  const el=document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent=status;
+  el.classList.remove('sync-warn');
+  el.onclick=null;
+};
+// Distinct from setSyncStatus('failed'): this means sbLoadAll() never ran this
+// load at all, so every number on screen is whatever was last cached locally —
+// could be hours or days old. Must be impossible to mistake for "synced".
+const setSyncNotSignedIn=()=>{
+  syncStatus='not signed in';
+  const el=document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent='Not signed in — showing data from last sync';
+  el.classList.add('sync-warn');
+  el.onclick=()=>setLoginVisible(true);
+};
 const reportSyncError=(context,e)=>{
   console.error('Supabase sync failed',context,e);
   setSyncStatus('failed');
@@ -1798,10 +1822,13 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
       setLoginVisible(false);
       await sbLoadAll();
     }else{
+      setSyncNotSignedIn();
       setLoginVisible(true);
     }
   }catch(e){
     console.error('Startup sync failed',e);
+    setSyncNotSignedIn();
+    setLoginVisible(true);
   }
 
   applyCfg();
