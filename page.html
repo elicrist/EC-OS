@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC OS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EC OS">
+<meta name="theme-color" content="#0e0e0f">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --accent:#B3A369;
+  --ok:#5cb87a;--ok-bg:#0e261a;--danger:#e05b5b;--blue:#5b8dee;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-left:52px}
+header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.4px}
+.logo span{color:var(--muted);font-weight:300}
+.hdr-right{display:flex;align-items:center;gap:14px}
+.hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.hub-link{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-decoration:none;transition:color .15s}
+.hub-link:hover{color:var(--text)}
+.page-caption{padding:0 2rem;margin-top:-2px;margin-bottom:.4rem;font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:1.5rem 2rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.widget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;align-items:start}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
+.stat-label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.stat-value{font-size:26px;font-weight:600;letter-spacing:-.5px;margin-top:4px}
+.stat-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+.accent{color:var(--accent)}.ok{color:var(--ok)}.blue{color:var(--blue)}.danger{color:var(--danger)}
+.progress-wrap{background:var(--border);border-radius:100px;height:8px;margin:10px 0}
+.progress-bar{height:100%;border-radius:100px;background:var(--accent);transition:width .4s ease}
+.form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:90px}
+.field label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+input,select,textarea{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+select option{background:var(--surface)}
+textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
+.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
+.log-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:5px 7px;border-bottom:1px solid var(--border);font-weight:500}
+.log-table td{padding:7px 7px;border-bottom:1px solid var(--faint);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle}
+.log-table tr:last-child td{border-bottom:none}
+.log-table tr:hover td{background:var(--surface)}
+.del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 3px}
+.del:hover{color:var(--danger)}
+.empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:12px}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--faint)}
+.check-row:last-child{border-bottom:none}
+.hcheck{width:22px;height:22px;border-radius:6px;border:1px solid var(--border-light);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;margin-top:1px}
+.hcheck.on{background:var(--ok-bg);border-color:var(--ok)}
+.hcheck.on::after{content:'✓';font-size:12px;color:var(--ok)}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:4px}
+.wcell{width:100%;aspect-ratio:1;border-radius:4px;border:1px solid var(--border);cursor:pointer;transition:all .15s}
+.wcell.on{background:var(--ok);border-color:var(--ok)}
+.wlabel{font-size:10px;color:var(--muted);text-align:center;font-family:'DM Mono',monospace;margin-bottom:3px}
+.streak-badge{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1px solid var(--accent);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent)}
+@media(max-width:720px){.grid-2,.grid-4{grid-template-columns:1fr}.widget-grid{grid-template-columns:1fr}.content{padding:1rem}header{padding:.9rem 1rem}.page-caption{padding:0 1rem}}
+/* === OS SIDEBAR === */
+.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease;overflow:hidden}
+.os-sb.open{width:168px;align-items:flex-start;padding:14px 10px}
+.sb-toggle{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .15s;margin-bottom:6px;flex-shrink:0;background:none;border:none}
+.sb-toggle:hover{background:var(--faint);color:var(--text)}
+.sb-div{width:24px;height:1px;background:var(--border);margin:4px auto;flex-shrink:0;transition:width .2s}
+.os-sb.open .sb-div{width:100%}
+.sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .15s;width:36px;overflow:hidden;white-space:nowrap;flex-shrink:0}
+.os-sb.open .sb-item{width:148px;padding:9px 10px}
+.sb-item:hover{background:var(--faint);color:var(--text)}
+.sb-item.active{color:var(--text);background:var(--faint)}
+.sb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.sb-label{font-size:12px;font-weight:500;opacity:0;transition:opacity .15s;font-family:'DM Sans',sans-serif}
+.os-sb.open .sb-label{opacity:1}
+.sb-footer{margin-top:auto;display:flex;flex-direction:column;gap:6px;width:100%}
+.sb-action{border:none;background:none;width:34px;height:34px;color:var(--text)}
+.sb-action .sb-dot{width:20px;height:20px;font-size:20px;display:flex;align-items:center;justify-content:center}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
+.overlay.active{display:flex}
+.overlay-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.5rem;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.35)}
+.overlay-card.wide{max-width:580px}
+.archive-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.archive-row:last-child{border-bottom:none}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--faint)}
+.set-row:last-child{border-bottom:none}
+.set-label{font-size:13px}
+.set-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px}
+.pb-swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.pb-swatch.sel{border-color:var(--text)}
+</style>
+</head>
+<body>
+<div class="os-sb" id="os-sb">
+  <button class="sb-toggle" onclick="document.getElementById('os-sb').classList.toggle('open')">≡</button>
+  <div class="sb-div"></div>
+  <div id="sb-pages"></div>
+  <div class="sb-footer">
+    <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot">+</span><span class="sb-label">New page</span></button>
+    <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.2" y1="4.2" x2="19.8" y2="19.8"/><line x1="19.8" y1="4.2" x2="4.2" y2="19.8"/><path d="M12 6 C 14.5 6.5, 17.5 9.5, 18 12"/><path d="M18 12 C 17.5 14.5, 14.5 17.5, 12 18"/><path d="M12 18 C 9.5 17.5, 6.5 14.5, 6 12"/><path d="M6 12 C 6.5 9.5, 9.5 6.5, 12 6"/><path d="M12 9.5 C 13.5 9.8, 14.2 10.5, 14.5 12"/><path d="M14.5 12 C 14.2 13.5, 13.5 14.2, 12 14.5"/><path d="M12 14.5 C 10.5 14.2, 9.8 13.5, 9.5 12"/><path d="M9.5 12 C 9.8 10.5, 10.5 9.8, 12 9.5"/></svg></span><span class="sb-label">Archive</span></button>
+    <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
+  </div>
+</div>
+<div id="settings-overlay" class="overlay" aria-hidden="true">
+  <div class="overlay-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin:0">Settings</div>
+      <button class="btn btn-sm" onclick="closeSettingsOverlay()">Close</button>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="section-title">pages</div>
+      <div style="display:flex;gap:1.5rem">
+        <div><div class="stat-value" id="set-pages-total" style="font-size:20px;margin-top:0">—</div><div class="stat-label">total</div></div>
+        <div><div class="stat-value" id="set-pages-active" style="font-size:20px;margin-top:0">—</div><div class="stat-label">active</div></div>
+        <div><div class="stat-value" id="set-pages-archived" style="font-size:20px;margin-top:0">—</div><div class="stat-label">archived</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="section-title">account</div>
+      <div class="set-row">
+        <div class="set-label" id="set-auth-status">Not signed in</div>
+        <button class="btn btn-sm" id="set-signout-btn" onclick="signOut()" style="display:none">Sign out</button>
+      </div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <div class="section-title">install as app</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <strong style="color:var(--text)">Safari on Mac:</strong> File → Add to Dock<br>
+        <strong style="color:var(--text)">Safari on iPhone:</strong> Share → Add to Home Screen<br>
+        <strong style="color:var(--text)">Chrome:</strong> Install icon in address bar
+      </div>
+    </div>
+    <div>
+      <div class="section-title">deploying changes</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">Changes are made locally via Claude Code, then deployed with git add, git commit, git push — live in about a minute.</div>
+    </div>
+  </div>
+</div>
+<div id="archive-overlay" class="overlay" aria-hidden="true">
+  <div class="overlay-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin:0">Archived pages</div>
+      <button class="btn btn-sm" onclick="closeArchiveOverlay()">Close</button>
+    </div>
+    <div id="archive-list"></div>
+    <div class="empty" id="archive-empty">No archived pages.</div>
+  </div>
+</div>
+<div id="page-builder-overlay" class="overlay" aria-hidden="true">
+  <div class="overlay-card wide">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin:0" id="pb-title">Page builder · step 1 of 2</div>
+      <button class="btn btn-sm" onclick="closePageBuilder()">Close</button>
+    </div>
+    <div id="pb-step1">
+      <div class="form-row">
+        <div class="field"><label>page name</label><input type="text" id="pb-name" placeholder="Fall Trip"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>timeframe (optional)</label><input type="text" id="pb-timeframe" placeholder="Sept 2026"></div>
+        <div class="field"><label>location (optional)</label><input type="text" id="pb-location" placeholder="Asheville, NC"></div>
+      </div>
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;display:block;margin-bottom:8px">dot color</label>
+        <div id="pb-colors" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="pbGoStep2()">Next: choose widgets</button>
+    </div>
+    <div id="pb-step2" style="display:none">
+      <div id="pb-widget-types" style="margin-bottom:1rem"></div>
+      <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:1.25rem">
+        <div class="section-title">widgets to add</div>
+        <div id="pb-selected"></div>
+        <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" style="flex:1" onclick="pbBackStep1()">Back</button>
+        <button class="btn btn-primary" style="flex:1" id="pb-build-btn" onclick="buildPage()">Build page</button>
+      </div>
+    </div>
+  </div>
+</div>
+<header>
+  <div class="logo"><span id="hdr-page-name">Loading…</span> <span id="hdr-sub">/ Eli Crist</span></div>
+  <div class="hdr-right">
+    <div class="hdr-meta" id="hdr-date"></div>
+    <a class="hub-link" href="#" id="hdr-archive-link" onclick="archiveThisPage();return false" style="display:none">Archive this page</a>
+    <a class="hub-link" href="hub.html">← hub</a>
+  </div>
+</header>
+<div class="empty" id="auth-notice" style="display:none;text-align:left;padding:8px 1.5rem;border-bottom:1px solid var(--border)">Log in via Summer OS first to sync your name and pages.</div>
+<div class="page-caption" id="page-caption" style="display:none"></div>
+<div class="content">
+<div class="empty" id="page-error" style="display:none">
+  This page is archived or doesn't exist.<br><br>
+  <a class="hub-link" href="index.html">← Back to Summer OS</a>
+</div>
+<div class="widget-grid" id="page-widgets" style="display:none"></div>
+</div><!-- /content -->
+<script src="public/auth.js"></script>
+<script>
+const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
+const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
+// SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
+// shared with index.html, gt.html and mission.html.
+const sbFetchJson=async(url)=>{
+  const resp=await fetch(url,{headers:buildHeaders()});
+  if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
+  return resp.json();
+};
+const getCurrentPagePath=()=>window.location.pathname.split('/').pop();
+const pageMatchesCurrent=row=>{
+  if(row.page_kind==='static'){return String(row.url||'').split('/').pop()===getCurrentPagePath();}
+  return String(row.id)===String(new URLSearchParams(window.location.search).get('id'));
+};
+const renderPagesSidebar=async()=>{
+  const container=document.getElementById('sb-pages');
+  if(!container) return;
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
+    if(!rows.length){container.innerHTML='<div class="empty" style="padding:0 12px">No pages available.</div>';return;}
+    container.innerHTML=rows.map(r=>{
+      const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
+      const active=pageMatchesCurrent(r)?' active':'';
+      const dotStyle=r.dot_color?`style="background:${r.dot_color}"`:'';
+      return `<a class="sb-item${active}" href="${href}"><span class="sb-dot" ${dotStyle}></span><span class="sb-label">${r.name}</span></a>`;
+    }).join('');
+  }catch(e){
+    console.error('renderPagesSidebar failed',e);
+    container.innerHTML='<div class="empty" style="padding:0 12px">Unable to load sidebar pages.</div>';
+  }
+};
+const openArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');loadArchivedPages();};
+const closeArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
+const openSettingsOverlay=()=>{const overlay=document.getElementById('settings-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');loadSettingsOverlay();};
+const closeSettingsOverlay=()=>{const overlay=document.getElementById('settings-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
+const renderAuthStatus=()=>{
+  const statusEl=document.getElementById('set-auth-status');
+  const btn=document.getElementById('set-signout-btn');
+  if(!statusEl) return;
+  if(authSession){
+    statusEl.textContent='Signed in as '+(authSession.user?.email||'elicrist@icloud.com');
+    if(btn) btn.style.display='inline-flex';
+  }else{
+    statusEl.textContent='Not signed in';
+    if(btn) btn.style.display='none';
+  }
+};
+const loadSettingsOverlay=async()=>{
+  renderAuthStatus();
+  try{
+    const [totalRows,activeRows,archivedRows]=await Promise.all([
+      sbFetchJson(`${SB_URL}/rest/v1/ec_pages?select=id`),
+      sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=id`),
+      sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.true&select=id`),
+    ]);
+    document.getElementById('set-pages-total').textContent=totalRows.length;
+    document.getElementById('set-pages-active').textContent=activeRows.length;
+    document.getElementById('set-pages-archived').textContent=archivedRows.length;
+  }catch(e){
+    console.error('loadSettingsOverlay failed',e);
+  }
+};
+const signOut=()=>{
+  setAuthSession(null);
+  renderAuthStatus();
+  showAuthNotice();
+  closeSettingsOverlay();
+};
+const loadArchivedPages=async()=>{
+  const listEl=document.getElementById('archive-list');
+  const emptyEl=document.getElementById('archive-empty');
+  if(!listEl||!emptyEl) return;
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.true&select=*&order=archived_at.desc`);
+    if(!rows.length){listEl.innerHTML='';emptyEl.style.display='block';return;}
+    emptyEl.style.display='none';
+    listEl.innerHTML=rows.map(r=>`
+      <div class="archive-row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="sb-dot" style="background:${r.dot_color||'var(--muted)'}"></span>
+          <div style="font-weight:600;color:var(--text)">${r.name}</div>
+        </div>
+        <button class="btn btn-sm" onclick="unarchivePage(${r.id})">Unarchive</button>
+      </div>
+    `).join('');
+  }catch(e){
+    console.error('loadArchivedPages failed',e);
+    listEl.innerHTML='<div class="empty">Unable to load archived pages.</div>';
+    emptyEl.style.display='none';
+  }
+};
+const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
+let cfg=GS('cfg',{name:'Eli Crist'});
+const showAuthNotice=()=>{const el=document.getElementById('auth-notice');if(el)el.style.display='block';};
+const loadHeaderName=async()=>{
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_config?key=eq.name&select=value`);
+    if(rows.length){cfg.name=rows[0].value;SS('cfg',cfg);}
+  }catch(e){console.error('loadHeaderName failed',e);}
+};
+
+// ═══ PAGE BUILDER ═══
+const WIDGET_TYPE_DEFS=[
+  {type:'savings',label:'Savings',sub:'Track progress toward a savings goal',defaultConfig:()=>({goal:1000,start:0})},
+  {type:'checklist',label:'Checklist',sub:'Simple checklist of items',defaultConfig:()=>({})},
+  {type:'habits',label:'Habit tracker',sub:'Daily habit tracker — one habit per widget',defaultConfig:()=>({})},
+  {type:'notes',label:'Notes',sub:'Freeform dated notes',defaultConfig:()=>({})},
+  {type:'schedule',label:'Schedule',sub:'Manually logged events',defaultConfig:()=>({})},
+  {type:'countdown',label:'Countdown',sub:'Countdown to a target date',defaultConfig:title=>({target_date:pbDefaultTargetDate(),label:title})},
+  {type:'funded_checklist',label:'Funded checklist',sub:'Checklist with a completion target count',defaultConfig:title=>({target_count:5,label:title})},
+  {type:'workout_log',label:'Workout log',sub:'Log of workout sets/reps',defaultConfig:()=>({})},
+];
+const PB_COLORS=['#B3A369','#e07b4a','#5b8dee','#9AAFBF','#5cb87a','#9b7fe8','#e8c56a','#e05b5b'];
+let pbDotColor=PB_COLORS[0];
+let pbWidgets=[];
+const pbDefaultTargetDate=()=>{const d=new Date();d.setDate(d.getDate()+30);return d.toLocaleDateString('en-CA');};
+const pbDefaultConfig=(type,title)=>{const def=WIDGET_TYPE_DEFS.find(w=>w.type===type);return def?def.defaultConfig(title):{};};
+const renderPbColors=()=>{
+  const wrap=document.getElementById('pb-colors');
+  if(!wrap) return;
+  wrap.innerHTML=PB_COLORS.map(c=>`<button type="button" class="pb-swatch${c===pbDotColor?' sel':''}" style="background:${c}" onclick="pbSelectColor('${c}')" aria-label="${c}"></button>`).join('');
+};
+const pbSelectColor=c=>{pbDotColor=c;renderPbColors();};
+const renderPbWidgetTypes=()=>{
+  const wrap=document.getElementById('pb-widget-types');
+  if(!wrap) return;
+  wrap.innerHTML=WIDGET_TYPE_DEFS.map(w=>`
+    <div class="set-row">
+      <div><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
+      <div class="hcheck" onclick="pbToggleWidget('${w.type}','${w.label}',this)"></div>
+    </div>`).join('');
+};
+const pbToggleWidget=(type,label,el)=>{
+  const title=prompt(`Title for this ${label} widget:`,label);
+  if(title===null) return;
+  const trimmed=title.trim();
+  if(!trimmed) return;
+  pbWidgets.push({clientId:Date.now()+'_'+Math.random().toString(36).slice(2),type,label,title:trimmed});
+  if(el){el.classList.add('on');setTimeout(()=>el.classList.remove('on'),350);}
+  renderPbSelected();
+};
+const pbRemoveWidget=clientId=>{pbWidgets=pbWidgets.filter(w=>w.clientId!==clientId);renderPbSelected();};
+const renderPbSelected=()=>{
+  const list=document.getElementById('pb-selected');
+  const empty=document.getElementById('pb-selected-empty');
+  if(!list||!empty) return;
+  if(!pbWidgets.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=pbWidgets.map(w=>`
+    <div class="archive-row">
+      <div><span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:11px">${w.label}</span> — ${w.title}</div>
+      <button class="del" onclick="pbRemoveWidget('${w.clientId}')">×</button>
+    </div>`).join('');
+};
+const pbReset=()=>{
+  document.getElementById('pb-name').value='';
+  document.getElementById('pb-timeframe').value='';
+  document.getElementById('pb-location').value='';
+  pbDotColor=PB_COLORS[0];
+  pbWidgets=[];
+  renderPbColors();
+  renderPbSelected();
+  document.getElementById('pb-step1').style.display='block';
+  document.getElementById('pb-step2').style.display='none';
+  document.getElementById('pb-title').textContent='Page builder · step 1 of 2';
+};
+const pbGoStep2=()=>{
+  const name=document.getElementById('pb-name').value.trim();
+  if(!name){alert('Page name is required.');return;}
+  document.getElementById('pb-step1').style.display='none';
+  document.getElementById('pb-step2').style.display='block';
+  document.getElementById('pb-title').textContent='Page builder · step 2 of 2';
+};
+const pbBackStep1=()=>{
+  document.getElementById('pb-step2').style.display='none';
+  document.getElementById('pb-step1').style.display='block';
+  document.getElementById('pb-title').textContent='Page builder · step 1 of 2';
+};
+const openPageBuilder=()=>{const overlay=document.getElementById('page-builder-overlay');if(!overlay)return;pbReset();overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');};
+const closePageBuilder=()=>{const overlay=document.getElementById('page-builder-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
+const buildPage=async()=>{
+  const name=document.getElementById('pb-name').value.trim();
+  if(!name){alert('Page name is required.');return;}
+  const timeframe=document.getElementById('pb-timeframe').value.trim();
+  const location=document.getElementById('pb-location').value.trim();
+  const btn=document.getElementById('pb-build-btn');
+  if(btn){btn.disabled=true;btn.textContent='Building…';}
+  try{
+    const maxRows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?select=sort_order&order=sort_order.desc&limit=1`);
+    const nextSort=(maxRows[0]?.sort_order??-1)+1;
+    const pageId=Date.now();
+    const pageResp=await fetch(`${SB_URL}/rest/v1/ec_pages`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:pageId,name,dot_color:pbDotColor,timeframe:timeframe||null,location:location||null,sort_order:nextSort,archived:false})});
+    if(!pageResp.ok) throw new Error(`Page insert failed ${pageResp.status}`);
+    for(let i=0;i<pbWidgets.length;i++){
+      const w=pbWidgets[i];
+      const widgetId=pageId+i+1;
+      const config=pbDefaultConfig(w.type,w.title);
+      const widgetResp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:widgetId,page_id:pageId,widget_type:w.type,title:w.title,config,sort_order:i})});
+      if(!widgetResp.ok) throw new Error(`Widget insert failed ${widgetResp.status}`);
+      const dataResp=await fetch(`${SB_URL}/rest/v1/ec_widget_data`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({page_widget_id:widgetId,data:{}})});
+      if(!dataResp.ok) throw new Error(`Widget data insert failed ${dataResp.status}`);
+    }
+    window.location.href=`page.html?id=${pageId}`;
+  }catch(e){
+    console.error('buildPage failed',e);
+    alert('Failed to build page. Check console for details.');
+    if(btn){btn.disabled=false;btn.textContent='Build page';}
+  }
+};
+
+// ═══ WIDGET ENGINE ═══
+let pageId=null;
+let pageRow=null;
+let pageWidgets=[];
+let widgetDataMap={};
+
+function todayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
+function weekDates(){
+  const t=new Date();t.setHours(0,0,0,0);
+  const day=t.getDay();const mon=new Date(t);mon.setDate(t.getDate()-(day===0?6:day-1));
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d.toLocaleDateString('en-CA');});
+}
+function calcHabitStreak(log){
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
+    const dk=d.toLocaleDateString('en-CA');
+    if(log[dk])streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+const findWidget=id=>pageWidgets.find(w=>String(w.id)===String(id));
+const renderWidgetById=id=>{const w=findWidget(id);if(!w)return;const renderer=WIDGET_RENDERERS[w.widget_type];if(renderer)renderer(w);};
+const saveWidgetData=async id=>{
+  const entry=widgetDataMap[id];
+  const resp=await fetch(`${SB_URL}/rest/v1/ec_widget_data?page_widget_id=eq.${id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({data:entry.data})});
+  if(!resp.ok) throw new Error(`Widget data save failed ${resp.status}`);
+};
+
+// --- savings ---
+function renderSavingsWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const cfg=w.config||{};
+  const goal=Number(cfg.goal)||0;
+  const start=Number(cfg.start)||0;
+  const data=widgetDataMap[w.id].data||{};
+  const entries=data.entries||[];
+  const current=start+entries.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const pct=goal?Math.min(100,Math.max(0,(current/goal)*100)):0;
+  body.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="stat-value" style="margin-top:0">$${current.toFixed(2)}</div>
+      <div class="stat-sub">of $${goal.toFixed(2)}</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    <div class="form-row" style="margin-top:1rem">
+      <div class="field"><label>date</label><input type="date" id="sv-date-${w.id}" value="${todayStr()}"></div>
+      <div class="field"><label>amount</label><input type="number" id="sv-amt-${w.id}" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label>note</label><input type="text" id="sv-note-${w.id}" placeholder="optional"></div>
+      <button class="btn btn-primary" onclick="addSavingsEntry(${w.id})">Add</button>
+    </div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>Date</th><th>Amount</th><th>Note</th><th></th></tr></thead>
+      <tbody>${entries.length?[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(e=>`
+        <tr><td>${e.date||'—'}</td><td>$${(Number(e.amount)||0).toFixed(2)}</td><td>${e.note||'—'}</td>
+        <td><button class="del" onclick="delSavingsEntry(${w.id},'${e.id}')">×</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No entries yet.</td></tr>'}</tbody>
+    </table></div>`;
+}
+async function addSavingsEntry(id){
+  const date=document.getElementById(`sv-date-${id}`).value;
+  const amount=parseFloat(document.getElementById(`sv-amt-${id}`).value);
+  if(!date||!amount)return;
+  const note=document.getElementById(`sv-note-${id}`).value.trim();
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.push({id:String(Date.now()),date,amount,note});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addSavingsEntry save failed',e);alert('Save failed — try again.');}
+}
+async function delSavingsEntry(id,entryId){
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delSavingsEntry save failed',e);alert('Save failed — try again.');}
+}
+
+// --- checklist ---
+function renderChecklistWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const items=data.items||[];
+  body.innerHTML=`
+    <div>${items.length?items.map(it=>`
+      <div class="check-row">
+        <div class="hcheck ${it.done?'on':''}" onclick="toggleChecklistItem(${w.id},'${it.id}')"></div>
+        <div style="flex:1;font-size:13px;${it.done?'text-decoration:line-through;color:var(--muted)':''}">${it.text}</div>
+        <button class="del" onclick="delChecklistItem(${w.id},'${it.id}')">×</button>
+      </div>`).join(''):'<div class="empty">No items yet.</div>'}</div>
+    <div class="form-row" style="margin-top:1rem">
+      <div class="field"><input type="text" id="cl-new-${w.id}" placeholder="Add item..." onkeydown="if(event.key==='Enter')addChecklistItem(${w.id})"></div>
+      <button class="btn btn-primary" onclick="addChecklistItem(${w.id})">Add</button>
+    </div>`;
+}
+async function addChecklistItem(id){
+  const text=document.getElementById(`cl-new-${id}`).value.trim();
+  if(!text)return;
+  const data=widgetDataMap[id].data;
+  if(!data.items)data.items=[];
+  data.items.push({id:String(Date.now()),text,done:false});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addChecklistItem save failed',e);alert('Save failed — try again.');}
+}
+async function toggleChecklistItem(id,itemId){
+  const data=widgetDataMap[id].data;
+  const it=(data.items||[]).find(i=>String(i.id)===String(itemId));
+  if(!it)return;
+  it.done=!it.done;
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('toggleChecklistItem save failed',e);alert('Save failed — try again.');}
+}
+async function delChecklistItem(id,itemId){
+  const data=widgetDataMap[id].data;
+  data.items=(data.items||[]).filter(i=>String(i.id)!==String(itemId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delChecklistItem save failed',e);alert('Save failed — try again.');}
+}
+
+// --- habits (one habit per widget instance) ---
+function renderHabitsWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const log=data.log||{};
+  const today=todayStr();
+  const dates=weekDates();
+  const dl=['M','T','W','T','F','S','S'];
+  const streak=calcHabitStreak(log);
+  body.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
+      <div class="hcheck ${log[today]?'on':''}" onclick="toggleHabitDay(${w.id},'${today}')"></div>
+      ${streak>=2?`<div class="streak-badge">🔥 ${streak}</div>`:''}
+    </div>
+    <div class="week-grid">${dl.map((l,i)=>{
+      const dk=dates[i];const done=!!log[dk];
+      return `<div><div class="wlabel">${l}</div><div class="wcell ${done?'on':''}" onclick="toggleHabitDay(${w.id},'${dk}')"></div></div>`;
+    }).join('')}</div>`;
+}
+async function toggleHabitDay(id,dateKey){
+  const data=widgetDataMap[id].data;
+  if(!data.log)data.log={};
+  if(data.log[dateKey])delete data.log[dateKey];else data.log[dateKey]=true;
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('toggleHabitDay save failed',e);alert('Save failed — try again.');}
+}
+
+// --- notes ---
+function renderNotesWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const entries=data.entries||[];
+  body.innerHTML=`
+    <div class="form-row">
+      <div class="field"><input type="text" id="nt-title-${w.id}" placeholder="Title"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><textarea id="nt-body-${w.id}" placeholder="Write it out." rows="3"></textarea></div>
+    </div>
+    <button class="btn btn-primary" onclick="addNoteEntry(${w.id})">Save Note</button>
+    <div style="margin-top:1rem">${entries.length?entries.map(n=>`
+      <div class="card" style="margin-bottom:.6rem;background:var(--surface)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
+          <div style="font-size:13px;font-weight:500">${n.title}</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${n.date}</div>
+            <button class="del" onclick="delNoteEntry(${w.id},'${n.id}')">×</button>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;font-family:'DM Mono',monospace;line-height:1.6">${n.body}</div>
+      </div>`).join(''):'<div class="empty">No notes yet.</div>'}</div>`;
+}
+async function addNoteEntry(id){
+  const titleEl=document.getElementById(`nt-title-${id}`);
+  const bodyEl=document.getElementById(`nt-body-${id}`);
+  const title=titleEl.value.trim();const text=bodyEl.value.trim();
+  if(!title&&!text)return;
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.unshift({id:String(Date.now()),date:todayStr(),title:title||'Untitled',body:text});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addNoteEntry save failed',e);alert('Save failed — try again.');}
+}
+async function delNoteEntry(id,entryId){
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delNoteEntry save failed',e);alert('Save failed — try again.');}
+}
+
+// --- schedule ---
+function renderScheduleWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const events=[...(data.events||[])].sort((a,b)=>`${a.date} ${a.time||''}`.localeCompare(`${b.date} ${b.time||''}`));
+  body.innerHTML=`
+    <div class="form-row">
+      <div class="field"><label>date</label><input type="date" id="sc-date-${w.id}"></div>
+      <div class="field"><label>time</label><input type="time" id="sc-time-${w.id}"></div>
+      <div class="field"><label>title</label><input type="text" id="sc-title-${w.id}" placeholder="Event title"></div>
+      <button class="btn btn-primary" onclick="addScheduleEvent(${w.id})">Add</button>
+    </div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>Date</th><th>Time</th><th>Title</th><th></th></tr></thead>
+      <tbody>${events.length?events.map(e=>`
+        <tr><td>${e.date}</td><td>${e.time||'—'}</td><td>${e.title}</td>
+        <td><button class="del" onclick="delScheduleEvent(${w.id},'${e.id}')">×</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No events yet.</td></tr>'}</tbody>
+    </table></div>`;
+}
+async function addScheduleEvent(id){
+  const date=document.getElementById(`sc-date-${id}`).value;
+  const title=document.getElementById(`sc-title-${id}`).value.trim();
+  if(!date||!title)return;
+  const time=document.getElementById(`sc-time-${id}`).value;
+  const data=widgetDataMap[id].data;
+  if(!data.events)data.events=[];
+  data.events.push({id:String(Date.now()),date,time,title});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addScheduleEvent save failed',e);alert('Save failed — try again.');}
+}
+async function delScheduleEvent(id,eventId){
+  const data=widgetDataMap[id].data;
+  data.events=(data.events||[]).filter(e=>String(e.id)!==String(eventId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delScheduleEvent save failed',e);alert('Save failed — try again.');}
+}
+
+// --- countdown (computed live, no data) ---
+function renderCountdownWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const cfg=w.config||{};
+  const target=cfg.target_date?new Date(cfg.target_date+'T00:00:00'):null;
+  const now=new Date();now.setHours(0,0,0,0);
+  let display='—',sub='no target date set';
+  if(target){
+    const days=Math.ceil((target-now)/86400000);
+    display=days>0?days:(days===0?'Today':'Past');
+    sub=cfg.label||cfg.target_date;
+  }
+  body.innerHTML=`
+    <div class="stat-value" style="margin-top:0">${display}</div>
+    <div class="stat-sub">${sub}</div>`;
+}
+
+// --- funded_checklist ---
+function renderFundedChecklistWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const cfg=w.config||{};
+  const target=Number(cfg.target_count)||0;
+  const data=widgetDataMap[w.id].data||{};
+  const items=data.items||[];
+  const doneCount=items.filter(i=>i.done).length;
+  const pct=target?Math.min(100,(doneCount/target)*100):0;
+  body.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="stat-value" style="margin-top:0">${doneCount} / ${target}</div>
+      <div class="stat-sub">${cfg.label||''}</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+    <div style="margin-top:1rem">${items.length?items.map(it=>`
+      <div class="check-row">
+        <div class="hcheck ${it.done?'on':''}" onclick="toggleFundedItem(${w.id},'${it.id}')"></div>
+        <div style="flex:1;font-size:13px;${it.done?'text-decoration:line-through;color:var(--muted)':''}">${it.text}</div>
+        <button class="del" onclick="delFundedItem(${w.id},'${it.id}')">×</button>
+      </div>`).join(''):'<div class="empty">No items yet.</div>'}</div>
+    <div class="form-row" style="margin-top:1rem">
+      <div class="field"><input type="text" id="fc-new-${w.id}" placeholder="Add item..." onkeydown="if(event.key==='Enter')addFundedItem(${w.id})"></div>
+      <button class="btn btn-primary" onclick="addFundedItem(${w.id})">Add</button>
+    </div>`;
+}
+async function addFundedItem(id){
+  const text=document.getElementById(`fc-new-${id}`).value.trim();
+  if(!text)return;
+  const data=widgetDataMap[id].data;
+  if(!data.items)data.items=[];
+  data.items.push({id:String(Date.now()),text,done:false});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addFundedItem save failed',e);alert('Save failed — try again.');}
+}
+async function toggleFundedItem(id,itemId){
+  const data=widgetDataMap[id].data;
+  const it=(data.items||[]).find(i=>String(i.id)===String(itemId));
+  if(!it)return;
+  it.done=!it.done;
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('toggleFundedItem save failed',e);alert('Save failed — try again.');}
+}
+async function delFundedItem(id,itemId){
+  const data=widgetDataMap[id].data;
+  data.items=(data.items||[]).filter(i=>String(i.id)!==String(itemId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delFundedItem save failed',e);alert('Save failed — try again.');}
+}
+
+// --- workout_log ---
+function renderWorkoutLogWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const entries=[...(data.entries||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  body.innerHTML=`
+    <div class="form-row">
+      <div class="field"><label>date</label><input type="date" id="wl-date-${w.id}" value="${todayStr()}"></div>
+      <div class="field"><label>exercise</label><input type="text" id="wl-ex-${w.id}" placeholder="Bench press"></div>
+    </div>
+    <div class="form-row">
+      <div class="field" style="max-width:90px"><label>weight</label><input type="number" id="wl-wt-${w.id}" placeholder="135"></div>
+      <div class="field" style="max-width:80px"><label>reps</label><input type="number" id="wl-reps-${w.id}" placeholder="8"></div>
+      <div class="field" style="max-width:80px"><label>sets</label><input type="number" id="wl-sets-${w.id}" placeholder="3"></div>
+      <div class="field"><label>notes</label><input type="text" id="wl-notes-${w.id}" placeholder="optional"></div>
+      <button class="btn btn-primary" onclick="addWorkoutEntry(${w.id})">Log</button>
+    </div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>Date</th><th>Exercise</th><th>Wt</th><th>Reps</th><th>Sets</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${entries.length?entries.map(e=>`
+        <tr><td>${e.date}</td><td>${e.exercise}</td><td>${e.weight||'—'}</td><td>${e.reps||'—'}</td><td>${e.sets||'—'}</td><td>${e.notes||'—'}</td>
+        <td><button class="del" onclick="delWorkoutEntry(${w.id},'${e.id}')">×</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">No entries yet.</td></tr>'}</tbody>
+    </table></div>`;
+}
+async function addWorkoutEntry(id){
+  const date=document.getElementById(`wl-date-${id}`).value;
+  const exercise=document.getElementById(`wl-ex-${id}`).value.trim();
+  if(!date||!exercise)return;
+  const weight=document.getElementById(`wl-wt-${id}`).value;
+  const reps=document.getElementById(`wl-reps-${id}`).value;
+  const sets=document.getElementById(`wl-sets-${id}`).value;
+  const notes=document.getElementById(`wl-notes-${id}`).value.trim();
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.push({id:String(Date.now()),date,exercise,weight,reps,sets,notes});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addWorkoutEntry save failed',e);alert('Save failed — try again.');}
+}
+async function delWorkoutEntry(id,entryId){
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delWorkoutEntry save failed',e);alert('Save failed — try again.');}
+}
+
+const WIDGET_RENDERERS={
+  savings:renderSavingsWidget,
+  checklist:renderChecklistWidget,
+  habits:renderHabitsWidget,
+  notes:renderNotesWidget,
+  schedule:renderScheduleWidget,
+  countdown:renderCountdownWidget,
+  funded_checklist:renderFundedChecklistWidget,
+  workout_log:renderWorkoutLogWidget,
+};
+
+const renderWidgets=()=>{
+  const wrap=document.getElementById('page-widgets');
+  wrap.innerHTML=pageWidgets.map(w=>`
+    <div class="card" id="widget-card-${w.id}">
+      <div class="section-title">${w.title||w.widget_type}</div>
+      <div id="widget-body-${w.id}"></div>
+    </div>`).join('');
+  pageWidgets.forEach(w=>{
+    const renderer=WIDGET_RENDERERS[w.widget_type];
+    if(renderer) renderer(w);
+    else document.getElementById(`widget-body-${w.id}`).innerHTML='<div class="empty">Unknown widget type.</div>';
+  });
+};
+
+const ensureWidgetData=async w=>{
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_widget_data?page_widget_id=eq.${w.id}&select=*`);
+    if(rows.length){widgetDataMap[w.id]=rows[0];}
+    else{
+      const resp=await fetch(`${SB_URL}/rest/v1/ec_widget_data`,{method:'POST',headers:buildHeaders({extra:{'Prefer':'return=representation'}}),body:JSON.stringify({page_widget_id:w.id,data:{}})});
+      if(!resp.ok) throw new Error(`Widget data create failed ${resp.status}`);
+      const [row]=await resp.json();
+      widgetDataMap[w.id]=row;
+    }
+  }catch(e){
+    console.error('ensureWidgetData failed',w.id,e);
+    widgetDataMap[w.id]={page_widget_id:w.id,data:{}};
+  }
+};
+
+const loadWidgets=async()=>{
+  try{
+    pageWidgets=await sbFetchJson(`${SB_URL}/rest/v1/ec_page_widgets?page_id=eq.${pageId}&select=*&order=sort_order.asc`);
+  }catch(e){
+    console.error('loadWidgets failed',e);
+    document.getElementById('page-widgets').innerHTML='<div class="empty">Unable to load widgets.</div>';
+    return;
+  }
+  await Promise.all(pageWidgets.map(ensureWidgetData));
+  renderWidgets();
+};
+
+const showPageError=()=>{
+  document.getElementById('hdr-page-name').textContent='Page not found';
+  document.getElementById('hdr-archive-link').style.display='none';
+  document.getElementById('page-caption').style.display='none';
+  document.getElementById('page-error').style.display='block';
+  document.getElementById('page-widgets').style.display='none';
+};
+
+const showPageContent=()=>{
+  document.getElementById('hdr-page-name').textContent=pageRow.name;
+  document.getElementById('hdr-archive-link').style.display='inline';
+  if(pageRow.dot_color) document.documentElement.style.setProperty('--accent',pageRow.dot_color);
+  const captionParts=[pageRow.timeframe,pageRow.location].filter(Boolean);
+  const captionEl=document.getElementById('page-caption');
+  if(captionParts.length){captionEl.textContent=captionParts.join(' · ');captionEl.style.display='block';}
+  else captionEl.style.display='none';
+  document.getElementById('page-error').style.display='none';
+  document.getElementById('page-widgets').style.display='';
+};
+
+const loadPage=async()=>{
+  pageId=new URLSearchParams(window.location.search).get('id');
+  if(!pageId){showPageError();return;}
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${pageId}&select=*`);
+    if(!rows.length||rows[0].archived){showPageError();return;}
+    pageRow=rows[0];
+  }catch(e){
+    console.error('loadPage failed',e);
+    showPageError();
+    return;
+  }
+  showPageContent();
+  await loadWidgets();
+};
+
+const archiveThisPage=async()=>{
+  if(!pageRow)return;
+  if(!confirm(`Archive "${pageRow.name}"? You can unarchive it later from the Archive panel.`))return;
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${pageRow.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:true,archived_at:new Date().toISOString()})});
+    if(!resp.ok) throw new Error(`Archive failed ${resp.status}`);
+    window.location.href='index.html';
+  }catch(e){
+    console.error('archiveThisPage failed',e);
+    alert('Archive failed.');
+  }
+};
+
+// Init
+(async function(){
+  const now=new Date();
+  document.getElementById('hdr-date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  const authed=await initAuth();
+  if(authed){await loadHeaderName();}else{showAuthNotice();}
+  document.getElementById('hdr-sub').textContent='/ '+(cfg.name||'Eli Crist');
+  renderPagesSidebar();
+  renderPbColors();
+  renderPbWidgetTypes();
+  await loadPage();
+})();
+</script>
+</body>
+</html>
