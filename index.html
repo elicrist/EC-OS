@@ -140,8 +140,50 @@ select option{background:var(--surface)}
     <div class="sb-div"></div>
     <div id="sb-pages"></div>
     <div class="sb-footer">
-      <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot">🕸</span><span class="sb-label">Archive</span></button>
+      <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5.5"/><line x1="12" y1="18.5" x2="12" y2="22"/><line x1="2" y1="12" x2="5.5" y2="12"/><line x1="18.5" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.34" y2="7.34"/><line x1="16.66" y1="16.66" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="16.66" y2="7.34"/><line x1="7.34" y1="16.66" x2="4.93" y2="19.07"/></svg></span><span class="sb-label">Settings</span></button>
+      <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.2" y1="4.2" x2="19.8" y2="19.8"/><line x1="19.8" y1="4.2" x2="4.2" y2="19.8"/><path d="M12 6 C 14.5 6.5, 17.5 9.5, 18 12"/><path d="M18 12 C 17.5 14.5, 14.5 17.5, 12 18"/><path d="M12 18 C 9.5 17.5, 6.5 14.5, 6 12"/><path d="M6 12 C 6.5 9.5, 9.5 6.5, 12 6"/><path d="M12 9.5 C 13.5 9.8, 14.2 10.5, 14.5 12"/><path d="M14.5 12 C 14.2 13.5, 13.5 14.2, 12 14.5"/><path d="M12 14.5 C 10.5 14.2, 9.8 13.5, 9.5 12"/><path d="M9.5 12 C 9.8 10.5, 10.5 9.8, 12 9.5"/></svg></span><span class="sb-label">Archive</span></button>
       <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot">+</span><span class="sb-label">New page</span></button>
+    </div>
+  </div>
+  <div id="settings-overlay" class="overlay" aria-hidden="true">
+    <div class="overlay-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+        <div class="section-title" style="margin:0">Settings</div>
+        <button class="btn btn-sm" onclick="closeSettingsOverlay()">Close</button>
+      </div>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="section-title">pages</div>
+        <div style="display:flex;gap:1.5rem">
+          <div><div class="stat-value" id="set-pages-total" style="font-size:20px;margin-top:0">—</div><div class="stat-label">total</div></div>
+          <div><div class="stat-value" id="set-pages-active" style="font-size:20px;margin-top:0">—</div><div class="stat-label">active</div></div>
+          <div><div class="stat-value" id="set-pages-archived" style="font-size:20px;margin-top:0">—</div><div class="stat-label">archived</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="section-title">account</div>
+        <div class="set-row">
+          <div class="set-label" id="set-auth-status">Not signed in</div>
+          <button class="btn btn-sm" id="set-signout-btn" onclick="signOut()" style="display:none">Sign out</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="section-title">identity & data</div>
+        <div class="set-row"><div><div class="set-label">Your name</div><div class="set-sub">shown in header</div></div><div style="display:flex;gap:6px"><input type="text" id="set-name" style="width:110px" placeholder="Eli"><button class="btn btn-sm" onclick="saveName()">Save</button></div></div>
+        <div class="set-row"><div><div class="set-label">Export backup</div><div class="set-sub">saves JSON file</div></div><button class="btn btn-sm" onclick="exportData()">Export</button></div>
+        <div class="set-row"><div><div class="set-label">Import backup</div><div class="set-sub">restore from JSON</div></div><div><input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(this)"><button class="btn btn-sm" onclick="document.getElementById('imp-file').click()">Import</button></div></div>
+      </div>
+      <div style="margin-bottom:1rem">
+        <div class="section-title">install as app</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8">
+          <strong style="color:var(--text)">Safari on Mac:</strong> File → Add to Dock<br>
+          <strong style="color:var(--text)">Safari on iPhone:</strong> Share → Add to Home Screen<br>
+          <strong style="color:var(--text)">Chrome:</strong> Install icon in address bar
+        </div>
+      </div>
+      <div>
+        <div class="section-title">deploying changes</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8">Changes are made locally via Claude Code, then deployed with git add, git commit, git push — live in about a minute.</div>
+      </div>
     </div>
   </div>
   <div id="archive-overlay" class="overlay" aria-hidden="true">
@@ -169,8 +211,6 @@ select option{background:var(--surface)}
     <a class="header-meta" href="hub.html">← hub</a>
     <div class="header-meta" id="hdr-date"></div>
     <div class="header-meta" id="sync-status">synced</div>
-    <div class="header-meta" id="auth-user" style="display:none"></div>
-    <button class="btn btn-sm" id="sign-out-btn" onclick="signOut()" style="display:none">Sign out</button>
   </div>
 </header>
 <div class="tab-bar">
@@ -183,7 +223,6 @@ select option{background:var(--surface)}
   <button class="tab-btn" onclick="showTab('habits',this)">Habits</button>
   <button class="tab-btn" onclick="showTab('tennis',this)">Tennis</button>
   <button class="tab-btn" onclick="showTab('notes',this)">Notes</button>
-  <button class="tab-btn" onclick="showTab('settings',this)">Settings</button>
 </div>
 
 <div id="login-screen">
@@ -262,6 +301,13 @@ select option{background:var(--surface)}
     <div class="stat"><div class="stat-label">needed / week</div><div class="stat-value blue" id="sv-pw">—</div><div class="stat-sub" id="sv-wks">—</div></div>
     <div class="stat"><div class="stat-label">hours to goal</div><div class="stat-value amber" id="sv-hrs">—</div><div class="stat-sub" id="sv-rate">—</div></div>
     <div class="stat"><div class="stat-label">on track?</div><div class="stat-value" id="sv-track">—</div><div class="stat-sub" id="sv-track-sub">—</div></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="section-title">savings settings</div>
+    <div class="set-row"><div><div class="set-label">Hourly rate ($)</div><div class="set-sub">used in savings math</div></div><div style="display:flex;gap:6px"><input type="number" id="set-rate" style="width:70px" placeholder="17"><button class="btn btn-sm" onclick="saveRate()">Save</button></div></div>
+    <div class="set-row"><div><div class="set-label">Savings goal ($)</div></div><div style="display:flex;gap:6px"><input type="number" id="set-goal" style="width:100px" placeholder="13115"><button class="btn btn-sm" onclick="saveGoal()">Save</button></div></div>
+    <div class="set-row"><div><div class="set-label">Starting balance ($)</div><div class="set-sub">day 1 amount</div></div><div style="display:flex;gap:6px"><input type="number" id="set-start" style="width:100px" placeholder="8800"><button class="btn btn-sm" onclick="saveStart()">Save</button></div></div>
+    <div class="set-row"><div><div class="set-label">Deadline</div></div><div style="display:flex;gap:6px"><input type="date" id="set-dl" style="width:130px"><button class="btn btn-sm" onclick="saveDeadline()">Save</button></div></div>
   </div>
   <div class="card" style="margin-bottom:1rem">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
@@ -379,6 +425,9 @@ select option{background:var(--surface)}
     <div class="stat"><div class="stat-label">best round</div><div class="stat-value green" id="go-best">—</div><div class="stat-sub" id="go-best-c">—</div></div>
     <div class="stat"><div class="stat-label">meadowlark free</div><div class="stat-value blue" id="go-mead">3</div><div class="stat-sub">rounds w/ Josh</div></div>
   </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="set-row"><div><div class="set-label">Meadowlark free rounds</div><div class="set-sub">updates the stat above</div></div><div style="display:flex;gap:6px"><input type="number" id="set-mead" style="width:60px" min="0" max="5"><button class="btn btn-sm" onclick="saveMead()">Save</button></div></div>
+  </div>
   <div class="grid-2" style="margin-bottom:1rem">
     <div class="card">
       <div class="section-title">log round</div>
@@ -495,42 +544,6 @@ select option{background:var(--surface)}
 </div>
 
 <!-- ══ SETTINGS ══ -->
-<div class="tab-panel" id="panel-settings">
-  <div class="grid-2">
-    <div class="card">
-      <div class="section-title">identity & goals</div>
-      <div class="set-row"><div><div class="set-label">Your name</div><div class="set-sub">shown in header</div></div><div style="display:flex;gap:6px"><input type="text" id="set-name" style="width:110px" placeholder="Eli"><button class="btn btn-sm" onclick="saveName()">Save</button></div></div>
-      <div class="set-row"><div><div class="set-label">Hourly rate ($)</div><div class="set-sub">used in savings math</div></div><div style="display:flex;gap:6px"><input type="number" id="set-rate" style="width:70px" placeholder="17"><button class="btn btn-sm" onclick="saveRate()">Save</button></div></div>
-      <div class="set-row"><div><div class="set-label">Savings goal ($)</div></div><div style="display:flex;gap:6px"><input type="number" id="set-goal" style="width:100px" placeholder="13115"><button class="btn btn-sm" onclick="saveGoal()">Save</button></div></div>
-      <div class="set-row"><div><div class="set-label">Starting balance ($)</div><div class="set-sub">day 1 amount</div></div><div style="display:flex;gap:6px"><input type="number" id="set-start" style="width:100px" placeholder="8800"><button class="btn btn-sm" onclick="saveStart()">Save</button></div></div>
-      <div class="set-row"><div><div class="set-label">Deadline</div></div><div style="display:flex;gap:6px"><input type="date" id="set-dl" style="width:130px"><button class="btn btn-sm" onclick="saveDeadline()">Save</button></div></div>
-      <div class="set-row"><div><div class="set-label">Meadowlark free rounds</div></div><div style="display:flex;gap:6px"><input type="number" id="set-mead" style="width:60px" min="0" max="5"><button class="btn btn-sm" onclick="saveMead()">Save</button></div></div>
-    </div>
-    <div class="card">
-      <div class="section-title">data</div>
-      <div class="set-row"><div><div class="set-label">Export backup</div><div class="set-sub">saves JSON file</div></div><button class="btn btn-sm" onclick="exportData()">Export</button></div>
-      <div class="set-row"><div><div class="set-label">Import backup</div><div class="set-sub">restore from JSON</div></div><div><input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(this)"><button class="btn btn-sm" onclick="document.getElementById('imp-file').click()">Import</button></div></div>
-      <div class="set-row"><div><div class="set-label">Clear all data</div><div class="set-sub" style="color:var(--danger)">cannot be undone</div></div><button class="btn btn-sm btn-danger" onclick="clearAll()">Clear</button></div>
-      <div style="margin-top:1.25rem">
-        <div class="section-title">install as app</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.8">
-          <strong style="color:var(--text)">Safari on Mac:</strong> File → Add to Dock<br>
-          <strong style="color:var(--text)">Safari on iPhone:</strong> Share → Add to Home Screen<br>
-          <strong style="color:var(--text)">Chrome:</strong> Install icon in address bar
-        </div>
-      </div>
-      <div style="margin-top:1.25rem">
-        <div class="section-title">update on github</div>
-        <div style="font-size:12px;color:var(--muted);line-height:1.8">
-          1. Go to your repo → click index.html<br>
-          2. Click the pencil (edit) icon<br>
-          3. Click ··· → Upload new file to replace<br>
-          4. Commit changes → live in ~60 sec
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 </div><!-- end content -->
 <script src="public/auth.js"></script>
@@ -554,17 +567,24 @@ const setLoginVisible=visible=>{
   if(tabBar) tabBar.style.display=visible?'none':'flex';
   if(content) content.style.display=visible?'none':'block';
 };
-const setAuthUser=email=>{
-  const el=document.getElementById('auth-user');
-  if(el){el.textContent=email?`signed in as ${email}`:'';el.style.display=email?'block':'none';}
-  const btn=document.getElementById('sign-out-btn');
-  if(btn){btn.style.display=email?'inline-flex':'none';}
+const renderAuthStatus=()=>{
+  const statusEl=document.getElementById('set-auth-status');
+  const btn=document.getElementById('set-signout-btn');
+  if(!statusEl) return;
+  if(authSession){
+    statusEl.textContent='Signed in as '+(authSession.user?.email||'elicrist@icloud.com');
+    if(btn) btn.style.display='inline-flex';
+  }else{
+    statusEl.textContent='Not signed in';
+    if(btn) btn.style.display='none';
+  }
 };
 const signOut=()=>{
   setAuthSession(null);
-  setAuthUser('');
+  renderAuthStatus();
   setSyncStatus('signed out');
   setLoginVisible(true);
+  closeSettingsOverlay();
 };
 const handleLogin=async()=>{
   const errEl=document.getElementById('login-error');
@@ -583,7 +603,7 @@ const handleLogin=async()=>{
       throw new Error(errMsg);
     }
     setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
-    setAuthUser(data.user?.email||LOGIN_EMAIL);
+    renderAuthStatus();
     setLoginVisible(false);
     await sbLoadAll();
     renderDash();renderSched(curDay);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
@@ -642,6 +662,23 @@ const openArchiveOverlay=()=>{const overlay=document.getElementById('archive-ove
 const closeArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
 const openPageBuilder=()=>{const overlay=document.getElementById('page-builder-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');};
 const closePageBuilder=()=>{const overlay=document.getElementById('page-builder-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
+const openSettingsOverlay=()=>{const overlay=document.getElementById('settings-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');loadSettingsOverlay();};
+const closeSettingsOverlay=()=>{const overlay=document.getElementById('settings-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
+const loadSettingsOverlay=async()=>{
+  renderAuthStatus();
+  try{
+    const [totalRows,activeRows,archivedRows]=await Promise.all([
+      sbFetchJson(`${SB_URL}/rest/v1/ec_pages?select=id`),
+      sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=id`),
+      sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.true&select=id`),
+    ]);
+    document.getElementById('set-pages-total').textContent=totalRows.length;
+    document.getElementById('set-pages-active').textContent=activeRows.length;
+    document.getElementById('set-pages-archived').textContent=archivedRows.length;
+  }catch(e){
+    console.error('loadSettingsOverlay failed',e);
+  }
+};
 const loadArchivedPages=async()=>{
   const listEl=document.getElementById('archive-list');
   const emptyEl=document.getElementById('archive-empty');
@@ -652,9 +689,9 @@ const loadArchivedPages=async()=>{
     emptyEl.style.display='none';
     listEl.innerHTML=rows.map(r=>`
       <div class="archive-row">
-        <div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="sb-dot" style="background:${r.dot_color||'var(--muted)'}"></span>
           <div style="font-weight:600;color:var(--text)">${r.name}</div>
-          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${r.page_kind==='static'?r.url:`page.html?id=${r.id}`}</div>
         </div>
         <button class="btn btn-sm" onclick="unarchivePage(${r.id})">Unarchive</button>
       </div>
@@ -941,7 +978,7 @@ function showTab(id,btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   btn.classList.add('active');
-  ({dashboard:renderDash,savings:renderSav,gym:renderGym,workout:renderWorkout,golf:renderGolf,habits:renderHabits,tennis:renderTennis,schedule:()=>renderSched(curDay),settings:renderSettings,notes:renderNotes})[id]?.();
+  ({dashboard:renderDash,savings:renderSav,gym:renderGym,workout:renderWorkout,golf:renderGolf,habits:renderHabits,tennis:renderTennis,schedule:()=>renderSched(curDay),notes:renderNotes})[id]?.();
 }
 
 // ── SETTINGS ──
@@ -1015,10 +1052,8 @@ function renderNotes(){
   `).join('');
 }
 
-function renderSettings(){applyCfg();}
 const scfg=async(k,v)=>{console.log('saveConfig',k,v);cfg[k]=v;SS('cfg',cfg);try{await sbUpsertConfig(cfg);}catch(e){console.error('saveConfig error',e);alert('Config sync failed.');}applyCfg();renderDash();renderSav();};
 async function saveName(){await scfg('name',document.getElementById('set-name').value||'Eli')}
-async function saveTitle(){await scfg('title',document.getElementById('set-title').value||'Summer OS')}
 async function saveRate(){const v=parseFloat(document.getElementById('set-rate').value);if(!isNaN(v)&&v>0)await scfg('rate',v);}
 async function saveGoal(){const v=parseFloat(document.getElementById('set-goal').value);if(!isNaN(v))await scfg('goal',v);}
 async function saveStart(){const v=parseFloat(document.getElementById('set-start').value);if(!isNaN(v))await scfg('start',v);}
@@ -1049,7 +1084,6 @@ function importData(inp){
   };
   r.readAsText(inp.files[0]);
 }
-function clearAll(){if(confirm('Clear ALL data? Cannot be undone.')){localStorage.clear();location.reload();}}
 
 // ── DASHBOARD ──
 function renderDash(){
@@ -1626,7 +1660,7 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
   try{
     const authed=await initAuth();
     if(authed){
-      setAuthUser(authSession.user?.email||LOGIN_EMAIL);
+      renderAuthStatus();
       setLoginVisible(false);
       await sbLoadAll();
     }else{
