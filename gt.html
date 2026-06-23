@@ -136,6 +136,7 @@ textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
     <a class="hub-link" href="hub.html">← hub</a>
   </div>
 </header>
+<div class="empty" id="auth-notice" style="display:none;text-align:left;padding:8px 1.5rem;border-bottom:1px solid var(--border)">Log in via Summer OS first to sync your name and pages.</div>
 <div class="tab-bar">
   <button class="tab-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="tab-btn" onclick="showTab('courses',this)">Courses</button>
@@ -379,18 +380,12 @@ textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
 </div>
 
 </div><!-- /content -->
+<script src="public/auth.js"></script>
 <script>
 const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
-const SB_URL="https://bezcgrtihvmktxjkbfrl.supabase.co";
-const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlemNncnRpaHZta3R4amtiZnJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzQ2OTQsImV4cCI6MjA5Njg1MDY5NH0.7BhpVFAsjW0fDDvk1r9RMITYtzoosLHqsX80AAQSqA8";
-const buildHeaders=(opts={})=>({
-  apikey:SB_KEY,
-  Authorization:`Bearer ${SB_KEY}`,
-  Accept:'application/json',
-  'Content-Type':'application/json',
-  ...opts,
-});
+// SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
+// shared with index.html and mission.html.
 const sbFetchJson=async(url)=>{
   const resp=await fetch(url,{headers:buildHeaders()});
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
@@ -447,6 +442,7 @@ const loadArchivedPages=async()=>{
 };
 const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
 let cfg=GS('cfg',{name:'Eli Crist'});
+const showAuthNotice=()=>{const el=document.getElementById('auth-notice');if(el)el.style.display='block';};
 const loadHeaderName=async()=>{
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_config?key=eq.name&select=value`);
@@ -719,7 +715,8 @@ function renderNotes(){
   ['ex-date','comp-date','ct-date'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=t;});
   const now=new Date();
   document.getElementById('hdr-date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
-  await loadHeaderName();
+  const authed=await initAuth();
+  if(authed){await loadHeaderName();}else{showAuthNotice();}
   document.getElementById('hdr-sub').textContent='/ '+(cfg.name||'Eli Crist');
   renderDash();renderCourses();renderHustle();renderFinance();renderNotes();
   renderPagesSidebar();

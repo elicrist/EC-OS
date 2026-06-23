@@ -533,24 +533,17 @@ select option{background:var(--surface)}
 </div>
 
 </div><!-- end content -->
+<script src="public/auth.js"></script>
 <script>
 // ── STORAGE ──
 const LS=(k,d)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d}catch{return d}};
 const SS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 
-// Supabase sync
-const SB_URL="https://bezcgrtihvmktxjkbfrl.supabase.co";
-const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlemNncnRpaHZta3R4amtiZnJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzQ2OTQsImV4cCI6MjA5Njg1MDY5NH0.7BhpVFAsjW0fDDvk1r9RMITYtzoosLHqsX80AAQSqA8";
+// Supabase sync (SB_URL, SB_KEY, buildHeaders, authSession, setAuthSession, refreshSession,
+// initAuth all come from public/auth.js, shared with gt.html and mission.html)
 const LOGIN_EMAIL='elicrist@icloud.com'; // Update this to the Supabase user's email.
-let authSession=LS('sb_session',null);
 const SB_HDR={"Content-Type":"application/json","apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`};
 let syncStatus='synced';
-const buildHeaders=(opts={})=>({
-  'apikey':SB_KEY,
-  'Authorization':`Bearer ${authSession?.access_token||SB_KEY}`,
-  'Content-Type':opts.contentType||'application/json',
-  ...opts.extra
-});
 const setLoginVisible=visible=>{
   const login=document.getElementById('login-screen');
   const header=document.querySelector('header');
@@ -567,60 +560,11 @@ const setAuthUser=email=>{
   const btn=document.getElementById('sign-out-btn');
   if(btn){btn.style.display=email?'inline-flex':'none';}
 };
-const setAuthSession=ses=>{
-  authSession=ses;
-  if(ses){SS('sb_session',ses);setAuthUser(ses.user?.email||LOGIN_EMAIL);}else{SS('sb_session',null);setAuthUser('');}
-};
 const signOut=()=>{
   setAuthSession(null);
+  setAuthUser('');
   setSyncStatus('signed out');
   setLoginVisible(true);
-};
-const refreshSession=async()=>{
-  if(!authSession?.refresh_token) return false;
-  try{
-    const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:authSession.refresh_token});
-    const url=`${SB_URL}/auth/v1/token`;
-    console.log('refreshSession request', {url,headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-    const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/x-www-form-urlencoded'},body:body.toString()});
-    const data=await resp.json().catch(()=>null);
-    console.log('refreshSession response', {status:resp.status,statusText:resp.statusText,data});
-    if(!resp.ok){
-      const errMsg=data?.error_description||data?.error||`Refresh failed (${resp.status})`;
-      throw new Error(errMsg);
-    }
-    setAuthSession({
-      access_token:data.access_token,
-      refresh_token:data.refresh_token||authSession.refresh_token,
-      expires_at:Date.now()+data.expires_in*1000,
-      user:data.user,
-    });
-    return true;
-  }catch(e){
-    console.warn('Auth refresh failed',e);
-    setAuthSession(null);
-    return false;
-  }
-};
-const initAuth=async()=>{
-  if(!authSession){
-    console.log('initAuth: no session stored, showing login screen');
-    setLoginVisible(true);
-    return false;
-  }
-  console.log('initAuth: found stored session', authSession);
-  if(authSession.expires_at && Date.now()>authSession.expires_at-60000){
-    console.log('initAuth: session expired or expiring soon, refreshing token');
-    const refreshed=await refreshSession();
-    if(!refreshed){
-      console.log('initAuth: refresh failed, showing login');
-      setLoginVisible(true);
-      return false;
-    }
-  }
-  setAuthUser(authSession.user?.email||LOGIN_EMAIL);
-  setLoginVisible(false);
-  return true;
 };
 const handleLogin=async()=>{
   const errEl=document.getElementById('login-error');
@@ -639,6 +583,7 @@ const handleLogin=async()=>{
       throw new Error(errMsg);
     }
     setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
+    setAuthUser(data.user?.email||LOGIN_EMAIL);
     setLoginVisible(false);
     await sbLoadAll();
     renderDash();renderSched(curDay);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
@@ -1682,7 +1627,11 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
   try{
     const authed=await initAuth();
     if(authed){
+      setAuthUser(authSession.user?.email||LOGIN_EMAIL);
+      setLoginVisible(false);
       await sbLoadAll();
+    }else{
+      setLoginVisible(true);
     }
   }catch(e){
     console.error('Startup sync failed',e);
