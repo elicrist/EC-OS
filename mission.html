@@ -174,12 +174,12 @@ textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
   </div>
 </div>
 <div id="page-builder-overlay" class="overlay" aria-hidden="true">
-  <div class="overlay-card wide">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+  <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
       <div class="section-title" style="margin:0" id="pb-title">Page builder · step 1 of 2</div>
       <button class="btn btn-sm" onclick="closePageBuilder()">Close</button>
     </div>
-    <div id="pb-step1">
+    <div id="pb-step1" style="overflow-y:auto;flex:1;min-height:0">
       <div class="form-row">
         <div class="field"><label>page name</label><input type="text" id="pb-name" placeholder="Fall Trip"></div>
       </div>
@@ -193,14 +193,16 @@ textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="pbGoStep2()">Next: choose widgets</button>
     </div>
-    <div id="pb-step2" style="display:none">
-      <div id="pb-widget-types" style="margin-bottom:1rem"></div>
-      <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:1.25rem">
-        <div class="section-title">widgets to add</div>
-        <div id="pb-selected"></div>
-        <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+    <div id="pb-step2" style="display:none;flex-direction:column;flex:1;min-height:0">
+      <div style="overflow-y:auto;flex:1;min-height:0">
+        <div id="pb-widget-types" style="margin-bottom:1rem"></div>
+        <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:.75rem">
+          <div class="section-title">widgets to add</div>
+          <div id="pb-selected"></div>
+          <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;padding-top:.75rem;flex-shrink:0">
         <button class="btn" style="flex:1" onclick="pbBackStep1()">Back</button>
         <button class="btn btn-primary" style="flex:1" id="pb-build-btn" onclick="buildPage()">Build page</button>
       </div>
@@ -214,7 +216,10 @@ textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
     <div class="hdr-meta" id="hdr-date"></div>
   </div>
 </header>
-<div class="empty" id="auth-notice" style="display:none;text-align:left;padding:8px 1.5rem;border-bottom:1px solid var(--border)">Log in via Summer OS first to sync your name and pages.</div>
+<div class="empty" id="page-archived-gate" style="display:none;padding:3rem 2rem">
+  This page has been archived.<br><br>
+  <a class="hub-link" href="#" onclick="openArchiveOverlay();return false">Open Archive panel to unarchive →</a>
+</div>
 <div class="tab-bar">
   <button class="tab-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="tab-btn" onclick="showTab('prep',this)">Prep</button>
@@ -448,6 +453,11 @@ const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}ca
 const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
 // SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
 // shared with index.html and gt.html.
+// The only entry point with a login form today. A later phase adds an
+// animated home screen in front of it — when that lands, change this one
+// constant rather than hunting for hardcoded redirects.
+const LOGIN_ENTRY_POINT='index.html';
+let myStaticPageRow=null;
 const sbFetchJson=async(url)=>{
   const resp=await fetch(url,{headers:buildHeaders()});
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
@@ -461,9 +471,10 @@ const pageMatchesCurrent=row=>{
 const renderPagesSidebar=async()=>{
   const container=document.getElementById('sb-pages');
   if(!container) return;
+  container.innerHTML='<div class="empty" style="padding:0 12px">Loading…</div>';
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
-    if(!rows.length){container.innerHTML='<div class="empty" style="padding:0 12px">No pages available.</div>';return;}
+    if(!rows.length){container.innerHTML=authSession?'<div class="empty" style="padding:0 12px">No pages available.</div>':'<div class="empty" style="padding:0 12px">Log in to see pages.</div>';return;}
     container.innerHTML=rows.map(r=>{
       const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
       const active=pageMatchesCurrent(r)?' active':'';
@@ -546,7 +557,7 @@ const pbGoStep2=()=>{
   const name=document.getElementById('pb-name').value.trim();
   if(!name){alert('Page name is required.');return;}
   document.getElementById('pb-step1').style.display='none';
-  document.getElementById('pb-step2').style.display='block';
+  document.getElementById('pb-step2').style.display='flex';
   document.getElementById('pb-title').textContent='Page builder · step 2 of 2';
 };
 const pbBackStep1=()=>{
@@ -616,9 +627,15 @@ const loadSettingsOverlay=async()=>{
 };
 const signOut=()=>{
   setAuthSession(null);
-  renderAuthStatus();
-  showAuthNotice();
-  closeSettingsOverlay();
+  window.location.href=LOGIN_ENTRY_POINT;
+};
+const showStaticPageArchivedGate=()=>{
+  const tabBar=document.querySelector('.tab-bar');
+  const content=document.querySelector('.content');
+  const gate=document.getElementById('page-archived-gate');
+  if(tabBar)tabBar.style.display='none';
+  if(content)content.style.display='none';
+  if(gate)gate.style.display='block';
 };
 const loadArchivedPages=async()=>{
   const listEl=document.getElementById('archive-list');
@@ -646,11 +663,10 @@ const loadArchivedPages=async()=>{
     emptyEl.style.display='none';
   }
 };
-const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
+const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);if(myStaticPageRow&&String(id)===String(myStaticPageRow.id)){location.reload();return;}await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
 const deletePagePermanently=async(id)=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}&select=name`);const name=rows[0]?.name||'this page';if(!confirm(`Permanently delete "${name}"? This cannot be undone.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});if(!resp.ok) throw new Error(`Delete failed ${resp.status}`);await loadArchivedPages();}catch(e){console.error('deletePagePermanently failed',e);alert('Delete failed.');}};
 const archiveThisPage=async()=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?page_kind=eq.static&select=*`);const row=rows.find(r=>String(r.url||'').split('/').pop()===getCurrentPagePath());if(!row){alert("Could not find this page's row.");return;}if(!confirm(`Archive "${row.name}"? You can unarchive it later from the Archive panel.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${row.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:true,archived_at:new Date().toISOString()})});if(!resp.ok) throw new Error(`Archive failed ${resp.status}`);window.location.href='hub.html';}catch(e){console.error('archiveThisPage failed',e);alert('Archive failed.');}};
 let cfg=GS('cfg',{name:'Eli Crist'});
-const showAuthNotice=()=>{const el=document.getElementById('auth-notice');if(el)el.style.display='block';};
 const loadHeaderName=async()=>{
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_config?key=eq.name&select=value`);
@@ -969,15 +985,24 @@ function renderAll(){renderDash();renderPrep();renderLang();renderHabits();rende
   const now=new Date();
   document.getElementById('hdr-date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
   const authed=await initAuth();
-  if(authed){await loadHeaderName();}else{showAuthNotice();}
+  if(!authed){window.location.href=LOGIN_ENTRY_POINT;return;}
+  await loadHeaderName();
   document.getElementById('hdr-sub').textContent='/ '+(cfg.name||'Eli Crist');
   // Load config into form
   if(mCfg.date)document.getElementById('cfg-date').value=mCfg.date;
   document.getElementById('cfg-lang').value=mCfg.lang||'';
   document.getElementById('cfg-goal').value=mCfg.goal||12000;
-  renderAll();
+  try{
+    const staticRows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?page_kind=eq.static&select=*`);
+    myStaticPageRow=staticRows.find(r=>String(r.url||'').split('/').pop()===getCurrentPagePath());
+  }catch(e){console.error('static page gating check failed',e);}
   renderPagesSidebar();
   renderPbColors();renderPbWidgetTypes();
+  if(myStaticPageRow&&myStaticPageRow.archived){
+    showStaticPageArchivedGate();
+  }else{
+    renderAll();
+  }
 })();
 </script>
 </body>

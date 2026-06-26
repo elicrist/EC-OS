@@ -159,12 +159,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   </div>
 </div>
 <div id="page-builder-overlay" class="overlay" aria-hidden="true">
-  <div class="overlay-card wide">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+  <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
       <div class="section-title" style="margin:0" id="pb-title">Page builder · step 1 of 2</div>
       <button class="btn btn-sm" onclick="closePageBuilder()">Close</button>
     </div>
-    <div id="pb-step1">
+    <div id="pb-step1" style="overflow-y:auto;flex:1;min-height:0">
       <div class="form-row">
         <div class="field"><label>page name</label><input type="text" id="pb-name" placeholder="Fall Trip"></div>
       </div>
@@ -178,18 +178,33 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
       </div>
       <button class="btn btn-primary" style="width:100%" onclick="pbGoStep2()">Next: choose widgets</button>
     </div>
-    <div id="pb-step2" style="display:none">
-      <div id="pb-widget-types" style="margin-bottom:1rem"></div>
-      <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:1.25rem">
-        <div class="section-title">widgets to add</div>
-        <div id="pb-selected"></div>
-        <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+    <div id="pb-step2" style="display:none;flex-direction:column;flex:1;min-height:0">
+      <div style="overflow-y:auto;flex:1;min-height:0">
+        <div id="pb-widget-types" style="margin-bottom:1rem"></div>
+        <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:.75rem">
+          <div class="section-title">widgets to add</div>
+          <div id="pb-selected"></div>
+          <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+        </div>
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;padding-top:.75rem;flex-shrink:0">
         <button class="btn" style="flex:1" onclick="pbBackStep1()">Back</button>
         <button class="btn btn-primary" style="flex:1" id="pb-build-btn" onclick="buildPage()">Build page</button>
       </div>
     </div>
+  </div>
+</div>
+<div id="widget-settings-overlay" class="overlay" aria-hidden="true">
+  <div class="overlay-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div class="section-title" style="margin:0">Edit widget</div>
+      <button class="btn btn-sm" onclick="closeWidgetSettings()">Close</button>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>title</label><input type="text" id="ws-title"></div>
+    </div>
+    <div id="ws-extra-fields"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveWidgetSettings()">Save</button>
   </div>
 </div>
 <header>
@@ -200,11 +215,14 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <a class="hub-link" href="#" id="hdr-archive-link" onclick="archiveThisPage();return false" style="display:none">Archive this page</a>
   </div>
 </header>
-<div class="empty" id="auth-notice" style="display:none;text-align:left;padding:8px 1.5rem;border-bottom:1px solid var(--border)">Log in via Summer OS first to sync your name and pages.</div>
 <div class="content">
 <div class="empty" id="page-error" style="display:none">
-  This page is archived or doesn't exist.<br><br>
+  This page doesn't exist.<br><br>
   <a class="hub-link" href="index.html">← Back to Summer OS</a>
+</div>
+<div class="empty" id="page-archived" style="display:none">
+  This page has been archived.<br><br>
+  <a class="hub-link" href="#" onclick="openArchiveOverlay();return false">Open Archive panel to unarchive →</a>
 </div>
 <div class="widget-grid" id="page-widgets" style="display:none"></div>
 </div><!-- /content -->
@@ -214,6 +232,10 @@ const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}ca
 const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
 // SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
 // shared with index.html, gt.html and mission.html.
+// The only entry point with a login form today. A later phase adds an
+// animated home screen in front of it — when that lands, change this one
+// constant rather than hunting for hardcoded redirects.
+const LOGIN_ENTRY_POINT='index.html';
 const sbFetchJson=async(url)=>{
   const resp=await fetch(url,{headers:buildHeaders()});
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
@@ -227,9 +249,10 @@ const pageMatchesCurrent=row=>{
 const renderPagesSidebar=async()=>{
   const container=document.getElementById('sb-pages');
   if(!container) return;
+  container.innerHTML='<div class="empty" style="padding:0 12px">Loading…</div>';
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
-    if(!rows.length){container.innerHTML='<div class="empty" style="padding:0 12px">No pages available.</div>';return;}
+    if(!rows.length){container.innerHTML=authSession?'<div class="empty" style="padding:0 12px">No pages available.</div>':'<div class="empty" style="padding:0 12px">Log in to see pages.</div>';return;}
     container.innerHTML=rows.map(r=>{
       const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
       const active=pageMatchesCurrent(r)?' active':'';
@@ -274,9 +297,7 @@ const loadSettingsOverlay=async()=>{
 };
 const signOut=()=>{
   setAuthSession(null);
-  renderAuthStatus();
-  showAuthNotice();
-  closeSettingsOverlay();
+  window.location.href=LOGIN_ENTRY_POINT;
 };
 const loadArchivedPages=async()=>{
   const listEl=document.getElementById('archive-list');
@@ -304,10 +325,9 @@ const loadArchivedPages=async()=>{
     emptyEl.style.display='none';
   }
 };
-const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
+const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);if(String(id)===String(pageId)){location.reload();return;}await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
 const deletePagePermanently=async(id)=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}&select=name`);const name=rows[0]?.name||'this page';if(!confirm(`Permanently delete "${name}"? This cannot be undone.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});if(!resp.ok) throw new Error(`Delete failed ${resp.status}`);await loadArchivedPages();}catch(e){console.error('deletePagePermanently failed',e);alert('Delete failed.');}};
 let cfg=GS('cfg',{name:'Eli Crist'});
-const showAuthNotice=()=>{const el=document.getElementById('auth-notice');if(el)el.style.display='block';};
 const loadHeaderName=async()=>{
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_config?key=eq.name&select=value`);
@@ -384,7 +404,7 @@ const pbGoStep2=()=>{
   const name=document.getElementById('pb-name').value.trim();
   if(!name){alert('Page name is required.');return;}
   document.getElementById('pb-step1').style.display='none';
-  document.getElementById('pb-step2').style.display='block';
+  document.getElementById('pb-step2').style.display='flex';
   document.getElementById('pb-title').textContent='Page builder · step 2 of 2';
 };
 const pbBackStep1=()=>{
@@ -762,6 +782,67 @@ async function delWorkoutEntry(id,entryId){
   try{await saveWidgetData(id);}catch(e){console.error('delWorkoutEntry save failed',e);alert('Save failed — try again.');}
 }
 
+// --- editable widget settings (title always; type-specific config where it exists) ---
+const WIDGET_SETTINGS_FIELDS={
+  savings:[
+    {key:'goal',label:'goal ($)',type:'number',step:'0.01'},
+    {key:'start',label:'starting amount ($)',type:'number',step:'0.01'},
+  ],
+  countdown:[
+    {key:'target_date',label:'target date',type:'date'},
+    {key:'label',label:'label',type:'text'},
+  ],
+  funded_checklist:[
+    {key:'target_count',label:'target count',type:'number'},
+    {key:'label',label:'label',type:'text'},
+  ],
+};
+let wsEditingId=null;
+const openWidgetSettings=id=>{
+  const w=findWidget(id);
+  if(!w)return;
+  wsEditingId=id;
+  document.getElementById('ws-title').value=w.title||'';
+  const fields=WIDGET_SETTINGS_FIELDS[w.widget_type]||[];
+  document.getElementById('ws-extra-fields').innerHTML=fields.map(f=>`
+    <div class="form-row">
+      <div class="field"><label>${f.label}</label><input type="${f.type}" id="ws-field-${f.key}" ${f.step?`step="${f.step}"`:''} value="${w.config?.[f.key]??''}"></div>
+    </div>`).join('');
+  const overlay=document.getElementById('widget-settings-overlay');
+  overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');
+};
+const closeWidgetSettings=()=>{
+  const overlay=document.getElementById('widget-settings-overlay');
+  if(!overlay)return;
+  overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');
+  wsEditingId=null;
+};
+const saveWidgetSettings=async()=>{
+  if(wsEditingId==null)return;
+  const w=findWidget(wsEditingId);
+  if(!w)return;
+  const title=document.getElementById('ws-title').value.trim()||w.widget_type;
+  const fields=WIDGET_SETTINGS_FIELDS[w.widget_type]||[];
+  const newConfig={...w.config};
+  fields.forEach(f=>{
+    const el=document.getElementById(`ws-field-${f.key}`);
+    if(!el)return;
+    newConfig[f.key]=f.type==='number'?(parseFloat(el.value)||0):el.value;
+  });
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${wsEditingId}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({title,config:newConfig})});
+    if(!resp.ok) throw new Error(`Widget update failed ${resp.status}`);
+    w.title=title;w.config=newConfig;
+    const titleEl=document.getElementById(`widget-title-${wsEditingId}`);
+    if(titleEl)titleEl.textContent=title;
+    renderWidgetById(wsEditingId);
+    closeWidgetSettings();
+  }catch(e){
+    console.error('saveWidgetSettings failed',e);
+    alert('Save failed — try again.');
+  }
+};
+
 const WIDGET_RENDERERS={
   savings:renderSavingsWidget,
   checklist:renderChecklistWidget,
@@ -777,7 +858,10 @@ const renderWidgets=()=>{
   const wrap=document.getElementById('page-widgets');
   wrap.innerHTML=pageWidgets.map(w=>`
     <div class="card" id="widget-card-${w.id}">
-      <div class="section-title">${w.title||w.widget_type}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
+        <div class="section-title" id="widget-title-${w.id}" style="margin:0">${w.title||w.widget_type}</div>
+        <button class="btn btn-sm" onclick="openWidgetSettings(${w.id})" aria-label="Edit widget settings">Edit</button>
+      </div>
       <div id="widget-body-${w.id}"></div>
     </div>`).join('');
   pageWidgets.forEach(w=>{
@@ -820,6 +904,16 @@ const showPageError=()=>{
   document.getElementById('hdr-archive-link').style.display='none';
   document.getElementById('hdr-date').textContent=hdrDateBase;
   document.getElementById('page-error').style.display='block';
+  document.getElementById('page-archived').style.display='none';
+  document.getElementById('page-widgets').style.display='none';
+};
+
+const showPageArchived=row=>{
+  document.getElementById('hdr-page-name').textContent=row.name;
+  document.getElementById('hdr-archive-link').style.display='none';
+  document.getElementById('hdr-date').textContent=hdrDateBase;
+  document.getElementById('page-error').style.display='none';
+  document.getElementById('page-archived').style.display='block';
   document.getElementById('page-widgets').style.display='none';
 };
 
@@ -830,6 +924,7 @@ const showPageContent=()=>{
   const captionParts=[pageRow.timeframe,pageRow.location].filter(Boolean);
   document.getElementById('hdr-date').textContent=captionParts.length?`${hdrDateBase} · ${captionParts.join(' · ')}`:hdrDateBase;
   document.getElementById('page-error').style.display='none';
+  document.getElementById('page-archived').style.display='none';
   document.getElementById('page-widgets').style.display='';
 };
 
@@ -838,7 +933,8 @@ const loadPage=async()=>{
   if(!pageId){showPageError();return;}
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${pageId}&select=*`);
-    if(!rows.length||rows[0].archived){showPageError();return;}
+    if(!rows.length){showPageError();return;}
+    if(rows[0].archived){showPageArchived(rows[0]);return;}
     pageRow=rows[0];
   }catch(e){
     console.error('loadPage failed',e);
@@ -868,7 +964,8 @@ const archiveThisPage=async()=>{
   hdrDateBase=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
   document.getElementById('hdr-date').textContent=hdrDateBase;
   const authed=await initAuth();
-  if(authed){await loadHeaderName();}else{showAuthNotice();}
+  if(!authed){window.location.href=LOGIN_ENTRY_POINT;return;}
+  await loadHeaderName();
   document.getElementById('hdr-sub').textContent='/ '+(cfg.name||'Eli Crist');
   renderPagesSidebar();
   renderPbColors();

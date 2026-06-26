@@ -208,12 +208,12 @@ select option{background:var(--surface)}
     </div>
   </div>
   <div id="page-builder-overlay" class="overlay" aria-hidden="true">
-    <div class="overlay-card wide">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
         <div class="section-title" style="margin:0" id="pb-title">Page builder · step 1 of 2</div>
         <button class="btn btn-sm" onclick="closePageBuilder()">Close</button>
       </div>
-      <div id="pb-step1">
+      <div id="pb-step1" style="overflow-y:auto;flex:1;min-height:0">
         <div class="form-row">
           <div class="field"><label>page name</label><input type="text" id="pb-name" placeholder="Fall Trip"></div>
         </div>
@@ -227,14 +227,16 @@ select option{background:var(--surface)}
         </div>
         <button class="btn btn-primary" style="width:100%" onclick="pbGoStep2()">Next: choose widgets</button>
       </div>
-      <div id="pb-step2" style="display:none">
-        <div id="pb-widget-types" style="margin-bottom:1rem"></div>
-        <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:1.25rem">
-          <div class="section-title">widgets to add</div>
-          <div id="pb-selected"></div>
-          <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+      <div id="pb-step2" style="display:none;flex-direction:column;flex:1;min-height:0">
+        <div style="overflow-y:auto;flex:1;min-height:0">
+          <div id="pb-widget-types" style="margin-bottom:1rem"></div>
+          <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:.75rem">
+            <div class="section-title">widgets to add</div>
+            <div id="pb-selected"></div>
+            <div class="empty" id="pb-selected-empty">No widgets selected yet.</div>
+          </div>
         </div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;padding-top:.75rem;flex-shrink:0">
           <button class="btn" style="flex:1" onclick="pbBackStep1()">Back</button>
           <button class="btn btn-primary" style="flex:1" id="pb-build-btn" onclick="buildPage()">Build page</button>
         </div>
@@ -249,6 +251,10 @@ select option{background:var(--surface)}
     <div class="hdr-meta" id="sync-status">checking…</div>
   </div>
 </header>
+<div class="empty" id="page-archived-gate" style="display:none;padding:3rem 2rem">
+  This page has been archived.<br><br>
+  <a class="hub-link" href="#" onclick="openArchiveOverlay();return false">Open Archive panel to unarchive →</a>
+</div>
 <div class="tab-bar">
   <button class="tab-btn active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="tab-btn" onclick="showTab('schedule',this)">Schedule</button>
@@ -627,21 +633,28 @@ const signOut=()=>{
   setLoginVisible(true);
   closeSettingsOverlay();
 };
+const showStaticPageArchivedGate=()=>{
+  const tabBar=document.querySelector('.tab-bar');
+  const content=document.querySelector('.content');
+  const gate=document.getElementById('page-archived-gate');
+  if(tabBar)tabBar.style.display='none';
+  if(content)content.style.display='none';
+  if(gate)gate.style.display='block';
+};
 const handleLogin=async()=>{
   const errEl=document.getElementById('login-error');
-  const pw=document.getElementById('login-password').value.trim();
+  const pwEl=document.getElementById('login-password');
+  const pw=pwEl.value.trim();
   errEl.textContent='';
   if(!pw){errEl.textContent='Enter your password.';return;}
   try{
     const body={email:LOGIN_EMAIL,password:pw};
     const url=`${SB_URL}/auth/v1/token?grant_type=password`;
-    console.log('handleLogin request', {url,headers:{apikey:SB_KEY,Authorization:`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body, email:LOGIN_EMAIL});
     const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await resp.json().catch(()=>null);
-    console.log('handleLogin response', {status:resp.status,statusText:resp.statusText,data});
     if(!resp.ok){
-      const errMsg=data?.error_description||data?.error||`Login failed (${resp.status})`;
-      throw new Error(errMsg);
+      console.error('Login failed',{status:resp.status,data});
+      throw new Error('auth-failed');
     }
     setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
     renderAuthStatus();
@@ -650,7 +663,8 @@ const handleLogin=async()=>{
     renderDash();renderSched(curDay);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
   }catch(e){
     console.error('Login error',e);
-    errEl.textContent=e.message||'Login failed.';
+    pwEl.value='';
+    errEl.textContent='Incorrect email/password.';
   }
 };
 
@@ -703,9 +717,10 @@ const pageMatchesCurrent=row=>{
 const renderPagesSidebar=async()=>{
   const container=document.getElementById('sb-pages');
   if(!container) return;
+  container.innerHTML='<div class="empty" style="padding:0 12px">Loading…</div>';
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
-    if(!rows.length){container.innerHTML='<div class="empty" style="padding:0 12px">No pages available.</div>';return;}
+    if(!rows.length){container.innerHTML=authSession?'<div class="empty" style="padding:0 12px">No pages available.</div>':'<div class="empty" style="padding:0 12px">Log in to see pages.</div>';return;}
     container.innerHTML=rows.map(r=>{
       const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
       const active=pageMatchesCurrent(r)?' active':'';
@@ -788,7 +803,7 @@ const pbGoStep2=()=>{
   const name=document.getElementById('pb-name').value.trim();
   if(!name){alert('Page name is required.');return;}
   document.getElementById('pb-step1').style.display='none';
-  document.getElementById('pb-step2').style.display='block';
+  document.getElementById('pb-step2').style.display='flex';
   document.getElementById('pb-title').textContent='Page builder · step 2 of 2';
 };
 const pbBackStep1=()=>{
@@ -875,6 +890,7 @@ const unarchivePage=async(id)=>{
     const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;
     const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});
     if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);
+    if(myStaticPageRow&&String(id)===String(myStaticPageRow.id)){location.reload();return;}
     await renderPagesSidebar();
     await loadArchivedPages();
   }catch(e){
@@ -1005,6 +1021,7 @@ const sbLoadAll=async()=>{
 };
 
 // ── STATE ──
+let myStaticPageRow=null;
 let cfg=LS('cfg',{name:'Eli Crist',title:'Summer OS',rate:17,goal:13115.80,start:8800.15,deadline:'2026-08-01'});
 let savLog=LS('sav_log',[]);
 let gymLog=LS('gym_log',[]);
@@ -1852,8 +1869,9 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
   const chips=document.querySelectorAll('.day-chip');
   chips.forEach((c,i)=>c.classList.toggle('active',i===sd));
 
+  let authed=false;
   try{
-    const authed=await initAuth();
+    authed=await initAuth();
     if(authed){
       renderAuthStatus();
       setLoginVisible(false);
@@ -1864,14 +1882,26 @@ function setAct(v){schedActs[curDay]=v;SS('sched_acts',schedActs);renderSched(cu
     }
   }catch(e){
     console.error('Startup sync failed',e);
+    authed=false;
     setSyncNotSignedIn();
     setLoginVisible(true);
   }
 
   applyCfg();
   await renderPagesSidebar();
-  renderDash();renderSched(sd);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
   renderPbColors();renderPbWidgetTypes();
+
+  if(authed){
+    try{
+      const staticRows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?page_kind=eq.static&select=*`);
+      myStaticPageRow=staticRows.find(r=>String(r.url||'').split('/').pop()===getCurrentPagePath());
+    }catch(e){console.error('static page gating check failed',e);}
+    if(myStaticPageRow&&myStaticPageRow.archived){
+      showStaticPageArchivedGate();
+    }else{
+      renderDash();renderSched(sd);renderSav();renderGym();renderWorkout();renderGolf();renderHabits();renderTennis();
+    }
+  }
 })();
 </script>
 <style>
