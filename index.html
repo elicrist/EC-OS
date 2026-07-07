@@ -270,9 +270,12 @@ select option{background:var(--surface)}
 <div id="login-screen">
   <div class="card">
     <div class="section-title">Sign in</div>
-    <p style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter the app password to unlock the dashboard.</p>
+    <p style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter your email and password to unlock the dashboard.</p>
+    <div class="form-row" style="margin-bottom:0.75rem">
+      <input type="email" id="login-email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
+    </div>
     <div class="form-row" style="margin-bottom:1rem">
-      <input type="password" id="login-password" placeholder="Password" onkeydown="if(event.key==='Enter') handleLogin()">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') handleLogin()">
     </div>
     <button class="btn btn-primary" style="width:100%;" onclick="handleLogin()">Unlock</button>
     <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:18px"></div>
@@ -596,7 +599,6 @@ const SS=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}};
 
 // Supabase sync (SB_URL, SB_KEY, buildHeaders, authSession, setAuthSession, refreshSession,
 // initAuth all come from public/auth.js, shared with gt.html and mission.html)
-const LOGIN_EMAIL='elicrist@icloud.com'; // Update this to the Supabase user's email.
 const SB_HDR={"Content-Type":"application/json","apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`};
 let syncStatus='checking';
 const setLoginVisible=visible=>{
@@ -619,7 +621,7 @@ const renderAuthStatus=()=>{
   const btn=document.getElementById('set-signout-btn');
   if(!statusEl) return;
   if(authSession){
-    statusEl.textContent='Signed in as '+(authSession.user?.email||'elicrist@icloud.com');
+    statusEl.textContent='Signed in as '+(authSession.user?.email||'unknown user');
     if(btn) btn.style.display='inline-flex';
   }else{
     statusEl.textContent='Not signed in';
@@ -643,12 +645,15 @@ const showStaticPageArchivedGate=()=>{
 };
 const handleLogin=async()=>{
   const errEl=document.getElementById('login-error');
+  const emailEl=document.getElementById('login-email');
   const pwEl=document.getElementById('login-password');
+  const email=emailEl.value.trim();
   const pw=pwEl.value.trim();
   errEl.textContent='';
+  if(!email){errEl.textContent='Enter your email.';return;}
   if(!pw){errEl.textContent='Enter your password.';return;}
   try{
-    const body={email:LOGIN_EMAIL,password:pw};
+    const body={email,password:pw};
     const url=`${SB_URL}/auth/v1/token?grant_type=password`;
     const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await resp.json().catch(()=>null);
