@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC OS — Migrate</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;--text:#f0ede8;--muted:#888880;--faint:#2a2a2e;--accent:#B3A369;--ok:#5cb87a;--danger:#e05b5b;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;padding:2rem;max-width:900px;margin:0 auto}
+h1{font-size:20px;margin-bottom:.25rem}
+.sub{font-size:12px;color:var(--muted);margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1rem}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.75rem}
+.row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--faint);font-size:13px}
+.row:last-child{border-bottom:none}
+.row .n{font-family:'DM Mono',monospace;color:var(--accent)}
+.row.mismatch .n{color:var(--danger)}
+.row.match .n{color:var(--ok)}
+input[type=text]{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:13px;padding:8px 10px;border-radius:7px;outline:none;width:100%}
+.btn{padding:9px 16px;border-radius:7px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.toggle-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.log{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);white-space:pre-wrap;max-height:240px;overflow-y:auto;background:var(--surface);border-radius:8px;padding:10px}
+.empty{color:var(--muted);font-size:12px;text-align:center;padding:1rem}
+a{color:var(--accent)}
+.pill{display:inline-block;font-size:10px;font-family:'DM Mono',monospace;padding:2px 7px;border-radius:100px;border:1px solid var(--border-light);color:var(--muted)}
+</style>
+</head>
+<body>
+<h1>Migrate to generic page-builder model</h1>
+<div class="sub">One-off tool. Reads your old standalone tables, previews what the new page/tabs/widgets will look like, cross-checks the numbers, and only writes when you confirm. Old tables are never modified or deleted by this tool.</div>
+
+<div id="loading" class="card"><div class="empty">Loading your data…</div></div>
+<div id="app" style="display:none">
+
+  <div class="card">
+    <div class="section-title">new page</div>
+    <div style="margin-bottom:.75rem"><label style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;display:block;margin-bottom:6px">page name</label><input type="text" id="page-name" value="Summer"></div>
+    <div class="toggle-row"><input type="checkbox" id="toggle-program" checked><label for="toggle-program" style="font-size:13px">Also migrate my workout program + progression targets into the Gym tab's optional config</label></div>
+    <div class="toggle-row"><input type="checkbox" id="toggle-schedule" checked><label for="toggle-schedule" style="font-size:13px">Also migrate my current weekly schedule routine into the Schedule tab's template</label></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">preview — tabs &amp; widgets to be created</div>
+    <div id="preview-tabs"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">cross-check — old data vs. what the new widgets will compute</div>
+    <div id="cross-check"></div>
+  </div>
+
+  <button class="btn btn-primary" id="migrate-btn" onclick="runMigration()">Confirm &amp; Migrate</button>
+  <button class="btn" onclick="location.reload()">Re-run preview</button>
+
+  <div class="card" id="progress-card" style="display:none;margin-top:1rem">
+    <div class="section-title">progress</div>
+    <div class="log" id="progress-log"></div>
+  </div>
+
+  <div class="card" id="result-card" style="display:none;margin-top:1rem">
+    <div class="section-title">done — verify before you trust it</div>
+    <div id="result-body"></div>
+  </div>
+
+</div>
+<script src="public/auth.js"></script>
+<script>
+const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v!==null?JSON.parse(v):d}catch{return d}};
+const sbFetchJson=async(url)=>{
+  const resp=await fetch(url,{headers:buildHeaders()});
+  if(!resp.ok) throw new Error(`Fetch failed ${url}: ${resp.status}`);
+  return resp.json();
+};
+const jsToSched=d=>d===0?6:d-1;
+
+// ═══ OLD-SIDE FORMULAS (mirrors index.html exactly, read-only, for the cross-check) ═══
+function oldCurrentBal(start,savLog){
+  let b=start;
+  savLog.forEach(e=>{
+    if(e.type==='balance')b=e.amount;
+    else if(e.type==='paycheck')b+=e.amount;
+    else if(e.type==='expense')b-=e.amount;
+  });
+  return b;
+}
+function oldGymSessionCount(gymLog){ return new Set(gymLog.map(e=>e.date)).size; }
+
+// The literal getBlocks() logic from index.html, used only to materialize the
+// current resolved schedule (real times/labels) into the new template format —
+// not copied into the generic engine, just used once here to move real data.
+function oldGetBlocks(di,schedActs){
+  const ACT_OPTS={0:['Golf @ Meadowlark (Josh)','Golf @ Hickory Swing','Lift','Tennis'],1:['Tennis','Lift','Golf @ Hickory Swing'],2:['Lift','Tennis','CRX practice'],3:['Tennis','Golf @ Hickory Swing','Lift'],4:['CRX practice','Lift','Tennis'],5:['Golf @ Hickory Swing','Tennis','Lift','CRX practice'],6:['Rest','Easy walk','Lift (light)']};
+  const act=schedActs[di]||ACT_OPTS[di][0];
+  if(di===6)return[
+    {t:'8:15 am',l:'Wake up',s:'Up and ready for breakfast by 9'},
+    {t:'8:30 am',l:'Breakfast',s:'Sit-down — no rush'},
+    {t:'9:30 am',l:'Get ready for church',s:'Leave ~10:15'},
+    {t:'10:30 am',l:'Church',s:'Full block · present'},
+    {t:'12:30 pm',l:'After church / lunch',s:'Family · decompress · mission prep'},
+    {t:'2:00 pm',l:'Rest / reading',s:'Sabbath — keep it low-key'},
+    {t:'5:00 pm',l:'Family dinner',s:'Sunday dinner'},
+    {t:'6:00 pm',l:'Prep for the week',s:'Plan Monday · review goals · lay out clothes'},
+    {t:'9:30 pm',l:'Phone to kitchen',s:'Wind-down'},
+    {t:'10:15 pm',l:'Lights out',s:'Work starts 8:30 tomorrow'},
+  ];
+  if(di===5)return[
+    {t:'8:00 am',l:'Wake up',s:'Slight sleep-in'},
+    {t:'8:15 am',l:'Breakfast + lunch meal prep',s:'Cook for the week'},
+    {t:'10:00 am',l:act,s:ACT_OPTS[5].join(' · ')},
+    {t:'12:00 pm',l:'Lunch',s:'From prep'},
+    {t:'12:30 pm',l:'Free block',s:'Errands · CRX · mission prep · social'},
+    {t:'3:00 pm',l:'Second activity (optional)',s:'Whatever you skipped this week'},
+    {t:'5:00 pm',l:'Family dinner',s:'Earned it'},
+    {t:'5:30 pm',l:'Free / social',s:'Earned downtime'},
+    {t:'9:30 pm',l:'Phone to kitchen',s:'Wind-down'},
+    {t:'10:15 pm',l:'Lights out',s:''},
+  ];
+  const wed=di===2;
+  return[
+    {t:'7:15 am',l:'Wake up — no phone',s:'Shower (10-min timer) · get dressed'},
+    {t:'7:35 am',l:'Breakfast + pack lunch',s:'Grab from prep'},
+    ...(wed?[{t:'7:45 am',l:'Leave for Magda lesson',s:'Meadowlark · lesson 8:00–9:00am'}]:[]),
+    {t:'7:50 am',l:'Buffer — out the door',s:'Leave by 8:10–8:15'},
+    {t:'8:30 am',l:'Work',s:'Full day'},
+    {t:'4:00 pm',l:'Commute home',s:'Decompress'},
+    {t:'4:15 pm',l:'Change + snack',s:'Fuel before activity'},
+    {t:'4:30 pm',l:act,s:ACT_OPTS[di].join(' · ')},
+    {t:'6:00 pm',l:'Family dinner',s:'Family time'},
+    {t:'6:45 pm',l:'Free / wind down',s:'Family · reading · mission prep'},
+    {t:'9:30 pm',l:'Phone to kitchen',s:'No screens'},
+    {t:'10:15 pm',l:'Lights out',s:'9 hrs'},
+  ];
+}
+function timeToHM(t){
+  // "7:15 am" -> "07:15" for the new template's time field
+  const m=String(t).trim().match(/(\d+):(\d+)\s*(am|pm)/i);
+  if(!m)return'';
+  let h=parseInt(m[1]);const min=m[2];const ap=m[3].toLowerCase();
+  if(ap==='pm'&&h!==12)h+=12;
+  if(ap==='am'&&h===12)h=0;
+  return String(h).padStart(2,'0')+':'+min;
+}
+
+const PROGRAM={
+  0:{exercises:[{n:'Pull-up',s:'3',r:'max',w:'BW'},{n:'Bench Press',s:'3',r:'8-10',w:'95 lbs'},{n:'DB Row',s:'3',r:'10 each',w:'30 lbs'},{n:'Overhead Press (DB)',s:'3',r:'10-12',w:'20 lbs'},{n:'Lateral Raise',s:'3',r:'12-15',w:'10 lbs'},{n:'Bicep Curl',s:'3',r:'10-12',w:'19 lbs'},{n:'Band Pull-Apart',s:'2',r:'20',w:'light band'}]},
+  1:{exercises:[{n:'Squat',s:'3',r:'6-8',w:'120 lbs'},{n:'Romanian Deadlift',s:'3',r:'10',w:'95 lbs'},{n:'Box Step-Up',s:'3',r:'10 each',w:'26 lbs KB'},{n:'KB Swing',s:'3',r:'15',w:'35 lbs KB'},{n:'Plank',s:'3',r:'45 sec',w:'BW'}]},
+  2:{exercises:[]},
+  3:{exercises:[{n:'Pull-up',s:'4',r:'max',w:'BW'},{n:'Bench Press',s:'3',r:'8-10',w:'95 lbs'},{n:'DB Row',s:'3',r:'10 each',w:'30 lbs'},{n:'Ring Face Pull',s:'3',r:'15',w:'BW'},{n:'Overhead Press (DB)',s:'3',r:'10-12',w:'20 lbs'},{n:'Bicep Curl',s:'3',r:'10-12',w:'19 lbs'},{n:'Pull-up Negative',s:'3',r:'5',w:'BW'}]},
+  4:{exercises:[{n:'Deadlift',s:'3',r:'5',w:'135 lbs'},{n:'Goblet Squat',s:'3',r:'8',w:'35 lbs KB'},{n:'Bulgarian Split Squat',s:'3',r:'8 each',w:'15 lbs DBs'},{n:'KB Swing',s:'3',r:'15',w:'35 lbs KB'},{n:'Fan Rower',s:'3',r:'250m sprint',w:''},{n:'Dead Hang',s:'3',r:'30 sec',w:'BW'}]},
+  5:{exercises:[]},
+  6:{exercises:[]},
+};
+const TRACKED_LIFTS=[
+  {name:'Bench Press',targetW:95,targetR:10},
+  {name:'Back Squat',targetW:120,targetR:8},
+  {name:'Deadlift',targetW:135,targetR:5},
+  {name:'DB Row',targetW:30,targetR:10},
+  {name:'DB Bicep Curl',targetW:19,targetR:12},
+  {name:'Pull-up',targetW:0,targetR:10},
+];
+
+let OLD={}; // raw fetched rows
+let PLAN=null; // computed migration plan
+
+async function loadOldData(){
+  const [cfgRows,savRows,gymRows,golfRows,tenRows,habitRows,notesRows]=await Promise.all([
+    sbFetchJson(`${SB_URL}/rest/v1/ec_config?select=*`),
+    sbFetchJson(`${SB_URL}/rest/v1/ec_savings?select=*`),
+    sbFetchJson(`${SB_URL}/rest/v1/ec_gym?select=*`),
+    sbFetchJson(`${SB_URL}/rest/v1/ec_golf?select=*`),
+    sbFetchJson(`${SB_URL}/rest/v1/ec_tennis?select=*`),
+    sbFetchJson(`${SB_URL}/rest/v1/ec_habits?select=*`),
+    sbFetchJson(`${SB_URL}/rest/v1/ec_notes?select=*`),
+  ]);
+  const cfg={};
+  cfgRows.forEach(r=>{cfg[r.key]=r.value;});
+  OLD={
+    cfg,
+    savLog:savRows,
+    gymLog:gymRows,
+    golfLog:golfRows,
+    tenLog:tenRows,
+    habitRows,
+    notes:notesRows,
+    habits:GS('habits',[{id:'bed',l:'Make bed'},{id:'shower',l:'10-min shower timer'},{id:'lunch',l:'Pack lunch'},{id:'activity',l:'Athletic activity'},{id:'insta',l:'No Instagram app'},{id:'plan',l:'Write plan for tomorrow'},{id:'read',l:'Read scriptures / book'},{id:'phone',l:'Phone to kitchen by 9:30'},{id:'whiten',l:'Whitening strips'},{id:'retainer',l:'Retainer in'},{id:'sleep',l:'Lights out by 10:15'}]),
+    gymEx:GS('gym_ex',[]),
+    schedActs:GS('sched_acts',{0:'Golf @ Meadowlark (Josh)',1:'Tennis',2:'Lift',3:'Tennis',4:'CRX practice',5:'Golf @ Hickory Swing',6:'Rest'}),
+  };
+}
+
+function buildPlan(){
+  const migrateProgram=document.getElementById('toggle-program').checked;
+  const migrateSchedule=document.getElementById('toggle-schedule').checked;
+  const pageName=document.getElementById('page-name').value.trim()||'Summer';
+
+  // savings config
+  const savingsConfig={
+    goal:Number(OLD.cfg.goal)||0,
+    start:Number(OLD.cfg.start)||0,
+    rate:Number(OLD.cfg.rate)||0,
+    deadline:OLD.cfg.deadline||'',
+  };
+  const savingsEntries=OLD.savLog.map(r=>({id:String(r.id),date:r.date,type:r.type,amount:r.amount,note:r.note||''}));
+
+  // workout_log
+  const workoutEntries=OLD.gymLog.map(r=>({id:String(r.id),date:r.date,exercise:r.ex,weight:r.wt,reps:r.reps,sets:r.sets}));
+  const exerciseNames=Array.from(new Set([...OLD.gymEx,...OLD.gymLog.map(r=>r.ex)])).filter(Boolean);
+  let workoutConfig={};
+  if(migrateProgram){
+    const days={};
+    Object.keys(PROGRAM).forEach(k=>{ if(PROGRAM[k].exercises.length) days[k]={exercises:PROGRAM[k].exercises.map(e=>({n:e.n,s:e.s,r:e.r,w:e.w}))}; });
+    workoutConfig={program:{days,targets:TRACKED_LIFTS.map(t=>({name:t.name,targetW:t.targetW,targetR:t.targetR}))}};
+  }
+
+  // golf_log
+  const golfEntries=OLD.golfLog.map(r=>({id:String(r.id),date:r.date,course:r.course,holes:r.holes,score:r.score,par:r.par}));
+
+  // tennis_log
+  const tennisEntries=OLD.tenLog.map(r=>({id:String(r.id),date:r.date,type:r.type,opp:r.opp||'',result:r.result||null,score:r.score||'',notes:r.notes||''}));
+
+  // habits — one widget per habit definition, log inverted from date-keyed rows
+  const habitWidgets=OLD.habits.map(h=>{
+    const log={};
+    OLD.habitRows.forEach(row=>{ if(row.data && row.data[h.id]) log[row.date]=true; });
+    return {title:h.l,log};
+  });
+
+  // notes
+  const noteEntries=OLD.notes.map(r=>({id:String(r.id),date:r.date,title:r.title,body:r.body}));
+
+  // schedule
+  let scheduleTemplate={};
+  if(migrateSchedule){
+    for(let di=0;di<7;di++){
+      const blocks=oldGetBlocks(di,OLD.schedActs);
+      scheduleTemplate[String(di)]={blocks:blocks.map((b,i)=>({id:'mig_'+di+'_'+i,time:timeToHM(b.t),label:b.l,sublabel:b.s||''}))};
+    }
+  }
+
+  return {
+    pageName,migrateProgram,migrateSchedule,
+    savingsConfig,savingsEntries,
+    workoutConfig,workoutEntries,exerciseNames,
+    golfEntries,tennisEntries,habitWidgets,noteEntries,scheduleTemplate,
+  };
+}
+
+function renderPreview(){
+  PLAN=buildPlan();
+  const tabsEl=document.getElementById('preview-tabs');
+  const rows=[
+    ['Dashboard','1 dashboard widget'],
+    ['Savings',`1 savings widget · ${PLAN.savingsEntries.length} entries`],
+    ['Gym',`1 workout_log widget · ${PLAN.workoutEntries.length} entries · ${PLAN.exerciseNames.length} exercise names${PLAN.migrateProgram?' · program + progression targets':''}`],
+    ['Golf',`1 golf_log widget · ${PLAN.golfEntries.length} rounds`],
+    ['Habits',`${PLAN.habitWidgets.length} habit widgets`],
+    ['Tennis',`1 tennis_log widget · ${PLAN.tennisEntries.length} sessions`],
+    ['Notes',`1 notes widget · ${PLAN.noteEntries.length} notes`],
+    ['Schedule',`1 schedule widget${PLAN.migrateSchedule?' · weekly template for all 7 days':' · blank template'}`],
+  ];
+  tabsEl.innerHTML=rows.map(([a,b])=>`<div class="row"><div>${a}</div><div class="n" style="font-size:11px">${b}</div></div>`).join('');
+}
+
+function renderCrossCheck(){
+  const el=document.getElementById('cross-check');
+  const oldBal=oldCurrentBal(Number(OLD.cfg.start)||0,OLD.savLog);
+  const newBal=PLAN.savingsEntries.reduce((b,e)=>{
+    const amt=Number(e.amount)||0;
+    if(e.type==='balance')return amt;
+    if(e.type==='expense')return b-amt;
+    return b+amt;
+  },PLAN.savingsConfig.start);
+  const oldGymSessions=oldGymSessionCount(OLD.gymLog);
+  const newGymSessions=new Set(PLAN.workoutEntries.map(e=>e.date)).size;
+  const oldGolfRounds=OLD.golfLog.length;
+  const newGolfRounds=PLAN.golfEntries.length;
+  const oldTennisSessions=OLD.tenLog.length;
+  const newTennisSessions=PLAN.tennisEntries.length;
+  const oldNotes=OLD.notes.length;
+  const newNotes=PLAN.noteEntries.length;
+  const oldHabitCheckins=OLD.habitRows.reduce((s,r)=>s+Object.values(r.data||{}).filter(Boolean).length,0);
+  const newHabitCheckins=PLAN.habitWidgets.reduce((s,h)=>s+Object.keys(h.log).length,0);
+
+  const checks=[
+    ['Savings balance',`$${oldBal.toFixed(2)}`,`$${newBal.toFixed(2)}`,Math.abs(oldBal-newBal)<0.005],
+    ['Gym sessions (distinct dates)',oldGymSessions,newGymSessions,oldGymSessions===newGymSessions],
+    ['Golf rounds',oldGolfRounds,newGolfRounds,oldGolfRounds===newGolfRounds],
+    ['Tennis sessions',oldTennisSessions,newTennisSessions,oldTennisSessions===newTennisSessions],
+    ['Notes',oldNotes,newNotes,oldNotes===newNotes],
+    ['Habit check-ins (total true cells)',oldHabitCheckins,newHabitCheckins,oldHabitCheckins===newHabitCheckins],
+  ];
+  el.innerHTML=checks.map(([label,oldV,newV,isMatch])=>`
+    <div class="row ${isMatch?'match':'mismatch'}">
+      <div>${label}</div>
+      <div class="n">${oldV} → ${newV} ${isMatch?'✓':'✗ MISMATCH'}</div>
+    </div>`).join('');
+  document.getElementById('migrate-btn').disabled=!checks.every(c=>c[3]);
+}
+
+function log(msg){
+  const el=document.getElementById('progress-log');
+  el.textContent+=msg+'\n';
+  el.scrollTop=el.scrollHeight;
+}
+
+async function runMigration(){
+  document.getElementById('progress-card').style.display='block';
+  document.getElementById('migrate-btn').disabled=true;
+  try{
+    const pageId=Date.now();
+    log(`Creating page "${PLAN.pageName}" (id ${pageId})…`);
+    const maxRows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?select=sort_order&order=sort_order.desc&limit=1`);
+    const nextSort=(maxRows[0]?.sort_order??-1)+1;
+    let r=await fetch(`${SB_URL}/rest/v1/ec_pages`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:pageId,name:PLAN.pageName,dot_color:'#B3A369',sort_order:nextSort,archived:false})});
+    if(!r.ok) throw new Error(`Page create failed ${r.status}`);
+
+    const tabDefs=['Dashboard','Savings','Gym','Golf','Habits','Tennis','Notes','Schedule'];
+    const tabIds={};
+    for(let i=0;i<tabDefs.length;i++){
+      const tabId=pageId+1+i;
+      tabIds[tabDefs[i]]=tabId;
+      r=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:tabId,page_id:pageId,name:tabDefs[i],sort_order:i})});
+      if(!r.ok) throw new Error(`Tab create failed (${tabDefs[i]}) ${r.status}`);
+      log(`Created tab "${tabDefs[i]}"`);
+    }
+
+    let widgetIdCounter=pageId+100;
+    async function createWidget(tabName,type,title,config,data){
+      const widgetId=widgetIdCounter++;
+      let r1=await fetch(`${SB_URL}/rest/v1/ec_page_widgets`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:widgetId,page_id:pageId,widget_type:type,title,config,sort_order:0,tab_id:tabIds[tabName]})});
+      if(!r1.ok) throw new Error(`Widget create failed (${title}) ${r1.status}`);
+      let r2=await fetch(`${SB_URL}/rest/v1/ec_widget_data`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({page_widget_id:widgetId,data})});
+      if(!r2.ok) throw new Error(`Widget data create failed (${title}) ${r2.status}`);
+      log(`  → widget "${title}" (${type}) created`);
+      return widgetId;
+    }
+
+    await createWidget('Dashboard','dashboard','Dashboard',{},{});
+    await createWidget('Savings','savings','Savings',PLAN.savingsConfig,{entries:PLAN.savingsEntries});
+    await createWidget('Gym','workout_log','Gym',PLAN.workoutConfig,{entries:PLAN.workoutEntries,exerciseNames:PLAN.exerciseNames});
+    await createWidget('Golf','golf_log','Golf',{},{entries:PLAN.golfEntries});
+    for(const h of PLAN.habitWidgets){
+      await createWidget('Habits','habits',h.title,{},{log:h.log});
+    }
+    await createWidget('Tennis','tennis_log','Tennis',{},{entries:PLAN.tennisEntries});
+    await createWidget('Notes','notes','Notes',{},{entries:PLAN.noteEntries});
+    await createWidget('Schedule','schedule','Schedule',{template:PLAN.scheduleTemplate},{events:[]});
+
+    log('\nMigration complete.');
+    document.getElementById('result-card').style.display='block';
+    document.getElementById('result-body').innerHTML=`
+      <p style="font-size:13px;margin-bottom:.75rem">New page created: <a href="page.html?id=${pageId}" target="_blank">open "${PLAN.pageName}" →</a></p>
+      <p style="font-size:12px;color:var(--muted)">Old tables (ec_savings, ec_gym, ec_golf, ec_tennis, ec_habits, ec_notes, ec_config) were not touched. Review the new page against index.html side by side. Only once you're satisfied should the old tables be dropped — that's a separate manual step, not done by this tool.</p>`;
+  }catch(e){
+    console.error('Migration failed',e);
+    log('ERROR: '+e.message);
+    alert('Migration failed partway — see the progress log. The old tables are untouched. You may have a partially-created page; check the page list before re-running.');
+    document.getElementById('migrate-btn').disabled=false;
+  }
+}
+
+(async function(){
+  const authed=await initAuth();
+  if(!authed){ window.location.href='index.html'; return; }
+  try{
+    await loadOldData();
+  }catch(e){
+    console.error('loadOldData failed',e);
+    document.getElementById('loading').innerHTML='<div class="empty">Failed to load old data. Check console.</div>';
+    return;
+  }
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('page-name').addEventListener('input',()=>{renderPreview();});
+  document.getElementById('toggle-program').addEventListener('change',()=>{renderPreview();});
+  document.getElementById('toggle-schedule').addEventListener('change',()=>{renderPreview();});
+  renderPreview();
+  renderCrossCheck();
+})();
+</script>
+</body>
+</html>
