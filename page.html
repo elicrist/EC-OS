@@ -35,10 +35,17 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab-btn.dragging{opacity:.4}
+.tab-wrap{display:flex;flex-direction:column;align-items:stretch;flex-shrink:0}
+.tab-del-btn{margin-top:1px;font-size:9px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px 4px;opacity:.8;text-align:center}
+.tab-del-btn:hover{opacity:1;text-decoration:underline}
+.tab-del-hidden{visibility:hidden;pointer-events:none}
 .tab-add-btn{padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;flex-shrink:0}
 .tab-add-btn:hover{color:var(--accent)}
-.widget-add-card{border-style:dashed;display:flex;align-items:center;justify-content:center;min-height:140px;cursor:pointer;color:var(--muted);font-size:28px;transition:all .15s}
+.widget-add-card{grid-column:1/-1;border-style:dashed;display:flex;align-items:center;justify-content:center;gap:6px;height:40px;min-height:0;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;padding:0;transition:all .15s}
 .widget-add-card:hover{color:var(--accent);border-color:var(--accent)}
+.widget-drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:2px 4px;user-select:none}
+.widget-drag-handle:hover{color:var(--accent)}
+.card.widget-dragging{opacity:.4}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
@@ -110,6 +117,8 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .set-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px}
 .pb-swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .pb-swatch.sel{border-color:var(--text)}
+.sched-swatch{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.sched-swatch.sel{border-color:var(--text)}
 .widget-card-full{grid-column:1/-1}
 .sched-day-nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem}
 .sched-day-chip{padding:5px 12px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted);text-align:center;transition:all .15s;font-family:'DM Mono',monospace}
@@ -246,7 +255,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <a class="hub-link" href="#" id="hdr-archive-link" onclick="archiveThisPage();return false" style="display:none">Archive this page</a>
   </div>
 </header>
-<div class="tab-bar" id="page-tab-bar" style="display:none"></div>
+<div class="tab-bar" id="page-tab-bar" style="display:none" ondragover="onTabBarDragOver(event)" ondrop="onTabBarDrop(event)"></div>
 <div class="content">
 <div class="empty" id="page-error" style="display:none">
   This page doesn't exist.<br><br>
@@ -256,7 +265,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   This page has been archived.<br><br>
   <a class="hub-link" href="#" onclick="openArchiveOverlay();return false">Open Archive panel to unarchive →</a>
 </div>
-<div class="widget-grid" id="page-widgets" style="display:none"></div>
+<div class="widget-grid" id="page-widgets" style="display:none" ondragover="onWidgetGridDragOver(event)" ondrop="onWidgetGridDrop(event)"></div>
 </div><!-- /content -->
 <script src="public/auth.js"></script>
 <script>
@@ -738,6 +747,34 @@ const SCHED_DAY_NAMES=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 let scheduleSelectedDay={}; // {widgetId: 0-6}
 function schedWeekdayIdx(d=new Date()){const j=d.getDay();return j===0?6:j-1;}
 
+// Fixed color palette — the LABEL for what a color means is entirely up to
+// whoever fills in the "category" field on a block; the engine never assigns
+// meaning to a slot, it just offers 6 consistent swatches to pick from.
+const SCHED_PALETTE=[
+  {key:'blue',bg:'#1a2540',border:'#5b8dee',text:'#adc4f5'},
+  {key:'orange',bg:'#2e1a0e',border:'#e07b4a',text:'#f5b990'},
+  {key:'green',bg:'#0e261a',border:'#5cb87a',text:'#96d9aa'},
+  {key:'purple',bg:'#1e1530',border:'#9b7fe8',text:'#c4aeee'},
+  {key:'amber',bg:'#28200a',border:'#e8c56a',text:'#f0d898'},
+  {key:'gray',bg:'#1c1c1f',border:'#333338',text:'#c8c8c4'},
+];
+const schedPaletteFor=key=>SCHED_PALETTE.find(p=>p.key===key)||SCHED_PALETTE[5];
+let scBlockColor={}; // {widgetId: colorKey} — in-progress selection for the "add recurring block" form
+let scEventColor={}; // {widgetId: colorKey} — in-progress selection for the "add one-off entry" form
+function paletteSwatchesHtml(selectedKey,clickFnName,widgetId){
+  return SCHED_PALETTE.map(p=>`<button type="button" class="sched-swatch${p.key===selectedKey?' sel':''}" style="background:${p.border}" onclick="${clickFnName}(${widgetId},'${p.key}')" aria-label="${p.key}"></button>`).join('');
+}
+function selectSchedBlockColor(widgetId,key){
+  scBlockColor[widgetId]=key;
+  const el=document.getElementById(`sched-block-colors-${widgetId}`);
+  if(el) el.innerHTML=paletteSwatchesHtml(key,'selectSchedBlockColor',widgetId);
+}
+function selectSchedEventColor(widgetId,key){
+  scEventColor[widgetId]=key;
+  const el=document.getElementById(`sched-event-colors-${widgetId}`);
+  if(el) el.innerHTML=paletteSwatchesHtml(key,'selectSchedEventColor',widgetId);
+}
+
 function renderScheduleWidget(w){
   const body=document.getElementById(`widget-body-${w.id}`);
   const cfg=w.config||{};
@@ -748,25 +785,29 @@ function renderScheduleWidget(w){
   const dayIdx=scheduleSelectedDay[w.id]??schedWeekdayIdx();
   scheduleSelectedDay[w.id]=dayIdx;
   const selectedDate=dates[dayIdx];
+  const blockColorSel=scBlockColor[w.id]||SCHED_PALETTE[0].key;
+  const eventColorSel=scEventColor[w.id]||SCHED_PALETTE[0].key;
 
   const dayNav=SCHED_DAY_NAMES.map((dn,i)=>`
     <div class="sched-day-chip${i===dayIdx?' active':''}" onclick="selectScheduleDay(${w.id},${i})">
       <div>${dn}</div><div style="font-size:9px;opacity:.65">${dates[i].slice(5)}</div>
     </div>`).join('');
 
-  const dayBlocks=(template[String(dayIdx)]?.blocks||[]).map(b=>({time:b.time||'',label:b.label,sublabel:b.sublabel,id:b.id,_source:'template'}));
-  const dayEvents=events.filter(e=>e.date===selectedDate).map(e=>({time:e.time||'',label:e.title,sublabel:'',id:e.id,_source:'event'}));
+  const dayBlocks=(template[String(dayIdx)]?.blocks||[]).map(b=>({time:b.time||'',label:b.label,sublabel:b.sublabel,category:b.category,color:b.color,id:b.id,_source:'template'}));
+  const dayEvents=events.filter(e=>e.date===selectedDate).map(e=>({time:e.time||'',label:e.title,sublabel:'',category:e.category,color:e.color,id:e.id,_source:'event'}));
   const merged=[...dayBlocks,...dayEvents].sort((a,b)=>a.time.localeCompare(b.time));
 
-  const mergedHtml=merged.length?merged.map(item=>`
-    <div class="sched-block-row">
+  const mergedHtml=merged.length?merged.map(item=>{
+    const pal=schedPaletteFor(item.color);
+    return `<div class="sched-block-row" style="background:${pal.bg};border-left:3px solid ${pal.border};border-radius:0 6px 6px 0;padding-left:10px;margin-bottom:4px">
       <div class="sched-block-time">${item.time||'—'}</div>
       <div class="sched-block-body">
-        <div class="sched-block-label">${item.label}${item._source==='event'?' <span style="font-size:9px;color:var(--accent);font-family:\'DM Mono\',monospace">· one-off</span>':''}</div>
+        <div class="sched-block-label" style="color:${pal.text}">${item.label}${item.category?` <span style="font-size:9px;opacity:.75">· ${item.category}</span>`:''}${item._source==='event'?' <span style="font-size:9px;color:var(--accent);font-family:\'DM Mono\',monospace">· one-off</span>':''}</div>
         ${item.sublabel?`<div class="sched-block-sub">${item.sublabel}</div>`:''}
       </div>
       <button class="del" onclick="${item._source==='template'?`removeTemplateBlock(${w.id},${dayIdx},'${item.id}')`:`delScheduleEvent(${w.id},'${item.id}')`}">×</button>
-    </div>`).join(''):'<div class="empty">Nothing scheduled for this day yet.</div>';
+    </div>`;
+  }).join(''):'<div class="empty">Nothing scheduled for this day yet.</div>';
 
   body.innerHTML=`
     <div class="sched-day-nav">${dayNav}</div>
@@ -779,9 +820,14 @@ function renderScheduleWidget(w){
           <div class="field"><label>label</label><input type="text" id="sc-b-label-${w.id}" placeholder="e.g. Work"></div>
         </div>
         <div class="form-row">
+          <div class="field"><label>category (optional)</label><input type="text" id="sc-b-cat-${w.id}" placeholder="e.g. Work"></div>
           <div class="field"><label>sublabel (optional)</label><input type="text" id="sc-b-sub-${w.id}" placeholder="optional detail"></div>
-          <button class="btn btn-primary" onclick="addTemplateBlock(${w.id})">Add</button>
         </div>
+        <div style="margin-bottom:.75rem">
+          <label style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;display:block;margin-bottom:6px">color</label>
+          <div id="sched-block-colors-${w.id}" style="display:flex;gap:6px">${paletteSwatchesHtml(blockColorSel,'selectSchedBlockColor',w.id)}</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="addTemplateBlock(${w.id})">Add</button>
       </div>
       <div class="card" style="background:var(--surface)">
         <div class="section-title">add one-off entry</div>
@@ -791,8 +837,13 @@ function renderScheduleWidget(w){
         </div>
         <div class="form-row">
           <div class="field"><label>title</label><input type="text" id="sc-e-title-${w.id}" placeholder="Event title"></div>
-          <button class="btn btn-primary" onclick="addScheduleEvent(${w.id})">Add</button>
+          <div class="field"><label>category (optional)</label><input type="text" id="sc-e-cat-${w.id}" placeholder="e.g. Appointment"></div>
         </div>
+        <div style="margin-bottom:.75rem">
+          <label style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;display:block;margin-bottom:6px">color</label>
+          <div id="sched-event-colors-${w.id}" style="display:flex;gap:6px">${paletteSwatchesHtml(eventColorSel,'selectSchedEventColor',w.id)}</div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="addScheduleEvent(${w.id})">Add</button>
       </div>
     </div>`;
 }
@@ -806,11 +857,13 @@ async function addTemplateBlock(id){
   const time=document.getElementById(`sc-b-time-${id}`).value;
   const label=document.getElementById(`sc-b-label-${id}`).value.trim();
   if(!label)return;
+  const category=document.getElementById(`sc-b-cat-${id}`).value.trim();
   const sublabel=document.getElementById(`sc-b-sub-${id}`).value.trim();
+  const color=scBlockColor[id]||SCHED_PALETTE[0].key;
   const newConfig=JSON.parse(JSON.stringify(w.config||{}));
   if(!newConfig.template)newConfig.template={};
   if(!newConfig.template[String(dayIdx)])newConfig.template[String(dayIdx)]={blocks:[]};
-  newConfig.template[String(dayIdx)].blocks.push({id:String(Date.now()),time,label,sublabel});
+  newConfig.template[String(dayIdx)].blocks.push({id:String(Date.now()),time,label,sublabel,category,color});
   try{await patchWidgetConfig(id,newConfig);renderWidgetById(id);}catch(e){console.error('addTemplateBlock save failed',e);alert('Save failed — try again.');}
 }
 async function removeTemplateBlock(id,dayIdx,blockId){
@@ -827,9 +880,11 @@ async function addScheduleEvent(id){
   const title=document.getElementById(`sc-e-title-${id}`).value.trim();
   if(!date||!title)return;
   const time=document.getElementById(`sc-e-time-${id}`).value;
+  const category=document.getElementById(`sc-e-cat-${id}`).value.trim();
+  const color=scEventColor[id]||SCHED_PALETTE[0].key;
   const data=widgetDataMap[id].data;
   if(!data.events)data.events=[];
-  data.events.push({id:String(Date.now()),date,time,title});
+  data.events.push({id:String(Date.now()),date,time,title,category,color});
   renderWidgetById(id);
   try{await saveWidgetData(id);}catch(e){console.error('addScheduleEvent save failed',e);alert('Save failed — try again.');}
 }
@@ -1489,11 +1544,15 @@ const WIDGET_RENDERERS={
 const renderWidgets=()=>{
   const wrap=document.getElementById('page-widgets');
   const tabbed=pageTabs.length>0;
-  const widgetsToShow=tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets;
+  const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
+    .slice().sort((a,b)=>a.sort_order-b.sort_order);
   let html=widgetsToShow.map(w=>`
     <div class="card${(w.widget_type==='schedule'||w.widget_type==='dashboard')?' widget-card-full':''}" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
-        <div class="section-title" id="widget-title-${w.id}" style="margin:0">${w.title||w.widget_type}</div>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+          <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder widget" title="Drag to reorder">⠿</span>
+          <div class="section-title" id="widget-title-${w.id}" style="margin:0">${w.title||w.widget_type}</div>
+        </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-sm" onclick="openWidgetSettings(${w.id})" aria-label="Edit widget settings">✎</button>
           <button class="btn btn-sm btn-danger" onclick="deleteWidgetInstance(${w.id})" aria-label="Delete widget">×</button>
@@ -1503,7 +1562,7 @@ const renderWidgets=()=>{
     </div>`).join('');
   if(tabbed){
     if(!widgetsToShow.length) html+='<div class="empty">No widgets in this tab yet.</div>';
-    html+='<div class="card widget-add-card" onclick="openMiniWidgetPicker()" aria-label="Add widget to this tab">+</div>';
+    html+='<div class="card widget-add-card" onclick="openMiniWidgetPicker()" aria-label="Add widget to this tab">+ Add widget</div>';
   }
   wrap.innerHTML=html;
   widgetsToShow.forEach(w=>{
@@ -1525,28 +1584,55 @@ const renderTabBar=()=>{
   if(addLink) addLink.style.display='none';
   bar.style.display='flex';
   const sorted=[...pageTabs].sort((a,b)=>a.sort_order-b.sort_order);
-  bar.innerHTML=sorted.map(t=>`
-    <button class="tab-btn${String(t.id)===String(activeTabId)?' active':''}" draggable="true"
-      ondragstart="onTabDragStart(event,${t.id})" ondragover="onTabDragOver(event)"
-      ondrop="onTabDrop(event,${t.id})" ondragend="onTabDragEnd(event)"
-      onclick="switchTab(${t.id})">${t.name}</button>`).join('')
+  bar.innerHTML=sorted.map(t=>{
+    const isActive=String(t.id)===String(activeTabId);
+    return `<div class="tab-wrap">
+      <button class="tab-btn${isActive?' active':''}" draggable="true"
+        ondragstart="onTabDragStart(event,${t.id})" ondragend="onTabDragEnd(event)"
+        onclick="switchTab(${t.id})">${t.name}</button>
+      <button class="tab-del-btn${isActive?'':' tab-del-hidden'}" onclick="deleteTabInstance(${t.id})" aria-label="Delete tab" tabindex="${isActive?'0':'-1'}">Delete</button>
+    </div>`;
+  }).join('')
     +`<button class="tab-add-btn" onclick="addTab()" aria-label="Add tab" title="Add tab">+</button>`;
 };
 
 const switchTab=id=>{activeTabId=id;renderTabBar();renderWidgets();};
 
+// Drag is constrained to the tab bar's own bounding box (with a small tolerance)
+// so a drag that ends up far away from the tab row is simply ignored, rather
+// than resolving to whatever element happens to receive the native drop event.
+const isWithinRect=(clientX,clientY,el,tolerance=16)=>{
+  if(!el)return false;
+  const r=el.getBoundingClientRect();
+  return clientX>=r.left-tolerance&&clientX<=r.right+tolerance&&clientY>=r.top-tolerance&&clientY<=r.bottom+tolerance;
+};
 const onTabDragStart=(e,id)=>{dragTabId=id;e.dataTransfer.effectAllowed='move';e.target.classList.add('dragging');};
-const onTabDragOver=e=>{e.preventDefault();};
 const onTabDragEnd=e=>{e.target.classList.remove('dragging');dragTabId=null;};
-const onTabDrop=async(e,targetId)=>{
+const onTabBarDragOver=e=>{
+  if(dragTabId==null)return;
+  if(isWithinRect(e.clientX,e.clientY,document.getElementById('page-tab-bar'))) e.preventDefault();
+};
+const findTabDropIndex=clientX=>{
+  const btns=[...document.getElementById('page-tab-bar').querySelectorAll('.tab-btn')];
+  for(let i=0;i<btns.length;i++){
+    const r=btns[i].getBoundingClientRect();
+    if(clientX<r.left+r.width/2) return i;
+  }
+  return btns.length;
+};
+const onTabBarDrop=async e=>{
+  if(dragTabId==null)return;
+  const bar=document.getElementById('page-tab-bar');
+  if(!isWithinRect(e.clientX,e.clientY,bar))return; // dropped outside/far from the tab row — no-op
   e.preventDefault();
-  if(dragTabId==null||String(dragTabId)===String(targetId))return;
   const sorted=[...pageTabs].sort((a,b)=>a.sort_order-b.sort_order);
   const fromIdx=sorted.findIndex(t=>String(t.id)===String(dragTabId));
-  const toIdx=sorted.findIndex(t=>String(t.id)===String(targetId));
-  if(fromIdx<0||toIdx<0)return;
+  if(fromIdx<0)return;
+  const toIdx=findTabDropIndex(e.clientX);
+  if(fromIdx===toIdx||fromIdx===toIdx-1)return;
   const [moved]=sorted.splice(fromIdx,1);
-  sorted.splice(toIdx,0,moved);
+  const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  sorted.splice(insertAt,0,moved);
   sorted.forEach((t,i)=>{t.sort_order=i;});
   pageTabs=sorted;
   renderTabBar();
@@ -1554,6 +1640,99 @@ const onTabDrop=async(e,targetId)=>{
     await Promise.all(sorted.map(t=>fetch(`${SB_URL}/rest/v1/ec_page_tabs?id=eq.${t.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:t.sort_order})})));
   }catch(e){
     console.error('tab reorder persist failed',e);
+    alert('Reorder failed to save — try again.');
+  }
+};
+
+const deleteTabInstance=async id=>{
+  const tab=pageTabs.find(t=>String(t.id)===String(id));
+  if(!tab)return;
+  const widgetsInTab=pageWidgets.filter(w=>String(w.tab_id)===String(id));
+  const msg=widgetsInTab.length
+    ?`Delete tab "${tab.name}" and its ${widgetsInTab.length} widget${widgetsInTab.length===1?'':'s'}? This deletes all their logged data and cannot be undone.`
+    :`Delete tab "${tab.name}"? This cannot be undone.`;
+  if(!confirm(msg))return;
+  try{
+    for(const w of widgetsInTab){
+      const dResp=await fetch(`${SB_URL}/rest/v1/ec_widget_data?page_widget_id=eq.${w.id}`,{method:'DELETE',headers:buildHeaders()});
+      if(!dResp.ok) throw new Error(`Widget data delete failed ${dResp.status}`);
+      const wResp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'DELETE',headers:buildHeaders()});
+      if(!wResp.ok) throw new Error(`Widget delete failed ${wResp.status}`);
+    }
+    const tResp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});
+    if(!tResp.ok) throw new Error(`Tab delete failed ${tResp.status}`);
+
+    pageWidgets=pageWidgets.filter(w=>String(w.tab_id)!==String(id));
+    widgetsInTab.forEach(w=>{delete widgetDataMap[w.id];});
+    pageTabs=pageTabs.filter(t=>String(t.id)!==String(id));
+    if(String(activeTabId)===String(id)){
+      const remaining=[...pageTabs].sort((a,b)=>a.sort_order-b.sort_order);
+      activeTabId=remaining.length?remaining[0].id:null;
+    }
+    renderTabBar();
+    renderWidgets();
+  }catch(e){
+    console.error('deleteTabInstance failed',e);
+    alert('Delete failed — try again.');
+  }
+};
+
+// Widget reorder — same constrained-drop pattern as tabs: dragging is scoped
+// to the widget grid's own bounding box, and a drop outside it is a no-op.
+let dragWidgetId=null;
+const onWidgetDragStart=(e,id)=>{
+  dragWidgetId=id;
+  e.dataTransfer.effectAllowed='move';
+  const card=document.getElementById(`widget-card-${id}`);
+  if(card)card.classList.add('widget-dragging');
+};
+const onWidgetDragEnd=e=>{
+  if(dragWidgetId!=null){
+    const card=document.getElementById(`widget-card-${dragWidgetId}`);
+    if(card)card.classList.remove('widget-dragging');
+  }
+  dragWidgetId=null;
+};
+const onWidgetGridDragOver=e=>{
+  if(dragWidgetId==null)return;
+  if(isWithinRect(e.clientX,e.clientY,document.getElementById('page-widgets'))) e.preventDefault();
+};
+const findWidgetDropIndex=(clientX,clientY,cardEls)=>{
+  if(!cardEls.length)return 0;
+  let nearestIdx=0,nearestDist=Infinity;
+  cardEls.forEach((el,i)=>{
+    const r=el.getBoundingClientRect();
+    const cx=r.left+r.width/2,cy=r.top+r.height/2;
+    const dist=Math.hypot(clientX-cx,clientY-cy);
+    if(dist<nearestDist){nearestDist=dist;nearestIdx=i;}
+  });
+  const r=cardEls[nearestIdx].getBoundingClientRect();
+  const frac=(clientX-r.left)/r.width+(clientY-r.top)/r.height;
+  return frac<1?nearestIdx:nearestIdx+1;
+};
+const onWidgetGridDrop=async e=>{
+  if(dragWidgetId==null)return;
+  const wrap=document.getElementById('page-widgets');
+  if(!isWithinRect(e.clientX,e.clientY,wrap))return; // dropped outside/far from the widget grid — no-op
+  e.preventDefault();
+  const tabbed=pageTabs.length>0;
+  const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
+    .slice().sort((a,b)=>a.sort_order-b.sort_order);
+  const fromIdx=widgetsToShow.findIndex(w=>String(w.id)===String(dragWidgetId));
+  if(fromIdx<0)return;
+  const cardEls=[...wrap.querySelectorAll('.card:not(.widget-add-card)')];
+  const toIdx=findWidgetDropIndex(e.clientX,e.clientY,cardEls);
+  if(fromIdx===toIdx||fromIdx===toIdx-1)return;
+  const sorted=[...widgetsToShow];
+  const [moved]=sorted.splice(fromIdx,1);
+  const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  sorted.splice(insertAt,0,moved);
+  sorted.forEach((w,i)=>{w.sort_order=i;}); // mutates shared refs in pageWidgets too
+  renderWidgets();
+  try{
+    await Promise.all(sorted.map(w=>fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:w.sort_order})})));
+  }catch(err){
+    console.error('widget reorder persist failed',err);
     alert('Reorder failed to save — try again.');
   }
 };
