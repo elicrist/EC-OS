@@ -369,12 +369,6 @@ const loadArchivedPages=async()=>{
 const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);if(String(id)===String(pageId)){location.reload();return;}await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
 const deletePagePermanently=async(id)=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}&select=name`);const name=rows[0]?.name||'this page';if(!confirm(`Permanently delete "${name}"? This cannot be undone.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});if(!resp.ok) throw new Error(`Delete failed ${resp.status}`);await loadArchivedPages();}catch(e){console.error('deletePagePermanently failed',e);alert('Delete failed.');}};
 let cfg=GS('cfg',{name:''});
-const loadHeaderName=async()=>{
-  try{
-    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_config?key=eq.name&select=value`);
-    if(rows.length){cfg.name=rows[0].value;SS('cfg',cfg);}
-  }catch(e){console.error('loadHeaderName failed',e);}
-};
 
 // ═══ PAGE BUILDER ═══
 const WIDGET_TYPE_DEFS=[
@@ -1902,7 +1896,6 @@ const archiveThisPage=async()=>{
   document.getElementById('hdr-date').textContent=hdrDateBase;
   const authed=await initAuth();
   if(!authed){window.location.href=LOGIN_ENTRY_POINT;return;}
-  await loadHeaderName();
   const hdrName=cfg.name||authSession?.user?.email||'';
   document.getElementById('hdr-sub').textContent=hdrName?'/ '+hdrName:'';
   renderPagesSidebar();

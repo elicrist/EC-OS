@@ -25,7 +25,7 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 2rem;gap:2.5rem}
 .eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);font-family:'DM Mono',monospace}
-.os-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;width:100%;max-width:920px}
+.os-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;width:100%;max-width:920px}
 .os-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:2rem 1.75rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:all .2s}
 .os-card:hover{transform:translateY(-3px)}
 .os-card.s:hover{border-color:var(--summer);box-shadow:0 8px 36px rgba(224,123,74,.1)}
@@ -56,16 +56,6 @@ footer{padding:1rem 2rem;border-top:1px solid var(--border);font-size:10px;color
 <main>
   <div class="eyebrow">select your operating system</div>
   <div class="os-grid" id="os-grid">
-    <a class="os-card s" href="index.html" id="os-card-summer">
-      <div class="os-phase"><span class="pulse"></span>active · summer 2026</div>
-      <div class="os-name">Summer OS</div>
-      <div class="os-tags">habits · gym · golf<br>tennis · savings · notes</div>
-      <div class="os-cd">
-        <div class="cd-num" id="cd-s">—</div>
-        <div class="cd-label">days until GT move-in</div>
-      </div>
-      <div class="os-open">open Summer OS →</div>
-    </a>
     <a class="os-card g" href="gt.html" id="os-card-gt">
       <div class="os-phase">georgia tech · fall 2026</div>
       <div class="os-name">GT OS</div>
@@ -97,7 +87,6 @@ const MS=localStorage.getItem('lds_mission_date');
 const MISSION=MS?new Date(MS):null;
 function days(d){return d?Math.ceil((d-today)/86400000):null;}
 const dG=days(GT);
-document.getElementById('cd-s').textContent=dG??'—';
 document.getElementById('cd-g').textContent=dG??'—';
 const dM=days(MISSION);
 document.getElementById('cd-m').textContent=dM??'TBD';
@@ -111,10 +100,14 @@ const sbFetchJson=async(url)=>{
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
   return resp.json();
 };
+// index.html has no card/DOM id of its own anymore (it's just the login
+// gate) but stays mapped here so its stale ec_pages static row — if it still
+// exists — gets treated as "already accounted for" and filtered out of the
+// dynamic list below, instead of leaking through as a broken generic card.
 const KNOWN_STATIC_CARDS={'index.html':'os-card-summer','gt.html':'os-card-gt','mission.html':'os-card-mission'};
 (async()=>{
   const authed=await initAuth();
-  if(!authed) return; // anon RLS sees nothing; the 3 hardcoded cards still work for nav
+  if(!authed) return; // anon RLS sees nothing; the 2 hardcoded cards still work for nav
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
     const extra=[];

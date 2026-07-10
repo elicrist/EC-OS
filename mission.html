@@ -210,7 +210,7 @@ textarea{resize:vertical;min-height:80px;font-family:'DM Mono',monospace}
   </div>
 </div>
 <header>
-  <div class="logo">Mission OS <span id="hdr-sub">/ Eli Crist</span></div>
+  <div class="logo">Mission OS <span id="hdr-sub"></span></div>
   <div class="hdr-right">
     <a class="hub-link" href="hub.html">← hub</a>
     <div class="hdr-meta" id="hdr-date"></div>
@@ -666,13 +666,7 @@ const loadArchivedPages=async()=>{
 const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);if(myStaticPageRow&&String(id)===String(myStaticPageRow.id)){location.reload();return;}await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
 const deletePagePermanently=async(id)=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}&select=name`);const name=rows[0]?.name||'this page';if(!confirm(`Permanently delete "${name}"? This cannot be undone.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});if(!resp.ok) throw new Error(`Delete failed ${resp.status}`);await loadArchivedPages();}catch(e){console.error('deletePagePermanently failed',e);alert('Delete failed.');}};
 const archiveThisPage=async()=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?page_kind=eq.static&select=*`);const row=rows.find(r=>String(r.url||'').split('/').pop()===getCurrentPagePath());if(!row){alert("Could not find this page's row.");return;}if(!confirm(`Archive "${row.name}"? You can unarchive it later from the Archive panel.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${row.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:true,archived_at:new Date().toISOString()})});if(!resp.ok) throw new Error(`Archive failed ${resp.status}`);window.location.href='hub.html';}catch(e){console.error('archiveThisPage failed',e);alert('Archive failed.');}};
-let cfg=GS('cfg',{name:'Eli Crist'});
-const loadHeaderName=async()=>{
-  try{
-    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_config?key=eq.name&select=value`);
-    if(rows.length){cfg.name=rows[0].value;SS('cfg',cfg);}
-  }catch(e){console.error('loadHeaderName failed',e);}
-};
+let cfg=GS('cfg',{name:''});
 
 // State
 let mCfg=GS('lds_cfg',{date:'',lang:'',goal:12000});
@@ -986,8 +980,8 @@ function renderAll(){renderDash();renderPrep();renderLang();renderHabits();rende
   document.getElementById('hdr-date').textContent=now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
   const authed=await initAuth();
   if(!authed){window.location.href=LOGIN_ENTRY_POINT;return;}
-  await loadHeaderName();
-  document.getElementById('hdr-sub').textContent='/ '+(cfg.name||'Eli Crist');
+  const hdrName=cfg.name||authSession?.user?.email||'';
+  document.getElementById('hdr-sub').textContent=hdrName?'/ '+hdrName:'';
   // Load config into form
   if(mCfg.date)document.getElementById('cfg-date').value=mCfg.date;
   document.getElementById('cfg-lang').value=mCfg.lang||'';
