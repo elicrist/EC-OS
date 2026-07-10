@@ -29,17 +29,24 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
 .grid-2>*,.grid-4>*{min-width:0}
-.widget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;align-items:start}
+.widget-rows{display:flex;flex-direction:column;align-items:stretch;gap:1rem}
+.widget-row{display:flex;gap:1rem;align-items:flex-start}
+.widget-row>.card{flex:1;min-width:0}
 .tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
 .tab-bar::-webkit-scrollbar{display:none}
 .tab-btn{padding:10px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab-btn.dragging{opacity:.4}
-.tab-wrap{display:flex;flex-direction:column;align-items:stretch;flex-shrink:0}
-.tab-del-btn{margin-top:1px;font-size:9px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px 4px;text-align:center;max-height:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-height .15s ease,opacity .15s ease}
-.tab-wrap:hover .tab-del-btn,.tab-wrap:focus-within .tab-del-btn{max-height:20px;opacity:.85;pointer-events:auto}
-.tab-del-btn:hover{opacity:1;text-decoration:underline}
+.tab-wrap{display:flex;flex-direction:column;align-items:stretch;flex-shrink:0;position:relative}
+.tab-btn-row{display:flex;align-items:center}
+.tab-edit-toggle{font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;padding:0 6px;opacity:0;transition:opacity .15s ease}
+.tab-wrap:hover .tab-edit-toggle,.tab-wrap:focus-within .tab-edit-toggle,.tab-wrap.editing .tab-edit-toggle{opacity:.85}
+.tab-edit-toggle:hover{opacity:1;color:var(--text)}
+.tab-edit-panel{z-index:1050;background:var(--card);border:1px solid var(--border-light);border-radius:8px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:6px;min-width:160px}
+.tab-edit-panel input{font-size:12px}
+.tab-del-btn{margin-top:1px;font-size:10px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:1px solid var(--danger);border-radius:6px;cursor:pointer;padding:4px 8px;text-align:center}
+.tab-del-btn:hover{background:color-mix(in srgb,var(--danger) 14%,var(--card))}
 .tab-add-btn{padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;flex-shrink:0}
 .tab-add-btn:hover{color:var(--accent)}
 .widget-add-card{grid-column:1/-1;border-style:dashed;display:flex;align-items:center;justify-content:center;gap:6px;height:40px;min-height:0;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;padding:0;transition:all .15s}
@@ -86,7 +93,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .wcell.on{background:var(--ok);border-color:var(--ok)}
 .wlabel{font-size:10px;color:var(--muted);text-align:center;font-family:'DM Mono',monospace;margin-bottom:3px}
 .streak-badge{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1px solid var(--accent);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent)}
-@media(max-width:720px){.grid-2,.grid-4{grid-template-columns:1fr}.widget-grid{grid-template-columns:1fr}.content{padding:1rem}header{padding:.9rem 1rem;flex-wrap:wrap;row-gap:6px}.hdr-right{flex-wrap:wrap}}
+@media(max-width:720px){.grid-2,.grid-4{grid-template-columns:1fr}.widget-row{flex-direction:column}.content{padding:1rem}header{padding:.9rem 1rem;flex-wrap:wrap;row-gap:6px}.hdr-right{flex-wrap:wrap}}
 /* === OS SIDEBAR === */
 .os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease;overflow:hidden}
 .os-sb.open{width:168px;align-items:flex-start;padding:14px 10px}
@@ -120,8 +127,6 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .pb-swatch.sel{border-color:var(--text)}
 .sched-swatch{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .sched-swatch.sel{border-color:var(--text)}
-.widget-card-full{grid-column:1/-1}
-.widget-card-wide{grid-column:span 2}
 .sched-day-nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem}
 .sched-day-chip{padding:5px 12px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted);text-align:center;transition:all .15s;font-family:'DM Mono',monospace}
 .sched-day-chip:hover{color:var(--text)}
@@ -258,6 +263,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   </div>
 </header>
 <div class="tab-bar" id="page-tab-bar" style="display:none" ondragover="onTabBarDragOver(event)" ondrop="onTabBarDrop(event)"></div>
+<div id="tab-edit-portal"></div>
 <div class="content">
 <div class="empty" id="page-error" style="display:none">
   This page doesn't exist.<br><br>
@@ -267,7 +273,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   This page has been archived.<br><br>
   <a class="hub-link" href="#" onclick="openArchiveOverlay();return false">Open Archive panel to unarchive →</a>
 </div>
-<div class="widget-grid" id="page-widgets" style="display:none" ondragover="onWidgetGridDragOver(event)" ondrop="onWidgetGridDrop(event)"></div>
+<div class="widget-rows" id="page-widgets" style="display:none" ondragover="onWidgetGridDragOver(event)" ondrop="onWidgetGridDrop(event)"></div>
 </div><!-- /content -->
 <script src="public/auth.js"></script>
 <script>
@@ -315,6 +321,16 @@ const closeOverlayIfBackdrop=(event,closeFn)=>{ if(event.target===event.currentT
 document.addEventListener('click',event=>{
   const sb=document.getElementById('os-sb');
   if(sb&&sb.classList.contains('open')&&!sb.contains(event.target)) sb.classList.remove('open');
+});
+// Tab rename/delete panel closes on any click outside the tab OR the
+// (portal-rendered, DOM-detached-from-the-tab) panel itself.
+document.addEventListener('click',event=>{
+  if(tabEditingId==null)return;
+  const wrap=document.getElementById(`tab-wrap-${tabEditingId}`);
+  const portal=document.getElementById('tab-edit-portal');
+  const insideWrap=wrap&&wrap.contains(event.target);
+  const insidePortal=portal&&portal.contains(event.target);
+  if(!insideWrap&&!insidePortal) closeTabEdit();
 });
 const openArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');loadArchivedPages();};
 const closeArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
@@ -502,6 +518,7 @@ let hdrDateBase='';
 let pageTabs=[];
 let activeTabId=null;
 let dragTabId=null;
+let tabEditingId=null; // which tab's rename/delete panel is currently open, if any
 
 function todayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
 function weekDates(){
@@ -1546,13 +1563,35 @@ const WIDGET_RENDERERS={
   dashboard:renderDashboardWidget,
 };
 
+// Widgets are laid out as a sequence of rows (1 or 2 widgets each), not a
+// fixed-column grid. Default: walk widgets in sort_order and greedily pair
+// up consecutive ones — a lone widget (odd one out, or the only widget on
+// the tab) gets a full-width row to itself. schedule/dashboard always get
+// their own full-width row regardless (unchanged from before). Dragging a
+// widget onto the bottom portion of another (see onWidgetGridDrop) sets
+// config.fullRow=true, which forces it out of pairing permanently until
+// dragged into a normal (pairing-eligible) drop zone again.
+const widgetIsRowForced=w=>w.widget_type==='schedule'||w.widget_type==='dashboard'||!!w.config?.fullRow;
+const computeWidgetRows=widgets=>{
+  const rows=[];
+  let i=0;
+  while(i<widgets.length){
+    const w=widgets[i];
+    if(widgetIsRowForced(w)){ rows.push([w]); i+=1; continue; }
+    const next=widgets[i+1];
+    if(next&&!widgetIsRowForced(next)){ rows.push([w,next]); i+=2; }
+    else{ rows.push([w]); i+=1; }
+  }
+  return rows;
+};
+
 const renderWidgets=()=>{
   const wrap=document.getElementById('page-widgets');
   const tabbed=pageTabs.length>0;
   const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
     .slice().sort((a,b)=>a.sort_order-b.sort_order);
-  let html=widgetsToShow.map(w=>`
-    <div class="card${(w.widget_type==='schedule'||w.widget_type==='dashboard')?' widget-card-full':w.widget_type==='notes'?' widget-card-wide':''}" id="widget-card-${w.id}">
+  const widgetCardHtml=w=>`
+    <div class="card" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
           <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder widget" title="Drag to reorder">⠿</span>
@@ -1564,7 +1603,9 @@ const renderWidgets=()=>{
         </div>
       </div>
       <div id="widget-body-${w.id}"></div>
-    </div>`).join('');
+    </div>`;
+  const rows=computeWidgetRows(widgetsToShow);
+  let html=rows.map(row=>`<div class="widget-row">${row.map(widgetCardHtml).join('')}</div>`).join('');
   if(tabbed){
     if(!widgetsToShow.length) html+='<div class="empty">No widgets in this tab yet.</div>';
     html+='<div class="card widget-add-card" onclick="openMiniWidgetPicker()" aria-label="Add widget to this tab">+ Add widget</div>';
@@ -1572,7 +1613,7 @@ const renderWidgets=()=>{
     // Brand-new page: no tabs exist yet. The header has a small "+ Add tab"
     // link, but a blank page shouldn't rely on that alone being noticed —
     // give it an unmissable call to action too.
-    html+=`<div class="card widget-card-full" style="text-align:center;padding:2.5rem 1.5rem">
+    html+=`<div class="card" style="text-align:center;padding:2.5rem 1.5rem">
       <div style="font-size:14px;margin-bottom:.4rem">This page doesn't have any tabs yet.</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">Add a tab to start building — any widgets already here will move into it.</div>
       <button class="btn btn-primary" onclick="addTab()">+ Add your first tab</button>
@@ -1600,17 +1641,66 @@ const renderTabBar=()=>{
   const sorted=[...pageTabs].sort((a,b)=>a.sort_order-b.sort_order);
   bar.innerHTML=sorted.map(t=>{
     const isActive=String(t.id)===String(activeTabId);
-    return `<div class="tab-wrap">
-      <button class="tab-btn${isActive?' active':''}" draggable="true"
-        ondragstart="onTabDragStart(event,${t.id})" ondragend="onTabDragEnd(event)"
-        onclick="switchTab(${t.id})">${t.name}</button>
-      <button class="tab-del-btn" onclick="deleteTabInstance(${t.id})" aria-label="Delete tab">Delete</button>
+    const isEditing=String(t.id)===String(tabEditingId);
+    return `<div class="tab-wrap${isEditing?' editing':''}" id="tab-wrap-${t.id}">
+      <div class="tab-btn-row">
+        <button class="tab-btn${isActive?' active':''}" draggable="true"
+          ondragstart="onTabDragStart(event,${t.id})" ondragend="onTabDragEnd(event)"
+          onclick="switchTab(${t.id})">${t.name}</button>
+        <button class="tab-edit-toggle" onclick="toggleTabEdit(event,${t.id})" aria-label="Edit tab" title="Rename or delete tab">✎</button>
+      </div>
     </div>`;
   }).join('')
     +`<button class="tab-add-btn" onclick="addTab()" aria-label="Add tab" title="Add tab">+</button>`;
+  renderTabEditPortal();
+};
+
+// The edit panel is a dropdown anchored to a specific tab, but .tab-bar needs
+// overflow-x:auto for horizontal scrolling with many tabs — which (per the
+// CSS overflow spec) forces overflow-y to clip too, cutting off anything
+// absolutely-positioned inside it. Rendered into a fixed-position portal
+// outside the tab bar instead, positioned from the tab's own bounding rect.
+const renderTabEditPortal=()=>{
+  const portal=document.getElementById('tab-edit-portal');
+  if(!portal)return;
+  if(tabEditingId==null){portal.innerHTML='';return;}
+  const t=pageTabs.find(pt=>String(pt.id)===String(tabEditingId));
+  const anchor=document.getElementById(`tab-wrap-${tabEditingId}`);
+  if(!t||!anchor){portal.innerHTML='';return;}
+  const r=anchor.getBoundingClientRect();
+  portal.innerHTML=`
+    <div class="tab-edit-panel" style="position:fixed;top:${r.bottom+4}px;left:${r.left}px">
+      <input type="text" id="tab-rename-${t.id}" value="${String(t.name).replace(/"/g,'&quot;')}" onkeydown="if(event.key==='Enter'){saveTabName(${t.id},this.value);}else if(event.key==='Escape'){closeTabEdit();}">
+      <button class="btn btn-sm" onclick="saveTabName(${t.id},document.getElementById('tab-rename-${t.id}').value)">Save name</button>
+      <button class="tab-del-btn" onclick="deleteTabInstance(${t.id})" aria-label="Delete tab">Delete tab</button>
+    </div>`;
+  const input=document.getElementById(`tab-rename-${t.id}`);
+  if(input){input.focus();input.select();}
 };
 
 const switchTab=id=>{activeTabId=id;renderTabBar();renderWidgets();};
+
+const toggleTabEdit=(event,id)=>{
+  event.stopPropagation();
+  tabEditingId=(String(tabEditingId)===String(id))?null:id;
+  renderTabBar();
+};
+const closeTabEdit=()=>{tabEditingId=null;renderTabBar();};
+const saveTabName=async(id,newName)=>{
+  const trimmed=(newName||'').trim();
+  if(!trimmed)return;
+  const tab=pageTabs.find(t=>String(t.id)===String(id));
+  if(!tab||tab.name===trimmed){closeTabEdit();return;}
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs?id=eq.${id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({name:trimmed})});
+    if(!resp.ok) throw new Error(`Tab rename failed ${resp.status}`);
+    tab.name=trimmed;
+    closeTabEdit();
+  }catch(e){
+    console.error('saveTabName failed',e);
+    alert('Rename failed — try again.');
+  }
+};
 
 // Drag is constrained to the tab bar's own bounding box (with a small tolerance)
 // so a drag that ends up far away from the tab row is simply ignored, rather
@@ -1711,8 +1801,12 @@ const onWidgetGridDragOver=e=>{
   if(dragWidgetId==null)return;
   if(isWithinRect(e.clientX,e.clientY,document.getElementById('page-widgets'))) e.preventDefault();
 };
-const findWidgetDropIndex=(clientX,clientY,cardEls)=>{
-  if(!cardEls.length)return 0;
+// Two drop zones per target card: the bottom quarter means "stack a new,
+// full-width row right after this card" (sets fullRow); everything else is
+// a normal reorder, which also clears fullRow so a previously-stacked
+// widget can rejoin pairing by being dragged into a normal zone.
+const findWidgetDropTarget=(clientX,clientY,cardEls)=>{
+  if(!cardEls.length)return {index:0,stack:false};
   let nearestIdx=0,nearestDist=Infinity;
   cardEls.forEach((el,i)=>{
     const r=el.getBoundingClientRect();
@@ -1721,30 +1815,45 @@ const findWidgetDropIndex=(clientX,clientY,cardEls)=>{
     if(dist<nearestDist){nearestDist=dist;nearestIdx=i;}
   });
   const r=cardEls[nearestIdx].getBoundingClientRect();
-  const frac=(clientX-r.left)/r.width+(clientY-r.top)/r.height;
-  return frac<1?nearestIdx:nearestIdx+1;
+  const fracY=(clientY-r.top)/r.height;
+  if(fracY>0.75) return {index:nearestIdx+1,stack:true};
+  const frac=(clientX-r.left)/r.width+fracY;
+  return {index:frac<1?nearestIdx:nearestIdx+1,stack:false};
 };
 const onWidgetGridDrop=async e=>{
   if(dragWidgetId==null)return;
   const wrap=document.getElementById('page-widgets');
-  if(!isWithinRect(e.clientX,e.clientY,wrap))return; // dropped outside/far from the widget grid — no-op
+  if(!isWithinRect(e.clientX,e.clientY,wrap))return; // dropped outside/far from the widget area — no-op
   e.preventDefault();
   const tabbed=pageTabs.length>0;
   const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
     .slice().sort((a,b)=>a.sort_order-b.sort_order);
   const fromIdx=widgetsToShow.findIndex(w=>String(w.id)===String(dragWidgetId));
   if(fromIdx<0)return;
+  const draggedWidget=widgetsToShow[fromIdx];
   const cardEls=[...wrap.querySelectorAll('.card:not(.widget-add-card)')];
-  const toIdx=findWidgetDropIndex(e.clientX,e.clientY,cardEls);
-  if(fromIdx===toIdx||fromIdx===toIdx-1)return;
+  const {index:toIdx,stack}=findWidgetDropTarget(e.clientX,e.clientY,cardEls);
+
+  const alwaysForced=draggedWidget.widget_type==='schedule'||draggedWidget.widget_type==='dashboard';
+  const currentFullRow=!!draggedWidget.config?.fullRow;
+  const newFullRow=alwaysForced?true:stack;
+  const fullRowChanged=!alwaysForced&&currentFullRow!==newFullRow;
+  const positionChanged=!(fromIdx===toIdx||fromIdx===toIdx-1);
+  if(!positionChanged&&!fullRowChanged)return;
+
   const sorted=[...widgetsToShow];
   const [moved]=sorted.splice(fromIdx,1);
-  const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  insertAt=Math.max(0,Math.min(insertAt,sorted.length));
   sorted.splice(insertAt,0,moved);
   sorted.forEach((w,i)=>{w.sort_order=i;}); // mutates shared refs in pageWidgets too
+  if(fullRowChanged) moved.config={...(moved.config||{}),fullRow:newFullRow};
+
   renderWidgets();
   try{
-    await Promise.all(sorted.map(w=>fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:w.sort_order})})));
+    const tasks=sorted.map(w=>fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:w.sort_order})}));
+    if(fullRowChanged) tasks.push(fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${moved.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:moved.config})}));
+    await Promise.all(tasks);
   }catch(err){
     console.error('widget reorder persist failed',err);
     alert('Reorder failed to save — try again.');
