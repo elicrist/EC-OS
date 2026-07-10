@@ -28,6 +28,7 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .content{flex:1;overflow-y:auto;padding:1.5rem 2rem}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+.grid-2>*,.grid-4>*{min-width:0}
 .widget-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;align-items:start}
 .tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
 .tab-bar::-webkit-scrollbar{display:none}
@@ -36,9 +37,9 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab-btn.dragging{opacity:.4}
 .tab-wrap{display:flex;flex-direction:column;align-items:stretch;flex-shrink:0}
-.tab-del-btn{margin-top:1px;font-size:9px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px 4px;opacity:.8;text-align:center}
+.tab-del-btn{margin-top:1px;font-size:9px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:none;cursor:pointer;padding:2px 4px 4px;text-align:center;max-height:0;opacity:0;overflow:hidden;pointer-events:none;transition:max-height .15s ease,opacity .15s ease}
+.tab-wrap:hover .tab-del-btn,.tab-wrap:focus-within .tab-del-btn{max-height:20px;opacity:.85;pointer-events:auto}
 .tab-del-btn:hover{opacity:1;text-decoration:underline}
-.tab-del-hidden{visibility:hidden;pointer-events:none}
 .tab-add-btn{padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;flex-shrink:0}
 .tab-add-btn:hover{color:var(--accent)}
 .widget-add-card{grid-column:1/-1;border-style:dashed;display:flex;align-items:center;justify-content:center;gap:6px;height:40px;min-height:0;cursor:pointer;color:var(--muted);font-size:12px;font-weight:500;padding:0;transition:all .15s}
@@ -46,7 +47,7 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .widget-drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:2px 4px;user-select:none}
 .widget-drag-handle:hover{color:var(--accent)}
 .card.widget-dragging{opacity:.4}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;min-width:0}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
 .stat-label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
@@ -58,7 +59,7 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
 .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:90px}
 .field label{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
-input,select,textarea{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
+input,select,textarea{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;min-width:0;transition:border-color .15s}
 input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 select option{background:var(--surface)}
 textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
@@ -105,9 +106,9 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sb-action .sb-dot{width:24px;height:24px;font-size:24px;display:flex;align-items:center;justify-content:center}
 .os-sb:not(.open) .sb-action{justify-content:center;gap:0}
 .os-sb:not(.open) .sb-action .sb-label{width:0;margin:0}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000;overscroll-behavior:contain}
 .overlay.active{display:flex}
-.overlay-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.5rem;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.35)}
+.overlay-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.5rem;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.35);overscroll-behavior:contain}
 .overlay-card.wide{max-width:580px}
 .archive-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .archive-row:last-child{border-bottom:none}
@@ -120,6 +121,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sched-swatch{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .sched-swatch.sel{border-color:var(--text)}
 .widget-card-full{grid-column:1/-1}
+.widget-card-wide{grid-column:span 2}
 .sched-day-nav{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:.5rem}
 .sched-day-chip{padding:5px 12px;border-radius:6px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted);text-align:center;transition:all .15s;font-family:'DM Mono',monospace}
 .sched-day-chip:hover{color:var(--text)}
@@ -143,7 +145,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
   </div>
 </div>
-<div id="settings-overlay" class="overlay" aria-hidden="true">
+<div id="settings-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeSettingsOverlay)">
   <div class="overlay-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div class="section-title" style="margin:0">Settings</div>
@@ -178,7 +180,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     </div>
   </div>
 </div>
-<div id="archive-overlay" class="overlay" aria-hidden="true">
+<div id="archive-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeArchiveOverlay)">
   <div class="overlay-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div class="section-title" style="margin:0">Archived pages</div>
@@ -188,13 +190,13 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <div class="empty" id="archive-empty">No archived pages.</div>
   </div>
 </div>
-<div id="page-builder-overlay" class="overlay" aria-hidden="true">
+<div id="page-builder-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closePageBuilder)">
   <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
       <div class="section-title" style="margin:0" id="pb-title">Page builder · step 1 of 2</div>
       <button class="btn btn-sm" onclick="closePageBuilder()">Close</button>
     </div>
-    <div id="pb-step1" style="overflow-y:auto;flex:1;min-height:0">
+    <div id="pb-step1" style="overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0">
       <div class="form-row">
         <div class="field"><label>page name</label><input type="text" id="pb-name" placeholder="Fall Trip"></div>
       </div>
@@ -209,7 +211,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
       <button class="btn btn-primary" style="width:100%" onclick="pbGoStep2()">Next: choose widgets</button>
     </div>
     <div id="pb-step2" style="display:none;flex-direction:column;flex:1;min-height:0">
-      <div style="overflow-y:auto;flex:1;min-height:0">
+      <div style="overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0">
         <div id="pb-widget-types" style="margin-bottom:1rem"></div>
         <div style="border-top:1px solid var(--border);padding-top:.9rem;margin-bottom:.75rem">
           <div class="section-title">widgets to add</div>
@@ -224,7 +226,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     </div>
   </div>
 </div>
-<div id="widget-settings-overlay" class="overlay" aria-hidden="true">
+<div id="widget-settings-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeWidgetSettings)">
   <div class="overlay-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div class="section-title" style="margin:0">Edit widget</div>
@@ -237,7 +239,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <button class="btn btn-primary" style="width:100%" onclick="saveWidgetSettings()">Save</button>
   </div>
 </div>
-<div id="mini-widget-picker-overlay" class="overlay" aria-hidden="true">
+<div id="mini-widget-picker-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeMiniWidgetPicker)">
   <div class="overlay-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <div class="section-title" style="margin:0">Add widget to tab</div>
@@ -305,6 +307,15 @@ const renderPagesSidebar=async()=>{
     container.innerHTML='<div class="empty" style="padding:0 12px">Unable to load sidebar pages.</div>';
   }
 };
+// Click-outside-to-close: bound on the .overlay backdrop itself. Only fires
+// when the click target IS the backdrop (not a child), so clicks inside the
+// card never close it.
+const closeOverlayIfBackdrop=(event,closeFn)=>{ if(event.target===event.currentTarget) closeFn(); };
+// Sidebar collapses on any click outside it, same as the overlays above.
+document.addEventListener('click',event=>{
+  const sb=document.getElementById('os-sb');
+  if(sb&&sb.classList.contains('open')&&!sb.contains(event.target)) sb.classList.remove('open');
+});
 const openArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');loadArchivedPages();};
 const closeArchiveOverlay=()=>{const overlay=document.getElementById('archive-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
 const openSettingsOverlay=()=>{const overlay=document.getElementById('settings-overlay');if(!overlay)return;overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');loadSettingsOverlay();};
@@ -708,14 +719,14 @@ function renderNotesWidget(w){
     <button class="btn btn-primary" onclick="addNoteEntry(${w.id})">Save Note</button>
     <div style="margin-top:1rem">${entries.length?entries.map(n=>`
       <div class="card" style="margin-bottom:.6rem;background:var(--surface)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem">
-          <div style="font-size:13px;font-weight:500">${n.title}</div>
-          <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;gap:8px">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(n.title||'').replace(/"/g,'&quot;')}">${n.title}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
             <div style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${n.date}</div>
             <button class="del" onclick="delNoteEntry(${w.id},'${n.id}')">×</button>
           </div>
         </div>
-        <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;font-family:'DM Mono',monospace;line-height:1.6">${n.body}</div>
+        <div style="font-size:12px;color:var(--muted);white-space:pre-wrap;overflow-wrap:break-word;font-family:'DM Mono',monospace;line-height:1.6">${n.body}</div>
       </div>`).join(''):'<div class="empty">No notes yet.</div>'}</div>`;
 }
 async function addNoteEntry(id){
@@ -992,9 +1003,9 @@ function renderWorkoutLogWidget(w){
   const prHtml=`
     <div class="section-title">personal records</div>
     ${prEntries.length?prEntries.map(([ex,pr])=>`
-      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--faint)">
-        <div style="font-size:12px">${ex}</div>
-        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--accent)">${pr.wt?pr.wt+' lbs × ':''}${pr.reps} reps</div>
+      <div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--faint)">
+        <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(ex).replace(/"/g,'&quot;')}">${ex}</div>
+        <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--accent);flex-shrink:0">${pr.wt?pr.wt+' lbs × ':''}${pr.reps} reps</div>
       </div>`).join(''):'<div class="empty" style="padding:.5rem 0">No PRs yet.</div>'}`;
 
   const quickLoadHtml=hasProgramDays?`
@@ -1012,9 +1023,9 @@ function renderWorkoutLogWidget(w){
         const key=Object.keys(prs).find(k=>k.toLowerCase().includes((t.name||'').toLowerCase()));
         const pr=key?prs[key]:null;
         const hit=pr&&(!t.targetW||pr.wt>=t.targetW)&&(!t.targetR||pr.reps>=t.targetR);
-        return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--faint)">
-          <div style="font-size:12px">${t.name}</div>
-          <div style="font-size:11px;font-family:'DM Mono',monospace;color:${hit?'var(--ok)':'var(--muted)'}">${pr?(pr.wt?pr.wt+' lbs × ':'')+pr.reps+' reps':'no data'}${hit?' — ready to increase':''}</div>
+        return `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--faint)">
+          <div style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(t.name).replace(/"/g,'&quot;')}">${t.name}</div>
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:${hit?'var(--ok)':'var(--muted)'};flex-shrink:0">${pr?(pr.wt?pr.wt+' lbs × ':'')+pr.reps+' reps':'no data'}${hit?' — ready to increase':''}</div>
         </div>`;
       }).join('')}
     </div>`:'';
@@ -1418,7 +1429,7 @@ function renderDashboardWidget(w){
     const done=!!log[today];
     return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--faint)">
       <div style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${done?'var(--ok)':'var(--border-light)'}"></div>
-      <div style="font-size:12px;color:${done?'var(--text)':'var(--muted)'}">${hw.title||'Habit'}</div>
+      <div style="font-size:12px;color:${done?'var(--text)':'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(hw.title||'Habit').replace(/"/g,'&quot;')}">${hw.title||'Habit'}</div>
     </div>`;
   }).join(''):'<div class="empty">No habit widgets on this page yet.</div>';
   const habitsDoneCount=habitWidgets.filter(hw=>{const log=(widgetDataMap[hw.id]?.data?.log)||{};return !!log[today];}).length;
@@ -1428,7 +1439,7 @@ function renderDashboardWidget(w){
     const program=workoutWidgets[0].config?.program;
     const day=program?.days?.[String(wIdx)];
     if(day&&(day.exercises||[]).length){
-      workoutHtml=(day.exercises||[]).map(ex=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;display:flex;justify-content:space-between"><span>${ex.n}</span><span style="font-family:'DM Mono',monospace;color:var(--accent)">${ex.s||'?'}×${ex.r||'?'}</span></div>`).join('');
+      workoutHtml=(day.exercises||[]).map(ex=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;display:flex;justify-content:space-between;gap:8px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(ex.n).replace(/"/g,'&quot;')}">${ex.n}</span><span style="font-family:'DM Mono',monospace;color:var(--accent);flex-shrink:0">${ex.s||'?'}×${ex.r||'?'}</span></div>`).join('');
     }else{
       workoutHtml='<div class="empty">Rest day, or no exercises set for today.</div>';
     }
@@ -1541,11 +1552,11 @@ const renderWidgets=()=>{
   const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
     .slice().sort((a,b)=>a.sort_order-b.sort_order);
   let html=widgetsToShow.map(w=>`
-    <div class="card${(w.widget_type==='schedule'||w.widget_type==='dashboard')?' widget-card-full':''}" id="widget-card-${w.id}">
+    <div class="card${(w.widget_type==='schedule'||w.widget_type==='dashboard')?' widget-card-full':w.widget_type==='notes'?' widget-card-wide':''}" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
-        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
           <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder widget" title="Drag to reorder">⠿</span>
-          <div class="section-title" id="widget-title-${w.id}" style="margin:0">${w.title||w.widget_type}</div>
+          <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-sm" onclick="openWidgetSettings(${w.id})" aria-label="Edit widget settings">✎</button>
@@ -1557,6 +1568,15 @@ const renderWidgets=()=>{
   if(tabbed){
     if(!widgetsToShow.length) html+='<div class="empty">No widgets in this tab yet.</div>';
     html+='<div class="card widget-add-card" onclick="openMiniWidgetPicker()" aria-label="Add widget to this tab">+ Add widget</div>';
+  }else{
+    // Brand-new page: no tabs exist yet. The header has a small "+ Add tab"
+    // link, but a blank page shouldn't rely on that alone being noticed —
+    // give it an unmissable call to action too.
+    html+=`<div class="card widget-card-full" style="text-align:center;padding:2.5rem 1.5rem">
+      <div style="font-size:14px;margin-bottom:.4rem">This page doesn't have any tabs yet.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">Add a tab to start building — any widgets already here will move into it.</div>
+      <button class="btn btn-primary" onclick="addTab()">+ Add your first tab</button>
+    </div>`;
   }
   wrap.innerHTML=html;
   widgetsToShow.forEach(w=>{
@@ -1584,7 +1604,7 @@ const renderTabBar=()=>{
       <button class="tab-btn${isActive?' active':''}" draggable="true"
         ondragstart="onTabDragStart(event,${t.id})" ondragend="onTabDragEnd(event)"
         onclick="switchTab(${t.id})">${t.name}</button>
-      <button class="tab-del-btn${isActive?'':' tab-del-hidden'}" onclick="deleteTabInstance(${t.id})" aria-label="Delete tab" tabindex="${isActive?'0':'-1'}">Delete</button>
+      <button class="tab-del-btn" onclick="deleteTabInstance(${t.id})" aria-label="Delete tab">Delete</button>
     </div>`;
   }).join('')
     +`<button class="tab-add-btn" onclick="addTab()" aria-label="Add tab" title="Add tab">+</button>`;
