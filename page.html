@@ -1809,6 +1809,7 @@ const deleteTabInstance=async id=>{
 let dragWidgetId=null;
 let widgetDragPreview=null; // {index,stack} — last computed live-preview target while dragging
 let widgetDragSnapshot=null; // frozen {id,rect}[] captured once at drag start — see note below
+let widgetDragGrab=null; // {offsetX,offsetY,width,height} — where within the card the user grabbed it
 const onWidgetDragStart=(e,id)=>{
   dragWidgetId=id;
   widgetDragPreview=null;
@@ -1816,13 +1817,20 @@ const onWidgetDragStart=(e,id)=>{
   const card=document.getElementById(`widget-card-${id}`);
   if(card){
     card.classList.add('widget-dragging');
-    try{ e.dataTransfer.setDragImage(card,20,20); }catch(err){}
+    const rect=card.getBoundingClientRect();
+    const offsetX=e.clientX-rect.left;
+    const offsetY=e.clientY-rect.top;
+    widgetDragGrab={offsetX,offsetY,width:rect.width,height:rect.height};
+    // Same offset for the native ghost image as for our own virtual-position
+    // math below, so what the user visually sees matches what drop-target
+    // resolution is actually computing against.
+    try{ e.dataTransfer.setDragImage(card,offsetX,offsetY); }catch(err){}
   }
-  // Freeze every card's geometry now, before any preview reflow happens.
-  // Target-finding uses this snapshot for the whole gesture instead of
-  // re-querying the live DOM — otherwise each live-reflow below would move
-  // cards, which shifts what's "nearest" the cursor, which can make the
-  // final drop resolve somewhere the user never actually pointed at.
+  // Freeze every OTHER card's geometry now, before any preview reflow
+  // happens. Target-finding uses this snapshot for the whole gesture instead
+  // of re-querying the live DOM — otherwise each live-reflow below would
+  // move cards, which shifts what's nearest, which can make the final drop
+  // resolve somewhere the user never actually pointed at.
   const wrap=document.getElementById('page-widgets');
   widgetDragSnapshot=wrap?[...wrap.querySelectorAll('.card:not(.widget-add-card)')]
     .map(el=>({id:el.id.replace('widget-card-',''),rect:el.getBoundingClientRect()})):[];
@@ -1835,7 +1843,19 @@ const onWidgetDragEnd=e=>{
   dragWidgetId=null;
   widgetDragPreview=null;
   widgetDragSnapshot=null;
+  widgetDragGrab=null;
   renderWidgets(); // snaps back to the true persisted order if nothing was dropped
+};
+// The dragged widget's own visual center right now — matching where the
+// native ghost image actually appears (same grab offset used for both) —
+// used for drop-target resolution instead of the raw cursor point, so the
+// drop logic matches what the live reflow is already showing the user, not
+// wherever the cursor happens to be relative to the widget.
+const widgetDragCenter=(clientX,clientY)=>{
+  if(!widgetDragGrab)return {x:clientX,y:clientY};
+  const left=clientX-widgetDragGrab.offsetX;
+  const top=clientY-widgetDragGrab.offsetY;
+  return {x:left+widgetDragGrab.width/2,y:top+widgetDragGrab.height/2};
 };
 
 // Two drop zones per target card: the bottom quarter means "stack a new,
@@ -1937,7 +1957,8 @@ const onWidgetGridDragOver=e=>{
   const fromIdx=widgetsToShow.findIndex(w=>String(w.id)===String(dragWidgetId));
   if(fromIdx<0)return;
 
-  const target=findWidgetDropTarget(e.clientX,e.clientY,widgetDragSnapshot);
+  const center=widgetDragCenter(e.clientX,e.clientY);
+  const target=findWidgetDropTarget(center.x,center.y,widgetDragSnapshot);
   const toIdx=resolveWidgetDropIndex(widgetsToShow,target);
   const stack=!!target?.stack;
 
@@ -1957,7 +1978,8 @@ const onWidgetGridDrop=async e=>{
   const fromIdx=widgetsToShow.findIndex(w=>String(w.id)===String(dragWidgetId));
   if(fromIdx<0)return;
   const draggedWidget=widgetsToShow[fromIdx];
-  const target=findWidgetDropTarget(e.clientX,e.clientY,widgetDragSnapshot);
+  const center=widgetDragCenter(e.clientX,e.clientY);
+  const target=findWidgetDropTarget(center.x,center.y,widgetDragSnapshot);
   const toIdx=resolveWidgetDropIndex(widgetsToShow,target);
   const stack=!!target?.stack;
 
