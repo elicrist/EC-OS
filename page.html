@@ -43,8 +43,12 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .tab-btn{padding:10px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
-.tab-btn.dragging{opacity:.4}
+.tab-wrap.dragging{opacity:.4}
 .tab-wrap{display:flex;flex-direction:column;align-items:stretch;flex-shrink:0;position:relative}
+/* Custom pointer-drag (tabs) needs its own no-select/cursor state — native
+   HTML5 DnD handled this for free, but a hand-rolled drag doesn't. */
+.tab-dragging-active,.tab-dragging-active *{user-select:none}
+.tab-dragging-active{cursor:grabbing}
 .tab-btn-row{display:flex;align-items:center}
 .tab-edit-toggle{font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;padding:0 6px;opacity:0;transition:opacity .15s ease}
 .tab-wrap:hover .tab-edit-toggle,.tab-wrap:focus-within .tab-edit-toggle,.tab-wrap.editing .tab-edit-toggle{opacity:.85}
@@ -294,7 +298,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <a class="hub-link" href="#" id="hdr-archive-link" onclick="archiveThisPage();return false" style="display:none">Archive this page</a>
   </div>
 </header>
-<div class="tab-bar" id="page-tab-bar" style="display:none" ondragover="onTabBarDragOver(event)" ondrop="onTabBarDrop(event)"></div>
+<div class="tab-bar" id="page-tab-bar" style="display:none"></div>
 <div id="tab-edit-portal"></div>
 <div class="content">
 <div class="empty" id="page-error" style="display:none">
@@ -347,19 +351,44 @@ const renderPagesSidebar=async()=>{
   }
 };
 // Sidebar's open width tracks the longest current page name so names never
-// get silently clipped — it only grows up to a sane cap (SB_OPEN_MAX), past
-// which a single overlong name gets its own horizontal scrollbar (see
-// .os-sb.open .sb-item's overflow-x:auto) instead of stretching the whole
-// sidebar. Recomputed on every renderPagesSidebar call, so archiving/
-// unarchiving a page reflows this to the new longest remaining name.
-const SB_OPEN_MIN=168,SB_OPEN_MAX=280;
+// get silently clipped — it grows all the way up to near the actual viewport
+// width (leaving a margin so it still reads as a sidebar, not a full-screen
+// takeover). Only a name still too long even at THAT width gets its own
+// horizontal scrollbar (see .os-sb.open .sb-item's overflow-x:auto) — a
+// genuinely rare, pathological case, not something an ordinary long page
+// name should ever trigger. Recomputed on every renderPagesSidebar call, so
+// archiving/unarchiving a page reflows this to the new longest remaining name.
+const SB_OPEN_MIN=168;
+const sbOpenMax=()=>Math.max(SB_OPEN_MIN,window.innerWidth-96);
+// .sb-item's scrollWidth already includes ITS OWN padding, but not the
+// sidebar's — .os-sb.open has its own 10px+10px horizontal padding that
+// wraps around #sb-pages/.sb-item, on top of that. Without adding it back
+// here, the container ends up sized to exactly fit the item's content with
+// no room for the sidebar's own padding, so even a moderately long name
+// still overflowed its item and fell back to the scrollbar it was supposed
+// to be exempt from. The extra +8 beyond the real 20px of padding is slack
+// for sub-pixel rounding across the width:100% chain (os-sb → #sb-pages →
+// .sb-item, three levels of percentage rounding) — without it, names sitting
+// right at the threshold could still trip the scrollbar by a few px.
+const SB_OPEN_PADDING_X=28;
 const sizeSidebarToContent=()=>{
   const sb=document.getElementById('os-sb');
   const container=document.getElementById('sb-pages');
   if(!sb||!container)return;
   const widest=[...container.querySelectorAll('.sb-item')].reduce((m,el)=>Math.max(m,el.scrollWidth),0);
-  const target=Math.max(SB_OPEN_MIN,Math.min(SB_OPEN_MAX,widest));
+  const target=Math.max(SB_OPEN_MIN,Math.min(sbOpenMax(),widest+SB_OPEN_PADDING_X));
   sb.style.setProperty('--sb-open-width',`${target}px`);
+  // Google Fonts loads with display=swap (see the stylesheet <link> in
+  // <head>): text first paints in a fallback font, THEN swaps to DM Sans
+  // once it's fetched, which reflows label widths. Without this, the very
+  // first measurement (almost always pre-swap) gets baked in permanently —
+  // re-measuring once fonts finish loading is what actually fixed the
+  // "moderately long name still scrolls" bug, not the padding math alone.
+  document.fonts?.ready?.then(()=>{
+    const widestNow=[...container.querySelectorAll('.sb-item')].reduce((m,el)=>Math.max(m,el.scrollWidth),0);
+    const targetNow=Math.max(SB_OPEN_MIN,Math.min(sbOpenMax(),widestNow+SB_OPEN_PADDING_X));
+    sb.style.setProperty('--sb-open-width',`${targetNow}px`);
+  });
 };
 // Click-outside-to-close: bound on the .overlay backdrop itself. Only fires
 // when the click target IS the backdrop (not a child), so clicks inside the
@@ -567,14 +596,19 @@ let activeTabId=null;
 let dragTabId=null;
 let tabDragPreview=null; // last computed live-preview insertion index while dragging a tab
 let tabDragSnapshot=null; // frozen {id,rect}[] of reorderable (non-dashboard) tabs, captured once at drag start
-let tabDragGrab=null; // {offsetX,offsetY,width,height} — where within the tab button the user grabbed it
+let tabDragGrab=null; // {offsetX,width} — where within the dragged .tab-wrap the user grabbed it; no Y term at all, by design
 let tabEditingId=null; // which tab's rename/delete panel is currently open, if any
 // The Dashboard tab is a built-in, pinned-first tab every page gets automatically
-// (see ensureDashboardTab below) — identified by name rather than a schema column
-// (ec_page_tabs has no per-tab type/flag column, and adding one would need a DB
-// migration outside this codebase). Sort order always puts it first regardless of
-// its numeric sort_order value, so normal tab drag-reorder can never displace it.
-const isDashboardTab=t=>!!t&&t.name==='Dashboard';
+// (see ensureDashboardTab below) — identified by config.isDashboard, a real flag
+// in ec_page_tabs.config (jsonb column added specifically for this; see the
+// ALTER TABLE in the project's migration notes). Name-matching (t.name===
+// 'Dashboard') was the original mechanism before that column existed and was
+// fragile — a page whose Dashboard tab's name didn't match exactly (case,
+// whitespace, or a pre-migration row that predated the naming convention)
+// silently fell through to some other tab as the load-time default. Sort
+// order always puts it first regardless of its numeric sort_order value, so
+// normal tab drag-reorder can never displace it.
+const isDashboardTab=t=>!!t&&t.config?.isDashboard===true;
 
 function todayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
 function weekDates(){
@@ -1844,7 +1878,7 @@ const renderTabBar=()=>{
     if(isDashboardTab(t)){
       // Built-in and pinned: not draggable, no rename/delete affordance at
       // all. tab-wrap-dashboard marks it for exclusion from the drag
-      // engine's snapshot/relayout below (see onTabDragStart/relayoutTabDOM).
+      // engine's snapshot/relayout below (see onTabPointerDown/relayoutTabDOM).
       return `<div class="tab-wrap tab-wrap-dashboard" id="tab-wrap-${t.id}">
         <div class="tab-btn-row">
           <button class="tab-btn tab-btn-dashboard${isActive?' active':''}" id="tab-btn-${t.id}" onclick="switchTab(${t.id})">${t.name}</button>
@@ -1854,9 +1888,9 @@ const renderTabBar=()=>{
     const isEditing=String(t.id)===String(tabEditingId);
     return `<div class="tab-wrap${isEditing?' editing':''}" id="tab-wrap-${t.id}">
       <div class="tab-btn-row">
-        <button class="tab-btn${isActive?' active':''}" id="tab-btn-${t.id}" draggable="true"
-          ondragstart="onTabDragStart(event,${t.id})" ondragend="onTabDragEnd(event)"
-          onclick="switchTab(${t.id})">${t.name}</button>
+        <button class="tab-btn${isActive?' active':''}" id="tab-btn-${t.id}"
+          onpointerdown="onTabPointerDown(event,${t.id})"
+          onclick="onTabClick(event,${t.id})">${t.name}</button>
         <button class="tab-edit-toggle" onclick="toggleTabEdit(event,${t.id})" aria-label="Edit tab" title="Rename or delete tab">✎</button>
       </div>
     </div>`;
@@ -1920,45 +1954,75 @@ const isWithinRect=(clientX,clientY,el,tolerance=16)=>{
   const r=el.getBoundingClientRect();
   return clientX>=r.left-tolerance&&clientX<=r.right+tolerance&&clientY>=r.top-tolerance&&clientY<=r.bottom+tolerance;
 };
-// Same drag engine as the widget/dashboard grid (grab-offset-corrected
-// virtual center, frozen snapshot, live FLIP-preview reflow, ID-based target
-// resolution) adapted for a horizontal single-row list instead of a 2D
-// row-paired grid — see findTabDropTarget/relayoutTabDOM below for the 1D
-// adaptation. The Dashboard tab's button/wrap are excluded from the
-// snapshot and the relayout entirely (matching tab-wrap-dashboard), so it
-// can never be a reorder boundary and never gets moved.
-const onTabDragStart=(e,id)=>{
+// Tabs use a hand-rolled pointer drag, NOT native HTML5 draggable/DnD. Native
+// DnD's drag ghost is an OS-composited overlay outside the page's own paint
+// and layout — no CSS/JS (not even setDragImage) can clip or clamp it to the
+// tab strip, so it visibly escapes to anywhere on screen and only snaps back
+// on drop. Here we move the real .tab-wrap ourselves via transform:translateX
+// on every pointermove, recomputed fresh each tick and always clamped to the
+// tab bar's own bounding rect — and we never touch the vertical axis at all,
+// so the element is structurally incapable of leaving the strip's bounds,
+// horizontally or vertically, at any point mid-drag. The Dashboard tab is
+// excluded from the snapshot and the relayout entirely (matching
+// tab-wrap-dashboard), so it can never be a reorder boundary and never moves.
+const TAB_DRAG_THRESHOLD=4; // px of pointer movement before a press becomes a drag rather than a click
+let tabJustDragged=false; // true for a brief window right after a real drag ends, to suppress switchTab
+
+const onTabPointerDown=(e,id)=>{
+  if(e.button!=null&&e.button!==0)return; // primary mouse button / touch only
+  const wrap=document.getElementById(`tab-wrap-${id}`);
+  if(!wrap)return;
+  const startX=e.clientX,startY=e.clientY;
+  let active=false;
+
+  const finish=ev=>{
+    window.removeEventListener('pointermove',onMove);
+    window.removeEventListener('pointerup',finish);
+    window.removeEventListener('pointercancel',finish);
+    if(active){
+      tabJustDragged=true;
+      endTabDrag();
+      // Normally the browser's own click (which onTabClick checks this flag
+      // against) fires synchronously right after pointerup and clears it.
+      // But calling preventDefault() on the drag's pointermoves (needed to
+      // stop touch-scroll/text-selection mid-drag) can suppress that
+      // trailing click entirely in some browsers — without this fallback,
+      // the flag would stay stuck true forever and silently eat the NEXT,
+      // completely unrelated click on some other tab.
+      setTimeout(()=>{tabJustDragged=false;},0);
+    }
+  };
+  const onMove=ev=>{
+    if(!active){
+      if(Math.abs(ev.clientX-startX)<TAB_DRAG_THRESHOLD&&Math.abs(ev.clientY-startY)<TAB_DRAG_THRESHOLD)return;
+      active=true;
+      beginTabDrag(id,wrap,ev);
+    }
+    ev.preventDefault();
+    updateTabDrag(ev,wrap);
+  };
+  window.addEventListener('pointermove',onMove);
+  window.addEventListener('pointerup',finish);
+  window.addEventListener('pointercancel',finish);
+};
+// Suppresses the ordinary tab-switch click that would otherwise fire right
+// after a real drag's pointerup (the button is still visually under the
+// pointer at release, since we moved it ourselves via transform).
+const onTabClick=(e,id)=>{
+  if(tabJustDragged){tabJustDragged=false;return;}
+  switchTab(id);
+};
+
+const beginTabDrag=(id,wrap,e)=>{
   dragTabId=id;
   tabDragPreview=null;
-  e.dataTransfer.effectAllowed='move';
-  const btn=document.getElementById(`tab-btn-${id}`);
-  if(btn){
-    btn.classList.add('dragging');
-    const rect=btn.getBoundingClientRect();
-    const offsetX=e.clientX-rect.left;
-    const offsetY=e.clientY-rect.top;
-    tabDragGrab={offsetX,offsetY,width:rect.width,height:rect.height};
-    // Explicit setDragImage, same as the widget engine: relayoutTabDOM moves
-    // the dragged tab's own element in the live DOM on every dragover tick
-    // (see below), which decouples the browser's default drag-image from its
-    // source element mid-gesture and lets the ghost drift outside the tab
-    // bar. A frozen snapshot image, grabbed once here, keeps it anchored.
-    try{ e.dataTransfer.setDragImage(btn,offsetX,offsetY); }catch(err){}
-  }
+  wrap.classList.add('dragging');
+  document.body.classList.add('tab-dragging-active');
+  const wrapRect=wrap.getBoundingClientRect();
+  tabDragGrab={offsetX:e.clientX-wrapRect.left,width:wrapRect.width};
   const bar=document.getElementById('page-tab-bar');
   tabDragSnapshot=bar?[...bar.querySelectorAll('.tab-btn:not(.tab-btn-dashboard)')]
     .map(el=>({id:el.id.replace('tab-btn-',''),rect:el.getBoundingClientRect()})):[];
-};
-const onTabDragEnd=e=>{
-  if(dragTabId!=null){
-    const btn=document.getElementById(`tab-btn-${dragTabId}`);
-    if(btn)btn.classList.remove('dragging');
-  }
-  dragTabId=null;
-  tabDragPreview=null;
-  tabDragSnapshot=null;
-  tabDragGrab=null;
-  renderTabBar(); // snaps back to the true persisted order if nothing was dropped
 };
 // 1D (horizontal-only) analog of findWidgetDropTarget — a tab strip is a
 // flat single row, not a 2D grid, so there's no "stack" zone and no reason
@@ -1988,9 +2052,9 @@ const tabsWithPreview=(tabsToShow,fromIdx,toIdx)=>{
 // Mirrors relayoutWidgetDOM's FLIP approach, simplified for a flat row (no
 // computeWidgetRows) — moves each .tab-wrap into place via insertBefore,
 // then transform-animates from its old position back to identity. Excludes
-// the actively-dragged tab's own element from the transform — same fix as
-// the widget engine (a CSS transform landing on the native drag source's
-// own element mid-gesture reliably kills the browser's 'drop' event).
+// the actively-dragged tab's own element from this transform — its transform
+// is instead driven entirely by updateTabDrag below, which tracks the
+// pointer directly.
 const relayoutTabDOM=tabs=>{
   const bar=document.getElementById('page-tab-bar');
   if(!bar)return;
@@ -2019,45 +2083,64 @@ const relayoutTabDOM=tabs=>{
     }
   });
 };
-const onTabBarDragOver=e=>{
-  if(dragTabId==null)return;
+const updateTabDrag=(e,wrap)=>{
   const bar=document.getElementById('page-tab-bar');
-  if(!isWithinRect(e.clientX,e.clientY,bar))return;
-  e.preventDefault();
+  if(!bar||dragTabId==null)return;
+  const barRect=bar.getBoundingClientRect();
+  const grab=tabDragGrab;
+  // Desired left edge = pointer X minus the grab offset, clamped so the whole
+  // wrap always stays within the bar's own bounding rect — this is the only
+  // horizontal constraint, and there is no vertical term at all, anywhere in
+  // this function, so the element can never drift off the row's Y position.
+  let desiredLeft=e.clientX-grab.offsetX;
+  desiredLeft=Math.max(barRect.left,Math.min(barRect.right-grab.width,desiredLeft));
 
   const tabsToShow=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
   const fromIdx=tabsToShow.findIndex(t=>String(t.id)===String(dragTabId));
-  if(fromIdx<0)return;
-
-  const center=dragCenterFromGrab(e.clientX,e.clientY,tabDragGrab);
-  const target=findTabDropTarget(center.x,tabDragSnapshot);
-  const toIdx=resolveWidgetDropIndex(tabsToShow,target);
-
-  if(tabDragPreview===toIdx)return; // unchanged, skip relayout
-  tabDragPreview=toIdx;
-
-  relayoutTabDOM(tabsWithPreview(tabsToShow,fromIdx,toIdx));
+  if(fromIdx>=0){
+    const centerX=desiredLeft+grab.width/2;
+    const target=findTabDropTarget(centerX,tabDragSnapshot);
+    const toIdx=resolveWidgetDropIndex(tabsToShow,target);
+    if(toIdx!==tabDragPreview){
+      tabDragPreview=toIdx;
+      relayoutTabDOM(tabsWithPreview(tabsToShow,fromIdx,toIdx));
+    }
+  }
+  // The dragged wrap's true flow position only changes when the reorder
+  // above actually moves it — clearing our own transform before measuring
+  // keeps this correct either way, instead of drifting from a stale
+  // baseline once a reorder shifts its underlying position.
+  wrap.style.transform='';
+  const flowRect=wrap.getBoundingClientRect();
+  const dx=desiredLeft-flowRect.left;
+  wrap.style.transform=`translateX(${dx}px)`;
 };
-const onTabBarDrop=async e=>{
+const endTabDrag=()=>{
+  const wrap=dragTabId!=null?document.getElementById(`tab-wrap-${dragTabId}`):null;
+  if(wrap){wrap.classList.remove('dragging');wrap.style.transform='';}
+  document.body.classList.remove('tab-dragging-active');
   if(dragTabId==null)return;
-  const bar=document.getElementById('page-tab-bar');
-  if(!isWithinRect(e.clientX,e.clientY,bar))return; // dropped outside/far from the tab row — no-op
-  e.preventDefault();
+
   // Dashboard is excluded from this reorderable set entirely — reindexing
   // only the non-dashboard tabs means its sort_order is never touched.
-  const sorted=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
-  const fromIdx=sorted.findIndex(t=>String(t.id)===String(dragTabId));
-  if(fromIdx<0)return;
-  const center=dragCenterFromGrab(e.clientX,e.clientY,tabDragGrab);
-  const target=findTabDropTarget(center.x,tabDragSnapshot);
-  const toIdx=resolveWidgetDropIndex(sorted,target);
-  tabDragPreview=null;
-  if(fromIdx===toIdx||fromIdx===toIdx-1)return;
+  const tabsToShow=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
+  const fromIdx=tabsToShow.findIndex(t=>String(t.id)===String(dragTabId));
+  const toIdx=tabDragPreview;
+  dragTabId=null;tabDragPreview=null;tabDragSnapshot=null;tabDragGrab=null;
+
+  if(fromIdx<0||toIdx==null||fromIdx===toIdx||fromIdx===toIdx-1){
+    renderTabBar(); // nothing changed — snap back to the true persisted order
+    return;
+  }
+  const sorted=[...tabsToShow];
   const [moved]=sorted.splice(fromIdx,1);
   const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
   sorted.splice(insertAt,0,moved);
   sorted.forEach((t,i)=>{t.sort_order=i;});
   renderTabBar();
+  persistTabOrder(sorted);
+};
+const persistTabOrder=async sorted=>{
   try{
     await Promise.all(sorted.map(t=>fetch(`${SB_URL}/rest/v1/ec_page_tabs?id=eq.${t.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:t.sort_order})})));
   }catch(e){
@@ -2398,10 +2481,24 @@ const ensureDashboardTab=async()=>{
     await migrateOldDashboardWidgets();
     await ensureMainTabForUntabbedWidgets();
     if(pageTabs.some(isDashboardTab))return;
+    // Self-heal legacy pages: a tab literally named "Dashboard" from before
+    // config.isDashboard existed just needs the flag backfilled onto it, not
+    // a brand-new duplicate tab. Runs on every page load, so any page that's
+    // still missing the flag gets fixed the next time it's opened, not just
+    // pages touched by the one-time SQL backfill.
+    const legacy=pageTabs.find(t=>t.name==='Dashboard');
+    if(legacy){
+      const newConfig={...(legacy.config||{}),isDashboard:true};
+      const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs?id=eq.${legacy.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:newConfig})});
+      if(!resp.ok) throw new Error(`Dashboard flag backfill failed ${resp.status}`);
+      legacy.config=newConfig;
+      return;
+    }
     const dashId=Date.now()+2;
-    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:dashId,page_id:pageId,name:'Dashboard',sort_order:-1})});
+    const config={isDashboard:true};
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:dashId,page_id:pageId,name:'Dashboard',sort_order:-1,config})});
     if(!resp.ok) throw new Error(`Dashboard tab create failed ${resp.status}`);
-    pageTabs.push({id:dashId,page_id:pageId,name:'Dashboard',sort_order:-1});
+    pageTabs.push({id:dashId,page_id:pageId,name:'Dashboard',sort_order:-1,config});
   }catch(e){
     console.error('ensureDashboardTab failed',e);
   }
