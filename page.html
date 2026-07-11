@@ -65,6 +65,11 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .widget-fav-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
 .widget-fav-btn svg{display:block}
 .widget-fav-btn.on svg{fill:currentColor}
+.hub-star-btn{background:none;border:1px solid var(--border-light);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all .15s;padding:0}
+.hub-star-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hub-star-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
+.hub-star-btn svg{display:block}
+.hub-star-btn.on svg{fill:currentColor}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;min-width:0}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
@@ -537,6 +542,9 @@ let hdrDateBase='';
 let pageTabs=[];
 let activeTabId=null;
 let dragTabId=null;
+let tabDragPreview=null; // last computed live-preview insertion index while dragging a tab
+let tabDragSnapshot=null; // frozen {id,rect}[] of reorderable (non-dashboard) tabs, captured once at drag start
+let tabDragGrab=null; // {offsetX,offsetY,width,height} — where within the tab button the user grabbed it
 let tabEditingId=null; // which tab's rename/delete panel is currently open, if any
 // The Dashboard tab is a built-in, pinned-first tab every page gets automatically
 // (see ensureDashboardTab below) — identified by name rather than a schema column
@@ -599,6 +607,52 @@ const toggleWidgetFavorite=async id=>{
     }
   }catch(e){
     console.error('toggleWidgetFavorite failed',e);
+    alert('Save failed — try again.');
+  }
+};
+// Single-select "this is the card that represents the page on the hub"
+// toggle — visible only on Dashboard-tab cards (a favorited widget's own
+// summary), distinct in shape (star vs. bookmark) and CSS class from the
+// multi-select favorite-for-dashboard toggle above, so the two aren't
+// confused. config.hubStarred, same no-schema-change pattern as
+// dashboardOrder. Storage only for now — wiring it into the actual hub
+// display is separate work (#7).
+const WIDGET_HUB_STAR_ICON_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M12 2 L15.09 8.26 L22 9.27 L17 14.14 L18.18 21.02 L12 17.77 L5.82 21.02 L7 14.14 L2 9.27 L8.91 8.26 Z"/></svg>';
+const toggleHubStar=async id=>{
+  const w=findWidget(id);
+  if(!w)return;
+  const turningOn=!w.config?.hubStarred;
+  // Only one widget on the whole page can be hub-starred — clear whichever
+  // other one currently has it (should only ever be 0 or 1, but handled as
+  // a list defensively).
+  const previouslyStarred=turningOn?pageWidgets.filter(pw=>String(pw.id)!==String(id)&&pw.config?.hubStarred):[];
+  try{
+    const tasks=previouslyStarred.map(pw=>{
+      const clearedConfig={...pw.config,hubStarred:false};
+      return fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${pw.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:clearedConfig})}).then(resp=>{
+        if(!resp.ok) throw new Error(`Hub star clear failed ${resp.status}`);
+        pw.config=clearedConfig;
+      });
+    });
+    const newConfig={...w.config,hubStarred:turningOn};
+    tasks.push(fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:newConfig})}).then(resp=>{
+      if(!resp.ok) throw new Error(`Hub star save failed ${resp.status}`);
+      w.config=newConfig;
+    }));
+    await Promise.all(tasks);
+    previouslyStarred.forEach(pw=>{
+      const btn=document.getElementById(`hub-star-${pw.id}`);
+      if(btn){btn.classList.remove('on');btn.title='Star for hub';btn.setAttribute('aria-label','Star for hub');}
+    });
+    const btn=document.getElementById(`hub-star-${id}`);
+    if(btn){
+      btn.classList.toggle('on',turningOn);
+      const label=turningOn?'Unstar':'Star for hub';
+      btn.title=label;
+      btn.setAttribute('aria-label',label);
+    }
+  }catch(e){
+    console.error('toggleHubStar failed',e);
     alert('Save failed — try again.');
   }
 };
@@ -1661,18 +1715,27 @@ const renderDashboardTabContent=wrap=>{
     return;
   }
   // Same .card/.widget-row shape (and widget-card-${id} id convention) as
-  // the builder grid, with just a drag handle in the header instead of the
-  // pin/edit/delete cluster — read-only, but draggable via the same
-  // onWidgetDragStart/onWidgetGridDragOver/onWidgetGridDrop mechanism,
-  // which reorders by config.dashboardOrder here instead of sort_order.
-  const dashCardHtml=w=>`
+  // the builder grid, with a drag handle in the header instead of the
+  // pin/edit/delete cluster — read-only otherwise, but draggable via the
+  // same onWidgetDragStart/onWidgetGridDragOver/onWidgetGridDrop mechanism,
+  // which reorders by config.dashboardOrder here instead of sort_order. The
+  // hub-star toggle on the right is the single-select "represents this page
+  // on the hub" marker — a star, not the bookmark used for favoriting, so
+  // the two aren't visually confused.
+  const dashCardHtml=w=>{
+    const starred=!!w.config?.hubStarred;
+    return `
     <div class="card" id="widget-card-${w.id}">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:.9rem;min-width:0">
-        <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder dashboard card" title="Drag to reorder">⠿</span>
-        <div class="section-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
+          <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder dashboard card" title="Drag to reorder">⠿</span>
+          <div class="section-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
+        </div>
+        <button class="hub-star-btn${starred?' on':''}" id="hub-star-${w.id}" onclick="toggleHubStar(${w.id})" aria-label="${starred?'Unstar':'Star for hub'}" title="${starred?'Unstar':'Star for hub'}">${WIDGET_HUB_STAR_ICON_SVG}</button>
       </div>
       <div id="dash-summary-${w.id}"></div>
     </div>`;
+  };
   const rows=computeWidgetRows(favorited);
   wrap.innerHTML=rows.map(row=>`<div class="widget-row">${row.map(dashCardHtml).join('')}</div>`).join('');
   favorited.forEach(w=>{
@@ -1756,17 +1819,19 @@ const renderTabBar=()=>{
   bar.innerHTML=sorted.map(t=>{
     const isActive=String(t.id)===String(activeTabId);
     if(isDashboardTab(t)){
-      // Built-in and pinned: not draggable, no rename/delete affordance at all.
-      return `<div class="tab-wrap" id="tab-wrap-${t.id}">
+      // Built-in and pinned: not draggable, no rename/delete affordance at
+      // all. tab-wrap-dashboard marks it for exclusion from the drag
+      // engine's snapshot/relayout below (see onTabDragStart/relayoutTabDOM).
+      return `<div class="tab-wrap tab-wrap-dashboard" id="tab-wrap-${t.id}">
         <div class="tab-btn-row">
-          <button class="tab-btn tab-btn-dashboard${isActive?' active':''}" onclick="switchTab(${t.id})">${t.name}</button>
+          <button class="tab-btn tab-btn-dashboard${isActive?' active':''}" id="tab-btn-${t.id}" onclick="switchTab(${t.id})">${t.name}</button>
         </div>
       </div>`;
     }
     const isEditing=String(t.id)===String(tabEditingId);
     return `<div class="tab-wrap${isEditing?' editing':''}" id="tab-wrap-${t.id}">
       <div class="tab-btn-row">
-        <button class="tab-btn${isActive?' active':''}" draggable="true"
+        <button class="tab-btn${isActive?' active':''}" id="tab-btn-${t.id}" draggable="true"
           ondragstart="onTabDragStart(event,${t.id})" ondragend="onTabDragEnd(event)"
           onclick="switchTab(${t.id})">${t.name}</button>
         <button class="tab-edit-toggle" onclick="toggleTabEdit(event,${t.id})" aria-label="Edit tab" title="Rename or delete tab">✎</button>
@@ -1832,21 +1897,121 @@ const isWithinRect=(clientX,clientY,el,tolerance=16)=>{
   const r=el.getBoundingClientRect();
   return clientX>=r.left-tolerance&&clientX<=r.right+tolerance&&clientY>=r.top-tolerance&&clientY<=r.bottom+tolerance;
 };
-const onTabDragStart=(e,id)=>{dragTabId=id;e.dataTransfer.effectAllowed='move';e.target.classList.add('dragging');};
-const onTabDragEnd=e=>{e.target.classList.remove('dragging');dragTabId=null;};
+// Same drag engine as the widget/dashboard grid (grab-offset-corrected
+// virtual center, frozen snapshot, live FLIP-preview reflow, ID-based target
+// resolution) adapted for a horizontal single-row list instead of a 2D
+// row-paired grid — see findTabDropTarget/relayoutTabDOM below for the 1D
+// adaptation. The Dashboard tab's button/wrap are excluded from the
+// snapshot and the relayout entirely (matching tab-wrap-dashboard), so it
+// can never be a reorder boundary and never gets moved.
+const onTabDragStart=(e,id)=>{
+  dragTabId=id;
+  tabDragPreview=null;
+  e.dataTransfer.effectAllowed='move';
+  const btn=document.getElementById(`tab-btn-${id}`);
+  if(btn){
+    btn.classList.add('dragging');
+    const rect=btn.getBoundingClientRect();
+    const offsetX=e.clientX-rect.left;
+    const offsetY=e.clientY-rect.top;
+    tabDragGrab={offsetX,offsetY,width:rect.width,height:rect.height};
+    // No explicit setDragImage: the browser's default drag-image already
+    // anchors on this same grab point for a whole-button drag (unlike
+    // widget cards, whose only draggable element is a small handle icon,
+    // which would otherwise be all the browser shows).
+  }
+  const bar=document.getElementById('page-tab-bar');
+  tabDragSnapshot=bar?[...bar.querySelectorAll('.tab-btn:not(.tab-btn-dashboard)')]
+    .map(el=>({id:el.id.replace('tab-btn-',''),rect:el.getBoundingClientRect()})):[];
+};
+const onTabDragEnd=e=>{
+  if(dragTabId!=null){
+    const btn=document.getElementById(`tab-btn-${dragTabId}`);
+    if(btn)btn.classList.remove('dragging');
+  }
+  dragTabId=null;
+  tabDragPreview=null;
+  tabDragSnapshot=null;
+  tabDragGrab=null;
+  renderTabBar(); // snaps back to the true persisted order if nothing was dropped
+};
+// 1D (horizontal-only) analog of findWidgetDropTarget — a tab strip is a
+// flat single row, not a 2D grid, so there's no "stack" zone and no reason
+// to let vertical cursor position influence the before/after decision the
+// way the 2D version's fracY term does.
+const findTabDropTarget=(clientX,snapshot)=>{
+  if(!snapshot||!snapshot.length)return null;
+  let nearest=null,nearestDist=Infinity;
+  snapshot.forEach(item=>{
+    const cx=item.rect.left+item.rect.width/2;
+    const dist=Math.abs(clientX-cx);
+    if(dist<nearestDist){nearestDist=dist;nearest=item;}
+  });
+  const r=nearest.rect;
+  return {targetId:nearest.id,before:clientX<r.left+r.width/2};
+};
+// Builds the tab list as it would look if dropped at the given preview
+// target right now — mirrors widgetsWithPreview, no config/fullRow concept.
+const tabsWithPreview=(tabsToShow,fromIdx,toIdx)=>{
+  const sorted=[...tabsToShow];
+  const [moved]=sorted.splice(fromIdx,1);
+  let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  insertAt=Math.max(0,Math.min(insertAt,sorted.length));
+  sorted.splice(insertAt,0,moved);
+  return sorted;
+};
+// Mirrors relayoutWidgetDOM's FLIP approach, simplified for a flat row (no
+// computeWidgetRows) — moves each .tab-wrap into place via insertBefore,
+// then transform-animates from its old position back to identity. Excludes
+// the actively-dragged tab's own element from the transform — same fix as
+// the widget engine (a CSS transform landing on the native drag source's
+// own element mid-gesture reliably kills the browser's 'drop' event).
+const relayoutTabDOM=tabs=>{
+  const bar=document.getElementById('page-tab-bar');
+  if(!bar)return;
+  const wraps=[...bar.querySelectorAll('.tab-wrap:not(.tab-wrap-dashboard)')];
+  const firstRects=new Map(wraps.map(el=>[el.id,el.getBoundingClientRect()]));
+
+  const addBtn=bar.querySelector('.tab-add-btn');
+  tabs.forEach(t=>{
+    const wrapEl=document.getElementById(`tab-wrap-${t.id}`);
+    if(wrapEl) bar.insertBefore(wrapEl,addBtn);
+  });
+
+  wraps.forEach(el=>{
+    if(el.id===`tab-wrap-${dragTabId}`)return;
+    const first=firstRects.get(el.id);
+    if(!first)return;
+    const last=el.getBoundingClientRect();
+    const dx=first.left-last.left;
+    if(Math.abs(dx)>1){
+      el.style.transition='none';
+      el.style.transform=`translateX(${dx}px)`;
+      requestAnimationFrame(()=>{
+        el.style.transition='transform .18s ease';
+        el.style.transform='';
+      });
+    }
+  });
+};
 const onTabBarDragOver=e=>{
   if(dragTabId==null)return;
-  if(isWithinRect(e.clientX,e.clientY,document.getElementById('page-tab-bar'))) e.preventDefault();
-};
-// Excludes the pinned Dashboard tab's button — it's never draggable and can
-// never be a reorder boundary, so a drag can't land before it.
-const findTabDropIndex=clientX=>{
-  const btns=[...document.getElementById('page-tab-bar').querySelectorAll('.tab-btn:not(.tab-btn-dashboard)')];
-  for(let i=0;i<btns.length;i++){
-    const r=btns[i].getBoundingClientRect();
-    if(clientX<r.left+r.width/2) return i;
-  }
-  return btns.length;
+  const bar=document.getElementById('page-tab-bar');
+  if(!isWithinRect(e.clientX,e.clientY,bar))return;
+  e.preventDefault();
+
+  const tabsToShow=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
+  const fromIdx=tabsToShow.findIndex(t=>String(t.id)===String(dragTabId));
+  if(fromIdx<0)return;
+
+  const center=dragCenterFromGrab(e.clientX,e.clientY,tabDragGrab);
+  const target=findTabDropTarget(center.x,tabDragSnapshot);
+  const toIdx=resolveWidgetDropIndex(tabsToShow,target);
+
+  if(tabDragPreview===toIdx)return; // unchanged, skip relayout
+  tabDragPreview=toIdx;
+
+  relayoutTabDOM(tabsWithPreview(tabsToShow,fromIdx,toIdx));
 };
 const onTabBarDrop=async e=>{
   if(dragTabId==null)return;
@@ -1858,7 +2023,10 @@ const onTabBarDrop=async e=>{
   const sorted=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
   const fromIdx=sorted.findIndex(t=>String(t.id)===String(dragTabId));
   if(fromIdx<0)return;
-  const toIdx=findTabDropIndex(e.clientX);
+  const center=dragCenterFromGrab(e.clientX,e.clientY,tabDragGrab);
+  const target=findTabDropTarget(center.x,tabDragSnapshot);
+  const toIdx=resolveWidgetDropIndex(sorted,target);
+  tabDragPreview=null;
   if(fromIdx===toIdx||fromIdx===toIdx-1)return;
   const [moved]=sorted.splice(fromIdx,1);
   const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
@@ -1956,17 +2124,21 @@ const onWidgetDragEnd=e=>{
   widgetDragGrab=null;
   renderWidgets(); // snaps back to the true persisted order if nothing was dropped
 };
-// The dragged widget's own visual center right now — matching where the
-// native ghost image actually appears (same grab offset used for both) —
-// used for drop-target resolution instead of the raw cursor point, so the
-// drop logic matches what the live reflow is already showing the user, not
-// wherever the cursor happens to be relative to the widget.
-const widgetDragCenter=(clientX,clientY)=>{
-  if(!widgetDragGrab)return {x:clientX,y:clientY};
-  const left=clientX-widgetDragGrab.offsetX;
-  const top=clientY-widgetDragGrab.offsetY;
-  return {x:left+widgetDragGrab.width/2,y:top+widgetDragGrab.height/2};
+// The dragged element's own visual center right now, given the {offsetX,
+// offsetY,width,height} captured at drag-start — matching where the native
+// ghost image actually appears (same grab offset used for both, whether via
+// an explicit setDragImage call or the browser's own default drag-image
+// behavior, which already anchors on the grab point) — used for drop-target
+// resolution instead of the raw cursor point, so the drop logic matches
+// what the live reflow is already showing the user. Shared by the widget
+// drag engine (widgetDragCenter) and the tab drag engine (tabDragCenter).
+const dragCenterFromGrab=(clientX,clientY,grab)=>{
+  if(!grab)return {x:clientX,y:clientY};
+  const left=clientX-grab.offsetX;
+  const top=clientY-grab.offsetY;
+  return {x:left+grab.width/2,y:top+grab.height/2};
 };
+const widgetDragCenter=(clientX,clientY)=>dragCenterFromGrab(clientX,clientY,widgetDragGrab);
 
 // Two drop zones per target card: the bottom quarter means "stack a new,
 // full-width row right after this card" (sets fullRow); everything else is
