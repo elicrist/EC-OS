@@ -24,10 +24,12 @@
   --ok:#5cb87a;--ok-bg:#0e261a;--danger:#e05b5b;--blue:#5b8dee;
 }
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;padding-left:52px}
-header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.logo{font-size:17px;font-weight:600;letter-spacing:-.4px}
-.logo span{color:var(--muted);font-weight:300}
-.hdr-right{display:flex;align-items:center;gap:12px}
+/* gap is a hard floor between the title and the right-side controls (~1/6
+   viewport width) — a long page name wraps and/or shrinks to make room (see
+   .logo below) instead of ever overflowing the header horizontally. */
+header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:16.666vw}
+.logo{font-size:17px;font-weight:600;letter-spacing:-.4px;min-width:0;overflow-wrap:break-word}
+.hdr-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
 .hub-link{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-decoration:none;transition:color .15s}
 .hub-link:hover{color:var(--text)}
@@ -291,7 +293,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   </div>
 </div>
 <header>
-  <div class="logo"><span id="hdr-page-name">Loading…</span> <span id="hdr-sub"></span></div>
+  <div class="logo"><span id="hdr-page-name">Loading…</span></div>
   <div class="hdr-right">
     <a class="hub-link" href="hub.html">← hub</a>
     <div class="hdr-meta" id="hdr-date"></div>
@@ -472,7 +474,6 @@ const loadArchivedPages=async()=>{
 };
 const unarchivePage=async(id)=>{try{const url=`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`;const resp=await fetch(url,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({archived:false,archived_at:null})});if(!resp.ok) throw new Error(`Patch failed ${resp.status}`);if(String(id)===String(pageId)){location.reload();return;}await renderPagesSidebar();await loadArchivedPages();}catch(e){console.error('unarchivePage failed',e);alert('Unarchive failed.');}};
 const deletePagePermanently=async(id)=>{try{const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}&select=name`);const name=rows[0]?.name||'this page';if(!confirm(`Permanently delete "${name}"? This cannot be undone.`))return;const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`,{method:'DELETE',headers:buildHeaders()});if(!resp.ok) throw new Error(`Delete failed ${resp.status}`);await loadArchivedPages();}catch(e){console.error('deletePagePermanently failed',e);alert('Delete failed.');}};
-let cfg=GS('cfg',{name:''});
 
 // ═══ PAGE BUILDER ═══
 const WIDGET_TYPE_DEFS=[
@@ -2664,8 +2665,6 @@ const archiveThisPage=async()=>{
   document.getElementById('hdr-date').textContent=hdrDateBase;
   const authed=await initAuth();
   if(!authed){window.location.href=LOGIN_ENTRY_POINT;return;}
-  const hdrName=cfg.name||authSession?.user?.email||'';
-  document.getElementById('hdr-sub').textContent=hdrName?'/ '+hdrName:'';
   renderPagesSidebar();
   renderPbColors();
   renderPbWidgetTypes();
