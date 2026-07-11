@@ -60,6 +60,9 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .widget-drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:2px 4px;user-select:none}
 .widget-drag-handle:hover{color:var(--accent)}
 .card.widget-dragging{opacity:.4}
+.widget-fav-btn{background:none;border:1px solid var(--border-light);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--muted);flex-shrink:0;transition:all .15s;padding:0}
+.widget-fav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.widget-fav-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;min-width:0}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
@@ -274,7 +277,6 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   <div class="hdr-right">
     <a class="hub-link" href="hub.html">← hub</a>
     <div class="hdr-meta" id="hdr-date"></div>
-    <a class="hub-link" href="#" id="hdr-add-tab-link" onclick="addTab();return false" style="display:none">+ Add tab</a>
     <a class="hub-link" href="#" id="hdr-archive-link" onclick="archiveThisPage();return false" style="display:none">Archive this page</a>
   </div>
 </header>
@@ -425,7 +427,6 @@ const WIDGET_TYPE_DEFS=[
   {type:'workout_log',label:'Workout log',sub:'Log of workout sets/reps',defaultConfig:()=>({})},
   {type:'golf_log',label:'Golf log',sub:'Log of golf rounds',defaultConfig:()=>({})},
   {type:'tennis_log',label:'Tennis log',sub:'Log of tennis sessions',defaultConfig:()=>({})},
-  {type:'dashboard',label:'Dashboard summary',sub:'Aggregates savings/gym/golf/habits widgets on this page',defaultConfig:()=>({})},
 ];
 const PB_COLORS=['#B3A369','#e07b4a','#5b8dee','#9AAFBF','#5cb87a','#9b7fe8','#e8c56a','#e05b5b'];
 let pbDotColor=PB_COLORS[0];
@@ -535,6 +536,12 @@ let pageTabs=[];
 let activeTabId=null;
 let dragTabId=null;
 let tabEditingId=null; // which tab's rename/delete panel is currently open, if any
+// The Dashboard tab is a built-in, pinned-first tab every page gets automatically
+// (see ensureDashboardTab below) — identified by name rather than a schema column
+// (ec_page_tabs has no per-tab type/flag column, and adding one would need a DB
+// migration outside this codebase). Sort order always puts it first regardless of
+// its numeric sort_order value, so normal tab drag-reorder can never displace it.
+const isDashboardTab=t=>!!t&&t.name==='Dashboard';
 
 function todayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
 function weekDates(){
@@ -565,6 +572,28 @@ const patchWidgetConfig=async(id,newConfig)=>{
   const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:newConfig})});
   if(!resp.ok) throw new Error(`Widget config save failed ${resp.status}`);
   w.config=newConfig;
+};
+// Per-page, per-widget "show this widget's summary on the Dashboard tab"
+// toggle — stored in the widget's own config (no schema change needed),
+// deliberately a different icon/placement than the future hub-level star
+// (#7 on the roadmap) so the two don't get visually conflated.
+const toggleWidgetFavorite=async id=>{
+  const w=findWidget(id);
+  if(!w)return;
+  const newConfig={...w.config,favorited:!w.config?.favorited};
+  const btn=document.getElementById(`widget-fav-${id}`);
+  try{
+    await patchWidgetConfig(id,newConfig);
+    if(btn){
+      btn.classList.toggle('on',!!newConfig.favorited);
+      const label=newConfig.favorited?'Remove from Dashboard':'Add to Dashboard';
+      btn.title=label;
+      btn.setAttribute('aria-label',label);
+    }
+  }catch(e){
+    console.error('toggleWidgetFavorite failed',e);
+    alert('Save failed — try again.');
+  }
 };
 const deleteWidgetInstance=async id=>{
   const w=findWidget(id);
@@ -1415,92 +1444,6 @@ async function delTennisEntry(id,entryId){
   try{await saveWidgetData(id);}catch(e){console.error('delTennisEntry save failed',e);alert('Save failed — try again.');}
 }
 
-// --- dashboard (aggregates other widgets on the same page — not self-contained) ---
-function renderDashboardWidget(w){
-  const body=document.getElementById(`widget-body-${w.id}`);
-  const today=todayStr();
-  const wIdx=schedWeekdayIdx();
-
-  const savingsWidgets=pageWidgets.filter(pw=>pw.widget_type==='savings');
-  const workoutWidgets=pageWidgets.filter(pw=>pw.widget_type==='workout_log');
-  const golfWidgets=pageWidgets.filter(pw=>pw.widget_type==='golf_log');
-  const habitWidgets=pageWidgets.filter(pw=>pw.widget_type==='habits');
-
-  const sv=savingsWidgets[0];
-  let balanceDisplay='—',weeksLeftDisplay='—',svHtml='<div class="empty">No savings widget on this page yet.</div>';
-  if(sv){
-    const cfg=sv.config||{};
-    const goal=Number(cfg.goal)||0;
-    const start=Number(cfg.start)||0;
-    const entries=(widgetDataMap[sv.id]?.data?.entries)||[];
-    const current=computeSavingsBalance(start,entries);
-    const range=goal-start;
-    const gained=current-start;
-    const pct=range>0?Math.min(100,Math.max(0,(gained/range)*100)):(goal?Math.min(100,Math.max(0,(current/goal)*100)):0);
-    balanceDisplay='$'+current.toFixed(2);
-    const wl=computeWeeksLeft(cfg.deadline);
-    weeksLeftDisplay=wl===null?'—':wl+' wks';
-    svHtml=`
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-        <div class="stat-value" style="margin-top:0">$${current.toFixed(2)}</div>
-        <div class="stat-sub">of $${goal.toFixed(2)}</div>
-      </div>
-      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`;
-  }
-
-  let gymSessions=0;
-  workoutWidgets.forEach(ww=>{
-    const entries=(widgetDataMap[ww.id]?.data?.entries)||[];
-    gymSessions+=new Set(entries.map(e=>e.date)).size;
-  });
-
-  let rounds=0;
-  golfWidgets.forEach(gw=>{ rounds+=((widgetDataMap[gw.id]?.data?.entries)||[]).length; });
-
-  const habitsHtml=habitWidgets.length?habitWidgets.map(hw=>{
-    const log=(widgetDataMap[hw.id]?.data?.log)||{};
-    const done=!!log[today];
-    return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--faint)">
-      <div style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${done?'var(--ok)':'var(--border-light)'}"></div>
-      <div style="font-size:12px;color:${done?'var(--text)':'var(--muted)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(hw.title||'Habit').replace(/"/g,'&quot;')}">${hw.title||'Habit'}</div>
-    </div>`;
-  }).join(''):'<div class="empty">No habit widgets on this page yet.</div>';
-  const habitsDoneCount=habitWidgets.filter(hw=>{const log=(widgetDataMap[hw.id]?.data?.log)||{};return !!log[today];}).length;
-
-  let workoutHtml='<div class="empty">No workout program set.</div>';
-  if(workoutWidgets.length){
-    const program=workoutWidgets[0].config?.program;
-    const day=program?.days?.[String(wIdx)];
-    if(day&&(day.exercises||[]).length){
-      workoutHtml=(day.exercises||[]).map(ex=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;display:flex;justify-content:space-between;gap:8px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(ex.n).replace(/"/g,'&quot;')}">${ex.n}</span><span style="font-family:'DM Mono',monospace;color:var(--accent);flex-shrink:0">${ex.s||'?'}×${ex.r||'?'}</span></div>`).join('');
-    }else{
-      workoutHtml='<div class="empty">Rest day, or no exercises set for today.</div>';
-    }
-  }
-
-  body.innerHTML=`
-    <div class="grid-4" style="margin-bottom:1rem">
-      <div class="stat"><div class="stat-label">balance</div><div class="stat-value" style="font-size:20px">${balanceDisplay}</div></div>
-      <div class="stat"><div class="stat-label">weeks left</div><div class="stat-value" style="font-size:20px">${weeksLeftDisplay}</div></div>
-      <div class="stat"><div class="stat-label">gym sessions</div><div class="stat-value" style="font-size:20px">${gymSessions}</div></div>
-      <div class="stat"><div class="stat-label">rounds played</div><div class="stat-value" style="font-size:20px">${rounds}</div></div>
-    </div>
-    <div class="card" style="margin-bottom:1rem;background:var(--surface)">
-      <div class="section-title">savings progress</div>
-      ${svHtml}
-    </div>
-    <div class="grid-2">
-      <div class="card" style="background:var(--surface)">
-        <div class="section-title">today's habits</div>
-        ${habitsHtml}
-        ${habitWidgets.length?`<div style="margin-top:8px;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted)">${habitsDoneCount}/${habitWidgets.length} completed</div>`:''}
-      </div>
-      <div class="card" style="background:var(--surface)">
-        <div class="section-title">today's workout</div>
-        ${workoutHtml}
-      </div>
-    </div>`;
-}
 
 // --- editable widget settings (title always; type-specific config where it exists) ---
 const WIDGET_SETTINGS_FIELDS={
@@ -1576,18 +1519,149 @@ const WIDGET_RENDERERS={
   workout_log:renderWorkoutLogWidget,
   golf_log:renderGolfLogWidget,
   tennis_log:renderTennisLogWidget,
-  dashboard:renderDashboardWidget,
+};
+
+// Compact, read-only summaries for the Dashboard tab — one per favorited
+// widget, distinct from each widget's own full interactive view (no forms,
+// no edit affordances). Returns an HTML string rather than mutating the DOM
+// directly, since these are simple and stateless to (re)render.
+const WIDGET_SUMMARY_RENDERERS={
+  savings:w=>{
+    const cfg=w.config||{};
+    const goal=Number(cfg.goal)||0,start=Number(cfg.start)||0;
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    const current=computeSavingsBalance(start,entries);
+    const range=goal-start,gained=current-start;
+    const pct=range>0?Math.min(100,Math.max(0,(gained/range)*100)):(goal?Math.min(100,Math.max(0,(current/goal)*100)):0);
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="stat-value" style="margin-top:0">$${current.toFixed(2)}</div>
+      <div class="stat-sub">of $${goal.toFixed(2)}</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`;
+  },
+  checklist:w=>{
+    const items=(widgetDataMap[w.id]?.data?.items)||[];
+    if(!items.length)return '<div class="empty">No items yet.</div>';
+    const done=items.filter(i=>i.done).length;
+    return `<div class="stat-value" style="margin-top:0;font-size:20px">${done} / ${items.length}</div><div class="stat-sub">items done</div>`;
+  },
+  habits:w=>{
+    const log=(widgetDataMap[w.id]?.data?.log)||{};
+    const done=!!log[todayStr()];
+    const streak=calcHabitStreak(log);
+    return `<div style="display:flex;align-items:center;gap:8px">
+      <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${done?'var(--ok)':'var(--border-light)'}"></div>
+      <div style="font-size:13px;color:${done?'var(--text)':'var(--muted)'}">${done?'Done today':'Not done today'}</div>
+      ${streak>=2?`<div class="streak-badge">🔥 ${streak}</div>`:''}
+    </div>`;
+  },
+  notes:w=>{
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    if(!entries.length)return '<div class="empty">No notes yet.</div>';
+    const latest=entries[0]; // newest first (unshift-inserted)
+    return `<div style="font-size:13px;font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${String(latest.title||'').replace(/"/g,'&quot;')}">${latest.title}</div>
+    <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${latest.date}</div>`;
+  },
+  schedule:w=>{
+    const cfg=w.config||{};
+    const template=cfg.template||{};
+    const data=widgetDataMap[w.id]?.data||{};
+    const events=data.events||[];
+    const dayIdx=schedWeekdayIdx();
+    const today=todayStr();
+    const dayBlocks=(template[String(dayIdx)]?.blocks||[]).map(b=>({time:b.time||'',label:b.label,color:b.color}));
+    const dayEvents=events.filter(e=>e.date===today).map(e=>({time:e.time||'',label:e.title,color:e.color}));
+    const merged=[...dayBlocks,...dayEvents].sort((a,b)=>a.time.localeCompare(b.time));
+    if(!merged.length)return '<div class="empty">Nothing scheduled today.</div>';
+    return merged.map(item=>{
+      const pal=schedPaletteFor(item.color);
+      return `<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:12px">
+        <span style="font-family:'DM Mono',monospace;color:${pal.text};flex-shrink:0">${item.time||'—'}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">${item.label}</span>
+      </div>`;
+    }).join('');
+  },
+  countdown:w=>{
+    const cfg=w.config||{};
+    const target=cfg.target_date?new Date(cfg.target_date+'T00:00:00'):null;
+    const now=new Date();now.setHours(0,0,0,0);
+    let display='—',sub='no target date set';
+    if(target){
+      const days=Math.ceil((target-now)/86400000);
+      display=days>0?days:(days===0?'Today':'Past');
+      sub=cfg.label||cfg.target_date;
+    }
+    return `<div class="stat-value" style="margin-top:0">${display}</div><div class="stat-sub">${sub}</div>`;
+  },
+  funded_checklist:w=>{
+    const cfg=w.config||{};
+    const target=Number(cfg.target_count)||0;
+    const items=(widgetDataMap[w.id]?.data?.items)||[];
+    const doneCount=items.filter(i=>i.done).length;
+    const pct=target?Math.min(100,(doneCount/target)*100):0;
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="stat-value" style="margin-top:0">${doneCount} / ${target}</div>
+      <div class="stat-sub">${cfg.label||''}</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`;
+  },
+  workout_log:w=>{
+    const program=w.config?.program;
+    const day=program?.days?.[String(schedWeekdayIdx())];
+    if(day&&(day.exercises||[]).length){
+      return (day.exercises||[]).map(ex=>`<div style="font-size:12px;color:var(--muted);padding:3px 0;display:flex;justify-content:space-between;gap:8px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${String(ex.n).replace(/"/g,'&quot;')}">${ex.n}</span><span style="font-family:'DM Mono',monospace;color:var(--accent);flex-shrink:0">${ex.s||'?'}×${ex.r||'?'}</span></div>`).join('');
+    }
+    return '<div class="empty">Rest day, or no exercises set for today.</div>';
+  },
+  golf_log:w=>{
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    if(!entries.length)return '<div class="empty">No rounds logged yet.</div>';
+    const r18=entries.filter(e=>Number(e.holes)===18);
+    const avg=r18.length?Math.round(r18.reduce((s,e)=>s+(Number(e.score)||0),0)/r18.length):null;
+    return `<div class="grid-2">
+      <div class="stat"><div class="stat-label">rounds</div><div class="stat-value" style="font-size:18px">${entries.length}</div></div>
+      <div class="stat"><div class="stat-label">avg (18)</div><div class="stat-value" style="font-size:18px">${avg===null?'—':avg}</div></div>
+    </div>`;
+  },
+  tennis_log:w=>{
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    if(!entries.length)return '<div class="empty">No sessions logged yet.</div>';
+    const matches=entries.filter(e=>e.type==='match');
+    const wins=matches.filter(e=>e.result==='W').length;
+    return `<div class="grid-2">
+      <div class="stat"><div class="stat-label">sessions</div><div class="stat-value" style="font-size:18px">${entries.length}</div></div>
+      <div class="stat"><div class="stat-label">record</div><div class="stat-value" style="font-size:18px">${wins}-${matches.length-wins}</div></div>
+    </div>`;
+  },
+};
+
+const renderDashboardTabContent=wrap=>{
+  const favorited=pageWidgets.filter(w=>w.config?.favorited);
+  if(!favorited.length){
+    wrap.innerHTML='<div class="card" style="text-align:center;padding:2.5rem 1.5rem"><div style="font-size:14px;color:var(--muted)">Favorite a widget to see its summary here.</div></div>';
+    return;
+  }
+  wrap.innerHTML=`<div class="grid-2">${favorited.map(w=>`
+    <div class="card" style="background:var(--surface)">
+      <div class="section-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
+      <div id="dash-summary-${w.id}"></div>
+    </div>`).join('')}</div>`;
+  favorited.forEach(w=>{
+    const renderer=WIDGET_SUMMARY_RENDERERS[w.widget_type];
+    const el=document.getElementById(`dash-summary-${w.id}`);
+    if(el) el.innerHTML=renderer?renderer(w):'<div class="empty">No summary available.</div>';
+  });
 };
 
 // Widgets are laid out as a sequence of rows (1 or 2 widgets each), not a
 // fixed-column grid. Default: walk widgets in sort_order and greedily pair
 // up consecutive ones — a lone widget (odd one out, or the only widget on
-// the tab) gets a full-width row to itself. schedule/dashboard always get
-// their own full-width row regardless (unchanged from before). Dragging a
-// widget onto the bottom portion of another (see onWidgetGridDrop) sets
-// config.fullRow=true, which forces it out of pairing permanently until
-// dragged into a normal (pairing-eligible) drop zone again.
-const widgetIsRowForced=w=>w.widget_type==='schedule'||w.widget_type==='dashboard'||!!w.config?.fullRow;
+// the tab) gets a full-width row to itself. schedule always gets its own
+// full-width row regardless (unchanged from before). Dragging a widget onto
+// the bottom portion of another (see onWidgetGridDrop) sets config.fullRow=
+// true, which forces it out of pairing permanently until dragged into a
+// normal (pairing-eligible) drop zone again.
+const widgetIsRowForced=w=>w.widget_type==='schedule'||!!w.config?.fullRow;
 const computeWidgetRows=widgets=>{
   const rows=[];
   let i=0;
@@ -1603,14 +1677,26 @@ const computeWidgetRows=widgets=>{
 
 const renderWidgets=()=>{
   const wrap=document.getElementById('page-widgets');
-  const tabbed=pageTabs.length>0;
-  const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
+  const activeTab=pageTabs.find(t=>String(t.id)===String(activeTabId));
+  if(activeTab&&isDashboardTab(activeTab)){
+    renderDashboardTabContent(wrap);
+    return;
+  }
+  if(!activeTab){
+    // Only reachable if ensureDashboardTab() itself failed (network error) and
+    // left pageTabs without even a Dashboard tab — a real failure state, not a
+    // normal empty page (which always has at least the Dashboard tab).
+    wrap.innerHTML='<div class="empty">Unable to load tabs — refresh to try again.</div>';
+    return;
+  }
+  const widgetsToShow=pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId))
     .slice().sort((a,b)=>a.sort_order-b.sort_order);
   const widgetCardHtml=w=>`
     <div class="card" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
           <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder widget" title="Drag to reorder">⠿</span>
+          <button class="widget-fav-btn${w.config?.favorited?' on':''}" id="widget-fav-${w.id}" onclick="toggleWidgetFavorite(${w.id})" aria-label="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}" title="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}">📌</button>
           <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <div style="display:flex;gap:6px">
@@ -1622,19 +1708,8 @@ const renderWidgets=()=>{
     </div>`;
   const rows=computeWidgetRows(widgetsToShow);
   let html=rows.map(row=>`<div class="widget-row">${row.map(widgetCardHtml).join('')}</div>`).join('');
-  if(tabbed){
-    if(!widgetsToShow.length) html+='<div class="empty">No widgets in this tab yet.</div>';
-    html+='<div class="card widget-add-card" onclick="openMiniWidgetPicker()" aria-label="Add widget to this tab">+ Add widget</div>';
-  }else{
-    // Brand-new page: no tabs exist yet. The header has a small "+ Add tab"
-    // link, but a blank page shouldn't rely on that alone being noticed —
-    // give it an unmissable call to action too.
-    html+=`<div class="card" style="text-align:center;padding:2.5rem 1.5rem">
-      <div style="font-size:14px;margin-bottom:.4rem">This page doesn't have any tabs yet.</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:1.25rem">Add a tab to start building — any widgets already here will move into it.</div>
-      <button class="btn btn-primary" onclick="addTab()">+ Add your first tab</button>
-    </div>`;
-  }
+  if(!widgetsToShow.length) html+='<div class="empty">No widgets in this tab yet.</div>';
+  html+='<div class="card widget-add-card" onclick="openMiniWidgetPicker()" aria-label="Add widget to this tab">+ Add widget</div>';
   wrap.innerHTML=html;
   widgetsToShow.forEach(w=>{
     const renderer=WIDGET_RENDERERS[w.widget_type];
@@ -1645,18 +1720,21 @@ const renderWidgets=()=>{
 
 const renderTabBar=()=>{
   const bar=document.getElementById('page-tab-bar');
-  const addLink=document.getElementById('hdr-add-tab-link');
   if(!bar) return;
-  if(!pageTabs.length){
-    bar.style.display='none';bar.innerHTML='';
-    if(addLink) addLink.style.display='inline';
-    return;
-  }
-  if(addLink) addLink.style.display='none';
   bar.style.display='flex';
-  const sorted=[...pageTabs].sort((a,b)=>a.sort_order-b.sort_order);
+  // Dashboard always sorts first regardless of its numeric sort_order — see
+  // isDashboardTab's comment — so normal tab reordering can never bump it.
+  const sorted=[...pageTabs].sort((a,b)=>isDashboardTab(a)?-1:isDashboardTab(b)?1:a.sort_order-b.sort_order);
   bar.innerHTML=sorted.map(t=>{
     const isActive=String(t.id)===String(activeTabId);
+    if(isDashboardTab(t)){
+      // Built-in and pinned: not draggable, no rename/delete affordance at all.
+      return `<div class="tab-wrap" id="tab-wrap-${t.id}">
+        <div class="tab-btn-row">
+          <button class="tab-btn tab-btn-dashboard${isActive?' active':''}" onclick="switchTab(${t.id})">${t.name}</button>
+        </div>
+      </div>`;
+    }
     const isEditing=String(t.id)===String(tabEditingId);
     return `<div class="tab-wrap${isEditing?' editing':''}" id="tab-wrap-${t.id}">
       <div class="tab-btn-row">
@@ -1732,8 +1810,10 @@ const onTabBarDragOver=e=>{
   if(dragTabId==null)return;
   if(isWithinRect(e.clientX,e.clientY,document.getElementById('page-tab-bar'))) e.preventDefault();
 };
+// Excludes the pinned Dashboard tab's button — it's never draggable and can
+// never be a reorder boundary, so a drag can't land before it.
 const findTabDropIndex=clientX=>{
-  const btns=[...document.getElementById('page-tab-bar').querySelectorAll('.tab-btn')];
+  const btns=[...document.getElementById('page-tab-bar').querySelectorAll('.tab-btn:not(.tab-btn-dashboard)')];
   for(let i=0;i<btns.length;i++){
     const r=btns[i].getBoundingClientRect();
     if(clientX<r.left+r.width/2) return i;
@@ -1745,7 +1825,9 @@ const onTabBarDrop=async e=>{
   const bar=document.getElementById('page-tab-bar');
   if(!isWithinRect(e.clientX,e.clientY,bar))return; // dropped outside/far from the tab row — no-op
   e.preventDefault();
-  const sorted=[...pageTabs].sort((a,b)=>a.sort_order-b.sort_order);
+  // Dashboard is excluded from this reorderable set entirely — reindexing
+  // only the non-dashboard tabs means its sort_order is never touched.
+  const sorted=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
   const fromIdx=sorted.findIndex(t=>String(t.id)===String(dragTabId));
   if(fromIdx<0)return;
   const toIdx=findTabDropIndex(e.clientX);
@@ -1754,7 +1836,6 @@ const onTabBarDrop=async e=>{
   const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
   sorted.splice(insertAt,0,moved);
   sorted.forEach((t,i)=>{t.sort_order=i;});
-  pageTabs=sorted;
   renderTabBar();
   try{
     await Promise.all(sorted.map(t=>fetch(`${SB_URL}/rest/v1/ec_page_tabs?id=eq.${t.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:t.sort_order})})));
@@ -1767,6 +1848,7 @@ const onTabBarDrop=async e=>{
 const deleteTabInstance=async id=>{
   const tab=pageTabs.find(t=>String(t.id)===String(id));
   if(!tab)return;
+  if(isDashboardTab(tab)){alert("The Dashboard tab is built-in and can't be deleted.");return;}
   const widgetsInTab=pageWidgets.filter(w=>String(w.tab_id)===String(id));
   const msg=widgetsInTab.length
     ?`Delete tab "${tab.name}" and its ${widgetsInTab.length} widget${widgetsInTab.length===1?'':'s'}? This deletes all their logged data and cannot be undone.`
@@ -1894,7 +1976,7 @@ const resolveWidgetDropIndex=(widgetsToShow,target)=>{
 // pageWidgets) used only to drive the live reflow while dragging.
 const widgetsWithPreview=(widgetsToShow,fromIdx,toIdx,stack)=>{
   const draggedWidget=widgetsToShow[fromIdx];
-  const alwaysForced=draggedWidget.widget_type==='schedule'||draggedWidget.widget_type==='dashboard';
+  const alwaysForced=draggedWidget.widget_type==='schedule';
   const sorted=[...widgetsToShow];
   const [moved]=sorted.splice(fromIdx,1);
   let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
@@ -1983,7 +2065,7 @@ const onWidgetGridDrop=async e=>{
   const toIdx=resolveWidgetDropIndex(widgetsToShow,target);
   const stack=!!target?.stack;
 
-  const alwaysForced=draggedWidget.widget_type==='schedule'||draggedWidget.widget_type==='dashboard';
+  const alwaysForced=draggedWidget.widget_type==='schedule';
   const currentFullRow=!!draggedWidget.config?.fullRow;
   const newFullRow=alwaysForced?true:stack;
   const fullRowChanged=!alwaysForced&&currentFullRow!==newFullRow;
@@ -2010,23 +2092,77 @@ const onWidgetGridDrop=async e=>{
   }
 };
 
+// Legacy untabbed pages have widgets with tab_id=null. Both a manual "+ Add
+// tab" click and the automatic Dashboard-tab bootstrap need this same
+// one-time migration (create a "Main" tab, reassign the untabbed widgets to
+// it) — shared here instead of duplicated. No-ops once any tab already
+// exists for the page.
+const ensureMainTabForUntabbedWidgets=async()=>{
+  if(pageTabs.length>0)return;
+  const untabbed=pageWidgets.filter(w=>w.tab_id==null);
+  if(!untabbed.length)return;
+  const mainTabId=Date.now();
+  const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:mainTabId,page_id:pageId,name:'Main',sort_order:0})});
+  if(!resp.ok) throw new Error(`Main tab create failed ${resp.status}`);
+  const untabbedIds=untabbed.map(w=>w.id);
+  const patchResp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=in.(${untabbedIds.join(',')})`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({tab_id:mainTabId})});
+  if(!patchResp.ok) throw new Error(`Migration patch failed ${patchResp.status}`);
+  pageTabs.push({id:mainTabId,page_id:pageId,name:'Main',sort_order:0});
+  untabbed.forEach(w=>{w.tab_id=mainTabId;});
+  console.log(`MIGRATION: created "Main" tab (id=${mainTabId}) and reassigned ${untabbedIds.length} untabbed widget(s) to it.`);
+};
+
+// The old "dashboard" widget type aggregated exactly these sibling types with
+// no picking involved. One-time migration for any page that still has one:
+// favorite everything it was already showing, then remove it — dashboard is
+// now a built-in tab, not something a user adds as a widget.
+const DASHBOARD_LEGACY_AGGREGATED_TYPES=['savings','workout_log','golf_log','habits'];
+const migrateOldDashboardWidgets=async()=>{
+  const oldDashboards=pageWidgets.filter(w=>w.widget_type==='dashboard');
+  if(!oldDashboards.length)return;
+  const toFavorite=pageWidgets.filter(w=>DASHBOARD_LEGACY_AGGREGATED_TYPES.includes(w.widget_type)&&!w.config?.favorited);
+  await Promise.all(toFavorite.map(async w=>{
+    const newConfig={...w.config,favorited:true};
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:newConfig})});
+    if(!resp.ok) throw new Error(`Favorite migration patch failed ${resp.status}`);
+    w.config=newConfig;
+  }));
+  for(const dw of oldDashboards){
+    const dResp=await fetch(`${SB_URL}/rest/v1/ec_widget_data?page_widget_id=eq.${dw.id}`,{method:'DELETE',headers:buildHeaders()});
+    if(!dResp.ok) throw new Error(`Old dashboard widget data delete failed ${dResp.status}`);
+    const wResp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${dw.id}`,{method:'DELETE',headers:buildHeaders()});
+    if(!wResp.ok) throw new Error(`Old dashboard widget delete failed ${wResp.status}`);
+    delete widgetDataMap[dw.id];
+  }
+  const removedIds=new Set(oldDashboards.map(dw=>dw.id));
+  pageWidgets=pageWidgets.filter(w=>!removedIds.has(w.id));
+  console.log(`MIGRATION: removed ${oldDashboards.length} old dashboard widget(s), favorited ${toFavorite.length} sibling widget(s) it was aggregating.`);
+};
+
+// Runs on every page load. Idempotent: no-ops once the page already has a
+// Dashboard tab. Handles both brand-new pages (nothing to migrate, just
+// creates the tab) and legacy pages (untabbed widgets, an old dashboard
+// widget, or both) in one pass.
+const ensureDashboardTab=async()=>{
+  try{
+    await migrateOldDashboardWidgets();
+    await ensureMainTabForUntabbedWidgets();
+    if(pageTabs.some(isDashboardTab))return;
+    const dashId=Date.now()+2;
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:dashId,page_id:pageId,name:'Dashboard',sort_order:-1})});
+    if(!resp.ok) throw new Error(`Dashboard tab create failed ${resp.status}`);
+    pageTabs.push({id:dashId,page_id:pageId,name:'Dashboard',sort_order:-1});
+  }catch(e){
+    console.error('ensureDashboardTab failed',e);
+  }
+};
+
 const addTab=async()=>{
   const name=prompt('Tab name:','New Tab');
   if(name===null)return;
   const trimmed=name.trim()||'New Tab';
   try{
-    if(pageTabs.length===0 && pageWidgets.some(w=>w.tab_id==null)){
-      const mainTabId=Date.now();
-      const resp=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:mainTabId,page_id:pageId,name:'Main',sort_order:0})});
-      if(!resp.ok) throw new Error(`Main tab create failed ${resp.status}`);
-      const untabbed=pageWidgets.filter(w=>w.tab_id==null);
-      const untabbedIds=untabbed.map(w=>w.id);
-      const patchResp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=in.(${untabbedIds.join(',')})`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({tab_id:mainTabId})});
-      if(!patchResp.ok) throw new Error(`Migration patch failed ${patchResp.status}`);
-      pageTabs.push({id:mainTabId,page_id:pageId,name:'Main',sort_order:0});
-      untabbed.forEach(w=>{w.tab_id=mainTabId;});
-      console.log(`MIGRATION: created "Main" tab (id=${mainTabId}) and reassigned ${untabbedIds.length} untabbed widget(s) to it.`);
-    }
+    await ensureMainTabForUntabbedWidgets(); // no-op in the normal case — Dashboard bootstrap already handled it on load
     const nextSort=pageTabs.length?Math.max(...pageTabs.map(t=>t.sort_order))+1:0;
     const newTabId=Date.now()+1;
     const resp2=await fetch(`${SB_URL}/rest/v1/ec_page_tabs`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:newTabId,page_id:pageId,name:trimmed,sort_order:nextSort})});
@@ -2103,7 +2239,14 @@ const loadWidgets=async()=>{
     document.getElementById('page-widgets').innerHTML='<div class="empty">Unable to load widgets.</div>';
     return;
   }
-  if(pageTabs.length && activeTabId==null) activeTabId=pageTabs[0].id;
+  await ensureDashboardTab();
+  if(activeTabId==null){
+    // Land on the first real content tab, not Dashboard — pinning it first
+    // in the tab order doesn't mean forcing it as the default landing view.
+    // Falls back to Dashboard only when it's the sole tab (brand-new page).
+    const nonDashboard=[...pageTabs].filter(t=>!isDashboardTab(t)).sort((a,b)=>a.sort_order-b.sort_order);
+    activeTabId=nonDashboard[0]?.id??(pageTabs.find(isDashboardTab)?.id)??null;
+  }
   await Promise.all(pageWidgets.map(ensureWidgetData));
   renderTabBar();
   renderWidgets();
