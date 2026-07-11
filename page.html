@@ -142,7 +142,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    the longest one silently clips against .os-sb's overflow:hidden instead
    of ever triggering its own scrollbar. */
 .os-sb.open #sb-pages{width:100%}
-.sb-toggle{width:32px;height:32px;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .15s;margin-bottom:6px;flex-shrink:0;background:none;border:none;padding:0}
+/* Collapsed width matches .sb-item's 36px exactly (not .sb-action's 40px
+   either) — align-items:center on the rail centers each child by its OWN
+   width, so mismatched widths here previously made the hover-highlight
+   boxes for the toggle/dots/footer icons each sit on a different horizontal
+   axis instead of lining up as one consistent column. */
+.sb-toggle{width:36px;height:36px;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .15s;margin-bottom:6px;flex-shrink:0;background:none;border:none;padding:0}
 .os-sb.open .sb-toggle{width:100%;justify-content:flex-start;padding:0 8px}
 .sb-toggle:hover{background:var(--faint);color:var(--text)}
 .sb-div{width:24px;height:1px;background:var(--border);margin:4px auto;flex-shrink:0;transition:width .2s}
@@ -154,8 +159,13 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .sb-label{font-size:12px;font-weight:500;opacity:0;transition:opacity .15s;font-family:'DM Sans',sans-serif;flex-shrink:0}
 .os-sb.open .sb-label{opacity:1}
-.sb-footer{margin-top:auto;display:flex;flex-direction:column;gap:6px;width:100%}
-.sb-action{border:none;background:none;width:40px;height:40px;color:var(--text)}
+/* align-items:center matches how .os-sb itself centers the toggle/page-dot
+   items directly — without it, .sb-footer's explicit-width children fall
+   back to flex-start (since a fixed width defeats the default stretch),
+   landing ~3px further left than the rest of the rail and breaking the
+   alignment this file's other .os-sb centering already relies on. */
+.sb-footer{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
+.sb-action{border:none;background:none;width:36px;height:36px;color:var(--text)}
 .sb-action .sb-dot{width:24px;height:24px;font-size:24px;display:flex;align-items:center;justify-content:center}
 .os-sb:not(.open) .sb-action{justify-content:center;gap:0}
 .os-sb:not(.open) .sb-action .sb-label{width:0;margin:0}
