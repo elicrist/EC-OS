@@ -167,8 +167,17 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sb-footer{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
 .sb-action{border:none;background:none;width:36px;height:36px;color:var(--text)}
 .sb-action .sb-dot{width:24px;height:24px;font-size:24px;display:flex;align-items:center;justify-content:center}
-.os-sb:not(.open) .sb-action{justify-content:center;gap:0}
-.os-sb:not(.open) .sb-action .sb-label{width:0;margin:0}
+/* Collapsed rail: every item (toggle, page-dot rows, and — via .sb-item,
+   which .sb-action also carries — the footer buttons) gets the SAME
+   recipe .sb-action alone used to have: a forced 36px square, gap:0 (a
+   real gap still renders even next to a zero-width label) and
+   justify-content:center. Without this, .sb-item's icon rendered visibly
+   off-center — its hidden label still occupied flex layout space, and its
+   box wasn't even square (36px wide but only ~32px tall, sized by content
+   instead of forced) — which was the real cause of the "off-center hover
+   box" look, not the box's left position. */
+.os-sb:not(.open) .sb-toggle,.os-sb:not(.open) .sb-item{height:36px;justify-content:center;gap:0}
+.os-sb:not(.open) .sb-label{width:0;margin:0}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000;overscroll-behavior:contain}
 .overlay.active{display:flex}
 .overlay-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.5rem;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.35);overscroll-behavior:contain}
