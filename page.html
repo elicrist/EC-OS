@@ -133,7 +133,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .streak-badge{display:inline-flex;align-items:center;gap:5px;background:color-mix(in srgb,var(--accent) 14%,var(--card));border:1px solid var(--accent);border-radius:6px;padding:3px 9px;font-size:11px;font-family:'DM Mono',monospace;color:var(--accent)}
 @media(max-width:720px){.grid-2,.grid-4{grid-template-columns:1fr}.widget-row{flex-direction:column}.content{padding:1rem}header{padding:.9rem 1rem;flex-wrap:wrap;row-gap:6px}.hdr-right{flex-wrap:wrap}}
 /* === OS SIDEBAR === */
-.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease;overflow:hidden}
+.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0 14px 10px;gap:4px;transition:width .2s ease;overflow:hidden}
 .os-sb.open{width:var(--sb-open-width,168px);align-items:flex-start;padding:14px 10px}
 /* Without this, #sb-pages (no width of its own) shrink-wraps to its widest
    child's natural content width in the cross axis, and every .sb-item's
