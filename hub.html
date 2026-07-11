@@ -24,13 +24,23 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .logo span{color:var(--muted);font-weight:300}
 .hdr-meta{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 2rem;gap:2.5rem}
+.hub-greeting{text-align:center}
+.greeting-title{font-size:20px;font-weight:600;letter-spacing:-.3px;margin-bottom:.3rem}
+.greeting-tagline{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace}
 .eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);font-family:'DM Mono',monospace}
 .os-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.25rem;width:100%;max-width:920px}
-.os-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:2rem 1.75rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:all .2s;min-width:0}
-.os-card:hover{transform:translateY(-3px)}
-.os-card.s:hover{border-color:var(--summer);box-shadow:0 8px 36px rgba(224,123,74,.1)}
-.os-card.g:hover{border-color:var(--gt);box-shadow:0 8px 36px rgba(179,163,105,.1)}
-.os-card.m:hover{border-color:var(--mission);box-shadow:0 8px 36px rgba(154,175,191,.1)}
+/* Default border reads --card-border (a dynamic card's own translucent tint,
+   set as a custom property, not a direct border-color) rather than having
+   dynamic cards set border-color inline — an inline border-color would beat
+   the :hover rule below no matter how it's written, since inline style
+   always outranks any stylesheet selector regardless of specificity. */
+.os-card{background:var(--card);border:1px solid var(--card-border,var(--border));border-radius:14px;padding:2rem 1.75rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:all .2s;min-width:0}
+/* --card-accent is set per card (from its own dot/accent color) so hover
+   always matches THAT page's color — never a fixed app-wide one. Set via a
+   class for the 2 hardcoded cards (.g/.m below) and inline per dynamic card. */
+.os-card:hover{transform:translateY(-3px);border-color:var(--card-accent,var(--border-light));box-shadow:0 8px 36px color-mix(in srgb,var(--card-accent,transparent) 20%,transparent)}
+.os-card.g{--card-accent:var(--gt)}
+.os-card.m{--card-accent:var(--mission)}
 .os-phase{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:.6rem;display:flex;align-items:center;gap:6px}
 .s .os-phase{color:var(--summer)}.g .os-phase{color:var(--gt)}.m .os-phase{color:var(--mission)}
 .pulse{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:pulse 2s ease-in-out infinite}
@@ -39,11 +49,17 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
 .os-name{font-size:22px;font-weight:600;letter-spacing:-.4px;margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .os-tags{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.8}
 .os-cd{margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)}
-.cd-num{font-size:32px;font-weight:600;letter-spacing:-.6px;line-height:1}
+.cd-num{font-size:32px;font-weight:600;letter-spacing:-.6px;line-height:1;color:var(--card-accent,var(--text))}
 .s .cd-num{color:var(--summer)}.g .cd-num{color:var(--gt)}.m .cd-num{color:var(--mission)}
 .cd-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:5px}
+.cd-prompt{font-size:11px;color:var(--muted);line-height:1.5}
 .os-open{margin-top:1.5rem;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);transition:color .15s}
 .os-card:hover .os-open{color:var(--text)}
+.hub-empty{display:flex;flex-direction:column;align-items:center;gap:1rem;padding:3rem 2rem;cursor:pointer;border:1px dashed var(--border-light);border-radius:14px;background:none;color:inherit;font-family:inherit;transition:all .2s;width:100%;max-width:420px;justify-self:center}
+.hub-empty:hover{border-color:var(--text);background:var(--card)}
+.hub-empty-plus{font-size:48px;font-weight:300;color:var(--muted);line-height:1;transition:color .2s}
+.hub-empty:hover .hub-empty-plus{color:var(--text)}
+.hub-empty-text{font-size:13px;color:var(--muted)}
 footer{padding:1rem 2rem;border-top:1px solid var(--border);font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center}
 @media(max-width:700px){.os-grid{grid-template-columns:1fr}main{justify-content:flex-start;padding-top:2rem}}
 </style>
@@ -54,6 +70,10 @@ footer{padding:1rem 2rem;border-top:1px solid var(--border);font-size:10px;color
   <div class="hdr-meta" id="hdr-date"></div>
 </header>
 <main>
+  <div class="hub-greeting">
+    <div class="greeting-title" id="greeting-title"></div>
+    <div class="greeting-tagline" id="greeting-tagline"></div>
+  </div>
   <div class="eyebrow">select your operating system</div>
   <div class="os-grid" id="os-grid">
     <a class="os-card g" href="gt.html" id="os-card-gt">
@@ -64,7 +84,7 @@ footer{padding:1rem 2rem;border-top:1px solid var(--border);font-size:10px;color
         <div class="cd-num" id="cd-g">—</div>
         <div class="cd-label">days until move-in</div>
       </div>
-      <div class="os-open">open GT OS →</div>
+      <div class="os-open">→ open GT OS</div>
     </a>
     <a class="os-card m" href="mission.html" id="os-card-mission">
       <div class="os-phase">lds mission · 2027 — 2029</div>
@@ -74,7 +94,7 @@ footer{padding:1rem 2rem;border-top:1px solid var(--border);font-size:10px;color
         <div class="cd-num" id="cd-m">—</div>
         <div class="cd-label" id="cd-m-label">days until set apart</div>
       </div>
-      <div class="os-open">open Mission OS →</div>
+      <div class="os-open">→ open Mission OS</div>
     </a>
   </div>
 </main>
@@ -93,6 +113,16 @@ document.getElementById('cd-m').textContent=dM??'TBD';
 if(!dM)document.getElementById('cd-m-label').textContent='set date in Mission OS';
 document.getElementById('hdr-date').textContent=today.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 
+// Single source for the hub greeting text — no real nickname/profile storage
+// exists yet (that's a future onboarding phase), so this is a generic
+// placeholder for now. When a real nickname exists, only this function's
+// body needs to change (e.g. reading authSession.user.nickname) — nothing
+// else references the greeting text directly.
+const getGreeting=()=>({title:'Welcome back',tagline:'Your operating systems, all in one place.'});
+const greeting=getGreeting();
+document.getElementById('greeting-title').textContent=greeting.title;
+document.getElementById('greeting-tagline').textContent=greeting.tagline;
+
 // hub.html sources its page list from ec_pages — same source of truth the
 // sidebar on every other surface uses — rather than only the 3 hardcoded cards.
 const sbFetchJson=async(url)=>{
@@ -100,6 +130,149 @@ const sbFetchJson=async(url)=>{
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
   return resp.json();
 };
+
+// Minimal duplicates of page.html's stat-calculation helpers — hub.html is a
+// separate static file with no shared JS module between them (same pattern
+// as the sidebar markup duplicated across gt.html/mission.html/page.html),
+// so these are copied rather than imported. Kept intentionally small: only
+// what's needed to derive a single headline {value,label} pair per widget
+// type, not the full rich Dashboard-tab summary rendering.
+function hubTodayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
+function hubSchedWeekdayIdx(d=new Date()){const j=d.getDay();return j===0?6:j-1;}
+function hubCalcHabitStreak(log){
+  let streak=0;
+  for(let i=0;i<365;i++){
+    const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
+    const dk=d.toLocaleDateString('en-CA');
+    if(log[dk])streak++;
+    else if(i>0)break;
+  }
+  return streak;
+}
+function hubSavingsBalance(start,entries){
+  let b=start;
+  entries.forEach(e=>{
+    const amt=Number(e.amount)||0;
+    if(e.type==='balance')b=amt;
+    else if(e.type==='expense')b-=amt;
+    else b+=amt;
+  });
+  return b;
+}
+// One headline {value,label} extractor per widget type — mirrors the shape
+// (not the full richness) of page.html's WIDGET_SUMMARY_RENDERERS. Returning
+// null means "nothing meaningful to show yet" (e.g. no entries logged),
+// which falls back to the same "star a stat" prompt as no widget being
+// starred at all.
+const HUB_STAT_EXTRACTORS={
+  savings:(cfg,data)=>{
+    const start=Number(cfg.start)||0,goal=Number(cfg.goal)||0;
+    const current=hubSavingsBalance(start,data?.entries||[]);
+    return {value:`$${current.toFixed(2)}`,label:`of $${goal.toFixed(2)} goal`};
+  },
+  checklist:(cfg,data)=>{
+    const items=data?.items||[];
+    if(!items.length)return null;
+    const done=items.filter(i=>i.done).length;
+    return {value:`${done} / ${items.length}`,label:'items done'};
+  },
+  habits:(cfg,data)=>{
+    const log=data?.log||{};
+    const done=!!log[hubTodayStr()];
+    const streak=hubCalcHabitStreak(log);
+    return {value:streak>0?streak:(done?'✓':'—'),label:streak>0?'day streak':(done?'done today':'not done today')};
+  },
+  notes:(cfg,data)=>{
+    const entries=data?.entries||[];
+    if(!entries.length)return null;
+    return {value:entries.length,label:entries.length===1?'note':'notes'};
+  },
+  schedule:(cfg,data)=>{
+    const template=cfg.template||{};
+    const events=data?.events||[];
+    const dayBlocks=template[String(hubSchedWeekdayIdx())]?.blocks||[];
+    const today=hubTodayStr();
+    const dayEvents=events.filter(e=>e.date===today);
+    const count=dayBlocks.length+dayEvents.length;
+    if(!count)return null;
+    return {value:count,label:count===1?'item today':'items today'};
+  },
+  countdown:cfg=>{
+    if(!cfg.target_date)return null;
+    const target=new Date(cfg.target_date+'T00:00:00');
+    const now=new Date();now.setHours(0,0,0,0);
+    const d=Math.ceil((target-now)/86400000);
+    return {value:d>0?d:(d===0?'Today':'Past'),label:cfg.label||cfg.target_date};
+  },
+  funded_checklist:(cfg,data)=>{
+    const target=Number(cfg.target_count)||0;
+    const done=(data?.items||[]).filter(i=>i.done).length;
+    return {value:`${done} / ${target}`,label:cfg.label||'funded goal'};
+  },
+  workout_log:cfg=>{
+    const day=cfg.program?.days?.[String(hubSchedWeekdayIdx())];
+    const count=(day?.exercises||[]).length;
+    if(!count)return {value:'—',label:'rest day'};
+    return {value:count,label:'exercises today'};
+  },
+  golf_log:(cfg,data)=>{
+    const entries=data?.entries||[];
+    if(!entries.length)return null;
+    return {value:entries.length,label:entries.length===1?'round logged':'rounds logged'};
+  },
+  tennis_log:(cfg,data)=>{
+    const entries=data?.entries||[];
+    if(!entries.length)return null;
+    const matches=entries.filter(e=>e.type==='match');
+    const wins=matches.filter(e=>e.result==='W').length;
+    return {value:`${wins}-${matches.length-wins}`,label:'match record'};
+  },
+};
+const HUB_STAT_PROMPT='<div class="os-cd"><div class="cd-prompt">Star a dashboard stat to feature it here</div></div>';
+const hubCardStatBlock=(widget,data)=>{
+  if(!widget)return HUB_STAT_PROMPT;
+  const extractor=HUB_STAT_EXTRACTORS[widget.widget_type];
+  const stat=extractor?extractor(widget.config||{},data):null;
+  if(!stat)return HUB_STAT_PROMPT;
+  return `<div class="os-cd"><div class="cd-num">${stat.value}</div><div class="cd-label">${stat.label}</div></div>`;
+};
+// Fetches whichever widget is hub-starred (config.hubStarred===true — see
+// page.html's toggleHubStar) for a single dynamic page, plus that widget's
+// current data. Static-kind pages (GT/Mission/index) don't have real
+// ec_page_widgets rows — their countdown stays the existing hardcoded one.
+const fetchHubStat=async pageRow=>{
+  if(pageRow.page_kind==='static')return {widget:null,data:null};
+  try{
+    const widgets=await sbFetchJson(`${SB_URL}/rest/v1/ec_page_widgets?page_id=eq.${pageRow.id}&select=*`);
+    const starred=widgets.find(w=>w.config?.hubStarred);
+    if(!starred)return {widget:null,data:null};
+    const dataRows=await sbFetchJson(`${SB_URL}/rest/v1/ec_widget_data?page_widget_id=eq.${starred.id}&select=data`);
+    return {widget:starred,data:dataRows[0]?.data||{}};
+  }catch(e){
+    console.error('fetchHubStat failed for page',pageRow.id,e);
+    return {widget:null,data:null};
+  }
+};
+
+// Lightweight page creation for the empty-state CTA — asks only for a name
+// (mirrors the sidebar's own addTab-style quick-prompt pattern) rather than
+// duplicating page.html's full 2-step builder overlay into this file. Once
+// this first page exists, its own sidebar "+ New page" covers the rest.
+const createFirstPage=async()=>{
+  const name=prompt('Name your first page:','My Page');
+  if(name===null)return;
+  const trimmed=name.trim()||'My Page';
+  try{
+    const pageId=Date.now();
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_pages`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:pageId,name:trimmed,sort_order:0,archived:false})});
+    if(!resp.ok) throw new Error(`Page insert failed ${resp.status}`);
+    window.location.href=`page.html?id=${pageId}`;
+  }catch(e){
+    console.error('createFirstPage failed',e);
+    alert('Failed to create page — try again.');
+  }
+};
+
 // index.html has no card/DOM id of its own anymore (it's just the login
 // gate) but stays mapped here so its stale ec_pages static row — if it still
 // exists — gets treated as "already accounted for" and filtered out of the
@@ -124,16 +297,30 @@ const KNOWN_STATIC_CARDS={'index.html':'os-card-summer','gt.html':'os-card-gt','
     });
     if(extra.length){
       const grid=document.getElementById('os-grid');
-      grid.insertAdjacentHTML('beforeend',extra.map(r=>{
+      const stats=await Promise.all(extra.map(fetchHubStat));
+      grid.insertAdjacentHTML('beforeend',extra.map((r,i)=>{
         const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
         const caption=[r.timeframe,r.location].filter(Boolean).join(' · ')||(r.page_kind==='static'?'page':'custom page');
         const color=r.dot_color||'var(--muted)';
-        return `<a class="os-card" href="${href}" style="border-color:${color}22">
+        const safeName=String(r.name).replace(/"/g,'&quot;');
+        return `<a class="os-card" href="${href}" style="--card-border:${color}22;--card-accent:${color}">
           <div class="os-phase" style="color:${color}"><span class="pulse" style="background:${color}"></span>${caption}</div>
-          <div class="os-name" title="${String(r.name).replace(/"/g,'&quot;')}">${r.name}</div>
-          <div class="os-open">open →</div>
+          <div class="os-name" title="${safeName}">${safeName}</div>
+          ${hubCardStatBlock(stats[i].widget,stats[i].data)}
+          <div class="os-open">→ open ${safeName}</div>
         </a>`;
       }).join(''));
+    }
+    // A brand-new account has none of the 3 known static rows yet either, so
+    // every hardcoded card above just got hidden and extra is empty — the
+    // grid would otherwise be silently blank instead of inviting first use.
+    const visibleCards=[...document.querySelectorAll('#os-grid .os-card')].filter(el=>el.style.display!=='none');
+    if(!visibleCards.length){
+      document.getElementById('os-grid').innerHTML=`
+        <button class="hub-empty" onclick="createFirstPage()" aria-label="Build your first page">
+          <div class="hub-empty-plus">+</div>
+          <div class="hub-empty-text">Build your first page to get started</div>
+        </button>`;
     }
   }catch(e){
     console.error('hub page list failed',e);
