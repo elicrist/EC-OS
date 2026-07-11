@@ -60,9 +60,11 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .widget-drag-handle{cursor:grab;color:var(--muted);font-size:14px;padding:2px 4px;user-select:none}
 .widget-drag-handle:hover{color:var(--accent)}
 .card.widget-dragging{opacity:.4}
-.widget-fav-btn{background:none;border:1px solid var(--border-light);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;color:var(--muted);flex-shrink:0;transition:all .15s;padding:0}
+.widget-fav-btn{background:none;border:1px solid var(--border-light);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all .15s;padding:0}
 .widget-fav-btn:hover{border-color:var(--accent);color:var(--accent)}
 .widget-fav-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
+.widget-fav-btn svg{display:block}
+.widget-fav-btn.on svg{fill:currentColor}
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;min-width:0}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem 1.25rem}
@@ -576,7 +578,12 @@ const patchWidgetConfig=async(id,newConfig)=>{
 // Per-page, per-widget "show this widget's summary on the Dashboard tab"
 // toggle — stored in the widget's own config (no schema change needed),
 // deliberately a different icon/placement than the future hub-level star
-// (#7 on the roadmap) so the two don't get visually conflated.
+// (#7 on the roadmap) so the two don't get visually conflated. Bookmark-
+// ribbon outline, matching the stroke-based line-icon style used elsewhere
+// (sidebar icons, ⠿/✎) rather than a colorful emoji glyph — filled via
+// .widget-fav-btn.on's CSS fill:currentColor when favorited, plain outline
+// otherwise.
+const WIDGET_FAV_ICON_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" aria-hidden="true"><path d="M6,3 L18,3 L18,21 L12,15 L6,21 Z"/></svg>';
 const toggleWidgetFavorite=async id=>{
   const w=findWidget(id);
   if(!w)return;
@@ -1635,17 +1642,39 @@ const WIDGET_SUMMARY_RENDERERS={
   },
 };
 
+// The two item-sources the shared widget drag-reorder engine below can
+// operate on: the current tab's real widgets (sorted by sort_order, the
+// builder grid), or the page's favorited widgets (sorted by dashboardOrder,
+// the Dashboard tab) — same drag mechanics, different subset + persisted
+// order field. dashboardOrder lives in config (no schema column for it), and
+// widgets that have never been manually reordered on Dashboard fall back to
+// sorting by id (creation order) — since id is a large Date.now() value, a
+// newly-favorited widget naturally sorts after any explicitly-set small
+// integer dashboardOrder, i.e. appends to the end.
+const builderWidgetsToShow=()=>pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)).slice().sort((a,b)=>a.sort_order-b.sort_order);
+const dashboardWidgetsToShow=()=>pageWidgets.filter(w=>w.config?.favorited).slice().sort((a,b)=>(a.config?.dashboardOrder??a.id)-(b.config?.dashboardOrder??b.id));
+
 const renderDashboardTabContent=wrap=>{
-  const favorited=pageWidgets.filter(w=>w.config?.favorited);
+  const favorited=dashboardWidgetsToShow();
   if(!favorited.length){
     wrap.innerHTML='<div class="card" style="text-align:center;padding:2.5rem 1.5rem"><div style="font-size:14px;color:var(--muted)">Favorite a widget to see its summary here.</div></div>';
     return;
   }
-  wrap.innerHTML=`<div class="grid-2">${favorited.map(w=>`
-    <div class="card" style="background:var(--surface)">
-      <div class="section-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
+  // Same .card/.widget-row shape (and widget-card-${id} id convention) as
+  // the builder grid, with just a drag handle in the header instead of the
+  // pin/edit/delete cluster — read-only, but draggable via the same
+  // onWidgetDragStart/onWidgetGridDragOver/onWidgetGridDrop mechanism,
+  // which reorders by config.dashboardOrder here instead of sort_order.
+  const dashCardHtml=w=>`
+    <div class="card" id="widget-card-${w.id}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:.9rem;min-width:0">
+        <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder dashboard card" title="Drag to reorder">⠿</span>
+        <div class="section-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
+      </div>
       <div id="dash-summary-${w.id}"></div>
-    </div>`).join('')}</div>`;
+    </div>`;
+  const rows=computeWidgetRows(favorited);
+  wrap.innerHTML=rows.map(row=>`<div class="widget-row">${row.map(dashCardHtml).join('')}</div>`).join('');
   favorited.forEach(w=>{
     const renderer=WIDGET_SUMMARY_RENDERERS[w.widget_type];
     const el=document.getElementById(`dash-summary-${w.id}`);
@@ -1689,14 +1718,13 @@ const renderWidgets=()=>{
     wrap.innerHTML='<div class="empty">Unable to load tabs — refresh to try again.</div>';
     return;
   }
-  const widgetsToShow=pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId))
-    .slice().sort((a,b)=>a.sort_order-b.sort_order);
+  const widgetsToShow=builderWidgetsToShow();
   const widgetCardHtml=w=>`
     <div class="card" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
           <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder widget" title="Drag to reorder">⠿</span>
-          <button class="widget-fav-btn${w.config?.favorited?' on':''}" id="widget-fav-${w.id}" onclick="toggleWidgetFavorite(${w.id})" aria-label="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}" title="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}">📌</button>
+          <button class="widget-fav-btn${w.config?.favorited?' on':''}" id="widget-fav-${w.id}" onclick="toggleWidgetFavorite(${w.id})" aria-label="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}" title="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}">${WIDGET_FAV_ICON_SVG}</button>
           <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <div style="display:flex;gap:6px">
@@ -1973,15 +2001,19 @@ const resolveWidgetDropIndex=(widgetsToShow,target)=>{
 };
 // Builds the widget list as it would look if dropped at the given preview
 // target right now — a throwaway computation (new objects, never mutates
-// pageWidgets) used only to drive the live reflow while dragging.
-const widgetsWithPreview=(widgetsToShow,fromIdx,toIdx,stack)=>{
+// pageWidgets) used only to drive the live reflow while dragging. The
+// "stack" (bottom-quarter drop zone forces a full-width row) concept is a
+// builder-grid-only idea — Dashboard-tab reordering (allowStack=false) never
+// touches fullRow, since that's the widget's own builder-grid layout state,
+// unrelated to its position among Dashboard summary cards.
+const widgetsWithPreview=(widgetsToShow,fromIdx,toIdx,stack,allowStack=true)=>{
   const draggedWidget=widgetsToShow[fromIdx];
-  const alwaysForced=draggedWidget.widget_type==='schedule';
+  const alwaysForced=allowStack&&draggedWidget.widget_type==='schedule';
   const sorted=[...widgetsToShow];
   const [moved]=sorted.splice(fromIdx,1);
   let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
   insertAt=Math.max(0,Math.min(insertAt,sorted.length));
-  const previewMoved={...moved,config:{...(moved.config||{}),fullRow:alwaysForced?true:stack}};
+  const previewMoved=allowStack?{...moved,config:{...(moved.config||{}),fullRow:alwaysForced?true:stack}}:moved;
   sorted.splice(insertAt,0,previewMoved);
   return sorted;
 };
@@ -2013,6 +2045,14 @@ const relayoutWidgetDOM=widgets=>{
   [...wrap.querySelectorAll(':scope > .widget-row')].forEach(el=>{ if(!el.querySelector('.card')) el.remove(); });
 
   cards.forEach(el=>{
+    // Never apply a CSS transform to the card actively being dragged: it's
+    // already got its own native ghost image (setDragImage) tracking the
+    // cursor, and Chromium's native HTML5 drag-and-drop silently stops
+    // firing 'drop' if a transform lands on the drag source's own element
+    // mid-gesture (confirmed empirically — a drag that crosses rows, so the
+    // dragged card's own position genuinely changes and would otherwise get
+    // FLIP-animated, reliably killed 'drop' until this exclusion was added).
+    if(el.id===`widget-card-${dragWidgetId}`)return;
     const first=firstRects.get(el.id);
     if(!first)return;
     const last=el.getBoundingClientRect();
@@ -2027,48 +2067,58 @@ const relayoutWidgetDOM=widgets=>{
     }
   });
 };
+// Same wrapper element (#page-widgets) and same dragover/drop handlers serve
+// both the builder grid and the Dashboard tab — they're never shown at the
+// same time, so which one applies is just whichever tab is currently active.
+// allowStack=false on Dashboard disables the bottom-quarter "stack" zone
+// entirely (see widgetsWithPreview) — Dashboard reordering never mutates a
+// widget's fullRow, only its dashboardOrder.
+const onDashboardTabActive=()=>{
+  const activeTab=pageTabs.find(t=>String(t.id)===String(activeTabId));
+  return !!activeTab&&isDashboardTab(activeTab);
+};
 const onWidgetGridDragOver=e=>{
   if(dragWidgetId==null)return;
   const wrap=document.getElementById('page-widgets');
   if(!isWithinRect(e.clientX,e.clientY,wrap))return;
   e.preventDefault();
 
-  const tabbed=pageTabs.length>0;
-  const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
-    .slice().sort((a,b)=>a.sort_order-b.sort_order);
+  const onDashboard=onDashboardTabActive();
+  const widgetsToShow=onDashboard?dashboardWidgetsToShow():builderWidgetsToShow();
+  const allowStack=!onDashboard;
   const fromIdx=widgetsToShow.findIndex(w=>String(w.id)===String(dragWidgetId));
   if(fromIdx<0)return;
 
   const center=widgetDragCenter(e.clientX,e.clientY);
   const target=findWidgetDropTarget(center.x,center.y,widgetDragSnapshot);
   const toIdx=resolveWidgetDropIndex(widgetsToShow,target);
-  const stack=!!target?.stack;
+  const stack=allowStack&&!!target?.stack;
 
   if(widgetDragPreview&&widgetDragPreview.index===toIdx&&widgetDragPreview.stack===stack)return; // unchanged, skip relayout
   widgetDragPreview={index:toIdx,stack};
 
-  relayoutWidgetDOM(widgetsWithPreview(widgetsToShow,fromIdx,toIdx,stack));
+  relayoutWidgetDOM(widgetsWithPreview(widgetsToShow,fromIdx,toIdx,stack,allowStack));
 };
 const onWidgetGridDrop=async e=>{
   if(dragWidgetId==null)return;
   const wrap=document.getElementById('page-widgets');
   if(!isWithinRect(e.clientX,e.clientY,wrap))return; // dropped outside/far from the widget area — no-op
   e.preventDefault();
-  const tabbed=pageTabs.length>0;
-  const widgetsToShow=(tabbed?pageWidgets.filter(w=>String(w.tab_id)===String(activeTabId)):pageWidgets)
-    .slice().sort((a,b)=>a.sort_order-b.sort_order);
+  const onDashboard=onDashboardTabActive();
+  const widgetsToShow=onDashboard?dashboardWidgetsToShow():builderWidgetsToShow();
+  const allowStack=!onDashboard;
   const fromIdx=widgetsToShow.findIndex(w=>String(w.id)===String(dragWidgetId));
   if(fromIdx<0)return;
   const draggedWidget=widgetsToShow[fromIdx];
   const center=widgetDragCenter(e.clientX,e.clientY);
   const target=findWidgetDropTarget(center.x,center.y,widgetDragSnapshot);
   const toIdx=resolveWidgetDropIndex(widgetsToShow,target);
-  const stack=!!target?.stack;
+  const stack=allowStack&&!!target?.stack;
 
-  const alwaysForced=draggedWidget.widget_type==='schedule';
+  const alwaysForced=allowStack&&draggedWidget.widget_type==='schedule';
   const currentFullRow=!!draggedWidget.config?.fullRow;
   const newFullRow=alwaysForced?true:stack;
-  const fullRowChanged=!alwaysForced&&currentFullRow!==newFullRow;
+  const fullRowChanged=allowStack&&!alwaysForced&&currentFullRow!==newFullRow;
   const positionChanged=!(fromIdx===toIdx||fromIdx===toIdx-1);
   widgetDragPreview=null;
   if(!positionChanged&&!fullRowChanged)return;
@@ -2078,13 +2128,16 @@ const onWidgetGridDrop=async e=>{
   let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
   insertAt=Math.max(0,Math.min(insertAt,sorted.length));
   sorted.splice(insertAt,0,moved);
-  sorted.forEach((w,i)=>{w.sort_order=i;}); // mutates shared refs in pageWidgets too
   if(fullRowChanged) moved.config={...(moved.config||{}),fullRow:newFullRow};
+  if(onDashboard) sorted.forEach((w,i)=>{w.config={...(w.config||{}),dashboardOrder:i};}); // mutates shared refs in pageWidgets too
+  else sorted.forEach((w,i)=>{w.sort_order=i;}); // mutates shared refs in pageWidgets too
 
   renderWidgets();
   try{
-    const tasks=sorted.map(w=>fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:w.sort_order})}));
-    if(fullRowChanged) tasks.push(fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${moved.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:moved.config})}));
+    const tasks=onDashboard
+      ?sorted.map(w=>fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:w.config})}))
+      :sorted.map(w=>fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${w.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:w.sort_order})}));
+    if(fullRowChanged) tasks.push(fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${moved.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:moved.config})})); // fullRowChanged is only ever true when allowStack (never on Dashboard)
     await Promise.all(tasks);
   }catch(err){
     console.error('widget reorder persist failed',err);
