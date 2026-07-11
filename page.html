@@ -105,6 +105,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    these two are page-agnostic app chrome. See --accent-default in :root for
    the TODO on app-wide theming. */
 #pb-next-btn,#pb-build-btn{background:color-mix(in srgb,var(--accent-default) 14%,var(--card));border-color:var(--accent-default);color:var(--accent-default)}
+/* Same bug, same fix: the page-builder's own step-1 fields (name/timeframe/
+   location) were inheriting the generic input:focus{border-color:var(
+   --accent)} rule below, so their focus outline also flashed whichever
+   page's accent happened to be active in the background when the builder
+   was opened, instead of a fixed neutral. */
+#pb-name:focus,#pb-timeframe:focus,#pb-location:focus{border-color:var(--accent-default)}
 .btn-sm{padding:4px 10px;font-size:11px}
 .btn-danger{border-color:var(--danger);color:var(--danger)}
 .log-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:.5rem}
