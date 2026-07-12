@@ -46,8 +46,18 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
 .grid-2>*,.grid-4>*{min-width:0}
 .widget-rows{display:flex;flex-direction:column;align-items:stretch;gap:1rem}
-.widget-row{display:flex;gap:1rem;align-items:flex-start}
+/* flex-wrap is harmless for the half/full case (a row never has more than
+   2 cards, both flex:1, so they always exactly fill the row and never
+   wrap) — it's only load-bearing for a row of 'small' cards, which use a
+   fixed basis instead of flex:1 so however many fit per line wraps
+   naturally based on available width. */
+.widget-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start}
 .widget-row>.card{flex:1;min-width:0}
+/* Deliberately just a fixed width, not a forced aspect-ratio square — actual
+   widget content varies too much (a progress bar vs. a single streak dot)
+   for a hard square to avoid clipping something eventually. "Square" here
+   means "compact," not a strictly enforced 1:1 box. */
+.widget-row>.card.size-small{flex:0 1 200px;max-width:200px}
 .tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
 .tab-bar::-webkit-scrollbar{display:none}
 .tab-btn{padding:10px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
@@ -55,16 +65,20 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .tab-btn.active{color:var(--text);border-bottom-color:var(--accent)}
 .tab-wrap.dragging{opacity:.4}
 .tab-wrap{display:flex;flex-direction:column;align-items:stretch;flex-shrink:0;position:relative}
-/* Custom pointer-drag (tabs) needs its own no-select/cursor state — native
-   HTML5 DnD handled this for free, but a hand-rolled drag doesn't. */
-.tab-dragging-active,.tab-dragging-active *{user-select:none}
-.tab-dragging-active{cursor:grabbing}
+/* Custom pointer-drag (tabs, and now the sidebar page list + widget-type
+   picker) needs its own no-select/cursor state — native HTML5 DnD handled
+   this for free, but a hand-rolled drag doesn't. Shared across all of them. */
+.drag-active,.drag-active *{user-select:none}
+.drag-active{cursor:grabbing}
 .tab-btn-row{display:flex;align-items:center}
 .tab-edit-toggle{font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;padding:0 6px;opacity:0;transition:opacity .15s ease}
 .tab-wrap:hover .tab-edit-toggle,.tab-wrap:focus-within .tab-edit-toggle,.tab-wrap.editing .tab-edit-toggle{opacity:.85}
 .tab-edit-toggle:hover{opacity:1;color:var(--text)}
 .tab-edit-panel{z-index:1050;background:var(--card);border:1px solid var(--border-light);border-radius:8px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:6px;min-width:160px}
 .tab-edit-panel input{font-size:12px}
+.widget-size-option{padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;background:none;border:none;color:var(--text);text-align:left;font-family:'DM Sans',sans-serif;transition:background .15s}
+.widget-size-option:hover{background:var(--faint)}
+.widget-size-option.sel{color:var(--accent);font-weight:600}
 .tab-del-btn{margin-top:1px;font-size:10px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:1px solid var(--danger);border-radius:6px;cursor:pointer;padding:4px 8px;text-align:center}
 .tab-del-btn:hover{background:color-mix(in srgb,var(--danger) 14%,var(--card))}
 .tab-add-btn{padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;flex-shrink:0}
@@ -167,9 +181,20 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sb-toggle:hover{background:var(--faint);color:var(--text)}
 .sb-div{width:24px;height:1px;background:var(--border);margin:4px auto;flex-shrink:0;transition:width .2s}
 .os-sb.open .sb-div{width:100%}
-.sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .2s ease;width:36px;overflow:hidden;white-space:nowrap;flex-shrink:0}
-.os-sb.open .sb-item{width:100%;padding:9px 10px;overflow-x:auto;scrollbar-width:thin}
+/* .sb-page-wrap owns the sizing (width/height) that .sb-item used to own
+   directly — needed once an edit button sits alongside the item, so the
+   two share one fixed-size row instead of the item alone dictating it. */
+.sb-page-wrap{display:flex;align-items:center;width:36px;flex-shrink:0;position:relative}
+.os-sb.open .sb-page-wrap{width:100%}
+.os-sb:not(.open) .sb-page-wrap{height:36px}
+.sb-page-wrap.dragging{opacity:.4}
+.sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .2s ease;overflow:hidden;white-space:nowrap;flex:1;min-width:0}
+.os-sb.open .sb-item{padding:9px 10px;overflow-x:auto;scrollbar-width:thin}
 .sb-item:hover{background:var(--faint);color:var(--text)}
+.sb-item-edit{opacity:0;transition:opacity .15s ease;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:4px;flex-shrink:0;display:none}
+.os-sb.open .sb-item-edit{display:block}
+.sb-page-wrap:hover .sb-item-edit{opacity:.85}
+.sb-item-edit:hover{color:var(--text)}
 .sb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 /* "You are here" cue for the currently-open page, independent of hover —
    replaces the persistent gray box removed earlier. Slightly bigger + a
@@ -195,7 +220,8 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    box wasn't even square (36px wide but only ~32px tall, sized by content
    instead of forced) — which was the real cause of the "off-center hover
    box" look, not the box's left position. */
-.os-sb:not(.open) .sb-toggle,.os-sb:not(.open) .sb-item{height:36px;justify-content:center;gap:0}
+.os-sb:not(.open) .sb-toggle{height:36px;justify-content:center;gap:0}
+.os-sb:not(.open) .sb-item{justify-content:center;gap:0}
 .os-sb:not(.open) .sb-label{width:0;margin:0}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.58);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000;overscroll-behavior:contain}
 .overlay.active{display:flex}
@@ -203,8 +229,14 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .overlay-card.wide{max-width:580px}
 .archive-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .archive-row:last-child{border-bottom:none}
-.set-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--faint)}
+/* gap+flex:1 on .set-row-info instead of justify-content:space-between —
+   equivalent for the plain 2-child case (label, hcheck) but also leaves
+   room for an optional leading drag handle (3 children) without the
+   label drifting off-center. */
+.set-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--faint)}
 .set-row:last-child{border-bottom:none}
+.set-row.dragging{opacity:.4}
+.set-row-info{flex:1;min-width:0}
 .set-label{font-size:13px}
 .set-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px}
 .pb-swatch{width:26px;height:26px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
@@ -298,7 +330,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
         <label style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;display:block;margin-bottom:8px">dot color</label>
         <div id="pb-colors" style="display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
-      <button class="btn btn-primary" style="width:100%" id="pb-next-btn" onclick="pbGoStep2()">Next: choose widgets</button>
+      <button class="btn btn-primary" style="width:100%" id="pb-next-btn" onclick="pbNextOrSave()">Next: choose widgets</button>
     </div>
     <div id="pb-step2" style="display:none;flex-direction:column;flex:1;min-height:0">
       <div style="overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0">
@@ -348,6 +380,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 </header>
 <div class="tab-bar" id="page-tab-bar" style="display:none"></div>
 <div id="tab-edit-portal"></div>
+<div id="widget-size-portal"></div>
 <div class="content">
 <div class="empty" id="page-error" style="display:none">
   This page doesn't exist.<br><br>
@@ -379,24 +412,198 @@ const pageMatchesCurrent=row=>{
   if(row.page_kind==='static'){return String(row.url||'').split('/').pop()===getCurrentPagePath();}
   return String(row.id)===String(new URLSearchParams(window.location.search).get('id'));
 };
+// Cached copy of the last fetch — reused by the drag-reorder engine (so a
+// reorder doesn't need a refetch, and can't race a still-in-flight PATCH)
+// and by the page-editor (openPageEditor below) to prefill the form
+// without a separate round trip.
+let sidebarPageRows=[];
+const renderPagesSidebarRows=()=>{
+  const container=document.getElementById('sb-pages');
+  if(!container)return;
+  if(!sidebarPageRows.length){container.innerHTML=authSession?'<div class="empty" style="padding:0 12px">No pages available.</div>':'<div class="empty" style="padding:0 12px">Log in to see pages.</div>';return;}
+  container.innerHTML=sidebarPageRows.map(r=>{
+    const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
+    const active=pageMatchesCurrent(r)?' active':'';
+    const dotStyle=r.dot_color?`style="background:${r.dot_color}"`:'';
+    // Editing a static page's name/color wouldn't rename the actual file it
+    // points at, so only genuinely dynamic (builder-created) pages get the
+    // edit affordance — static ones (GT OS, Mission OS, etc.) stay
+    // reorderable like any other page, just not editable here.
+    const editBtn=r.page_kind==='static'?'':`<button class="sb-item-edit" onclick="onPageEditClick(event,'${r.id}')" aria-label="Edit page" title="Edit page">✎</button>`;
+    return `<div class="sb-page-wrap" id="sb-page-wrap-${r.id}">
+      <a class="sb-item${active}" href="${href}" draggable="false" onpointerdown="onPageItemPointerDown(event,'${r.id}')" onclick="onPageItemClick(event,'${r.id}')"><span class="sb-dot" ${dotStyle}></span><span class="sb-label">${r.name}</span></a>
+      ${editBtn}
+    </div>`;
+  }).join('');
+  sizeSidebarToContent();
+};
 const renderPagesSidebar=async()=>{
   const container=document.getElementById('sb-pages');
   if(!container) return;
   container.innerHTML='<div class="empty" style="padding:0 12px">Loading…</div>';
   try{
-    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
-    if(!rows.length){container.innerHTML=authSession?'<div class="empty" style="padding:0 12px">No pages available.</div>':'<div class="empty" style="padding:0 12px">Log in to see pages.</div>';return;}
-    container.innerHTML=rows.map(r=>{
-      const href=r.page_kind==='static'?r.url:`page.html?id=${r.id}`;
-      const active=pageMatchesCurrent(r)?' active':'';
-      const dotStyle=r.dot_color?`style="background:${r.dot_color}"`:'';
-      return `<a class="sb-item${active}" href="${href}"><span class="sb-dot" ${dotStyle}></span><span class="sb-label">${r.name}</span></a>`;
-    }).join('');
-    sizeSidebarToContent();
+    sidebarPageRows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
+    renderPagesSidebarRows();
   }catch(e){
     console.error('renderPagesSidebar failed',e);
     container.innerHTML='<div class="empty" style="padding:0 12px">Unable to load sidebar pages.</div>';
   }
+};
+// Pointer-based vertical drag-reorder for the sidebar page list — same
+// approach as the tab strip and the widget-type picker (native HTML5 DnD's
+// ghost is an OS-composited overlay no CSS can contain, so this hand-tracks
+// the pointer instead). Unlike the widget-type picker, .sb-item is a real
+// <a href> navigation link, so — same as tabs — a genuine drag needs to
+// suppress the click that would otherwise navigate away right after.
+const PAGE_DRAG_THRESHOLD=4;
+let dragPageId=null,pageDragPreview=null,pageDragSnapshot=null,pageDragGrab=null,pageJustDragged=false;
+const onPageItemPointerDown=(e,id)=>{
+  if(e.button!=null&&e.button!==0)return;
+  const wrap=document.getElementById(`sb-page-wrap-${id}`);
+  if(!wrap)return;
+  const startX=e.clientX,startY=e.clientY;
+  let active=false;
+  const finish=()=>{
+    window.removeEventListener('pointermove',onMove);
+    window.removeEventListener('pointerup',finish);
+    window.removeEventListener('pointercancel',finish);
+    if(active){
+      pageJustDragged=true;
+      endPageDrag();
+      setTimeout(()=>{pageJustDragged=false;},0); // see onTabPointerDown's identical fallback for why
+    }
+  };
+  const onMove=ev=>{
+    if(!active){
+      if(Math.abs(ev.clientY-startY)<PAGE_DRAG_THRESHOLD&&Math.abs(ev.clientX-startX)<PAGE_DRAG_THRESHOLD)return;
+      active=true;
+      beginPageDrag(id,wrap,ev);
+    }
+    ev.preventDefault();
+    updatePageDrag(ev,wrap);
+  };
+  window.addEventListener('pointermove',onMove);
+  window.addEventListener('pointerup',finish);
+  window.addEventListener('pointercancel',finish);
+};
+const onPageItemClick=(e,id)=>{
+  if(pageJustDragged){pageJustDragged=false;e.preventDefault();return;}
+};
+const onPageEditClick=(e,id)=>{
+  e.preventDefault();e.stopPropagation();
+  openPageEditor(id);
+};
+const beginPageDrag=(id,wrap,e)=>{
+  dragPageId=id;
+  pageDragPreview=null;
+  wrap.classList.add('dragging');
+  document.body.classList.add('drag-active');
+  const rect=wrap.getBoundingClientRect();
+  pageDragGrab={offsetY:e.clientY-rect.top,height:rect.height};
+  const container=document.getElementById('sb-pages');
+  pageDragSnapshot=container?[...container.querySelectorAll('.sb-page-wrap')].map(el=>({id:el.id.replace('sb-page-wrap-',''),rect:el.getBoundingClientRect()})):[];
+};
+const findPageDropTarget=(clientY,snapshot)=>{
+  if(!snapshot||!snapshot.length)return null;
+  let nearest=null,nearestDist=Infinity;
+  snapshot.forEach(item=>{
+    const cy=item.rect.top+item.rect.height/2;
+    const dist=Math.abs(clientY-cy);
+    if(dist<nearestDist){nearestDist=dist;nearest=item;}
+  });
+  const r=nearest.rect;
+  return {targetId:nearest.id,before:clientY<r.top+r.height/2};
+};
+const resolvePageDropIndex=(idsToShow,target)=>{
+  if(!target)return idsToShow.length;
+  const idx=idsToShow.indexOf(target.targetId);
+  if(idx<0)return idsToShow.length;
+  return target.before?idx:idx+1;
+};
+const pagesWithPreview=(idsToShow,fromIdx,toIdx)=>{
+  const sorted=[...idsToShow];
+  const [moved]=sorted.splice(fromIdx,1);
+  let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  insertAt=Math.max(0,Math.min(insertAt,sorted.length));
+  sorted.splice(insertAt,0,moved);
+  return sorted;
+};
+const relayoutPageDOM=ids=>{
+  const container=document.getElementById('sb-pages');
+  if(!container)return;
+  const wraps=[...container.querySelectorAll('.sb-page-wrap')];
+  const firstRects=new Map(wraps.map(el=>[el.id,el.getBoundingClientRect()]));
+  ids.forEach(id=>{
+    const el=document.getElementById(`sb-page-wrap-${id}`);
+    if(el) container.appendChild(el);
+  });
+  wraps.forEach(el=>{
+    if(el.id===`sb-page-wrap-${dragPageId}`)return;
+    const first=firstRects.get(el.id);
+    if(!first)return;
+    const last=el.getBoundingClientRect();
+    const dy=first.top-last.top;
+    if(Math.abs(dy)>1){
+      el.style.transition='none';
+      el.style.transform=`translateY(${dy}px)`;
+      requestAnimationFrame(()=>{ el.style.transition='transform .18s ease'; el.style.transform=''; });
+    }
+  });
+};
+const updatePageDrag=(e,wrap)=>{
+  const container=document.getElementById('sb-pages');
+  if(!container||dragPageId==null)return;
+  const containerRect=container.getBoundingClientRect();
+  const grab=pageDragGrab;
+  let desiredTop=e.clientY-grab.offsetY;
+  desiredTop=Math.max(containerRect.top,Math.min(containerRect.bottom-grab.height,desiredTop));
+
+  const idsToShow=sidebarPageRows.map(r=>String(r.id));
+  const fromIdx=idsToShow.indexOf(String(dragPageId));
+  if(fromIdx>=0){
+    const centerY=desiredTop+grab.height/2;
+    const target=findPageDropTarget(centerY,pageDragSnapshot);
+    const toIdx=resolvePageDropIndex(idsToShow,target);
+    if(toIdx!==pageDragPreview){
+      pageDragPreview=toIdx;
+      relayoutPageDOM(pagesWithPreview(idsToShow,fromIdx,toIdx));
+    }
+  }
+  wrap.style.transform='';
+  const flowRect=wrap.getBoundingClientRect();
+  const dy=desiredTop-flowRect.top;
+  wrap.style.transform=`translateY(${dy}px)`;
+};
+const persistPageOrder=async sorted=>{
+  try{
+    await Promise.all(sorted.map(r=>fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${r.id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({sort_order:r.sort_order})})));
+  }catch(e){
+    console.error('page reorder persist failed',e);
+    alert('Reorder failed to save — try again.');
+  }
+};
+const endPageDrag=()=>{
+  const wrap=dragPageId!=null?document.getElementById(`sb-page-wrap-${dragPageId}`):null;
+  if(wrap){wrap.classList.remove('dragging');wrap.style.transform='';}
+  document.body.classList.remove('drag-active');
+  if(dragPageId==null)return;
+  const idsToShow=sidebarPageRows.map(r=>String(r.id));
+  const fromIdx=idsToShow.indexOf(String(dragPageId));
+  const toIdx=pageDragPreview;
+  dragPageId=null;pageDragPreview=null;pageDragSnapshot=null;pageDragGrab=null;
+
+  if(fromIdx<0||toIdx==null||fromIdx===toIdx||fromIdx===toIdx-1){
+    renderPagesSidebarRows(); // nothing changed — snap back to the true persisted order
+    return;
+  }
+  const sorted=[...sidebarPageRows];
+  const [moved]=sorted.splice(fromIdx,1);
+  const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  sorted.splice(insertAt,0,moved);
+  sorted.forEach((r,i)=>{r.sort_order=i;});
+  sidebarPageRows=sorted;
+  renderPagesSidebarRows();
+  persistPageOrder(sorted);
 };
 // Sidebar's open width tracks the longest current page name so names never
 // get silently clipped — it grows all the way up to near the actual viewport
@@ -537,6 +744,24 @@ const WIDGET_TYPE_DEFS=[
   {type:'golf_log',label:'Golf log',sub:'Log of golf rounds',defaultConfig:()=>({})},
   {type:'tennis_log',label:'Tennis log',sub:'Log of tennis sessions',defaultConfig:()=>({})},
 ];
+// User-customizable display order for widget TYPES themselves (not any
+// particular widget instance) — a personal UI preference about which types
+// show up first in the picker, not page/widget data, so it lives in
+// localStorage rather than Supabase. Falls back to WIDGET_TYPE_DEFS's own
+// order for anyone who hasn't reordered yet, and any type added to
+// WIDGET_TYPE_DEFS in a later release that isn't in a saved order yet just
+// gets appended at the end instead of vanishing.
+const WIDGET_TYPE_ORDER_KEY='widget_type_order';
+const getWidgetTypeOrder=()=>{
+  const allTypes=WIDGET_TYPE_DEFS.map(w=>w.type);
+  const saved=GS(WIDGET_TYPE_ORDER_KEY,null);
+  if(!Array.isArray(saved))return allTypes;
+  const valid=saved.filter(t=>allTypes.includes(t));
+  const missing=allTypes.filter(t=>!valid.includes(t));
+  return [...valid,...missing];
+};
+const setWidgetTypeOrder=order=>SS(WIDGET_TYPE_ORDER_KEY,order);
+const orderedWidgetTypeDefs=()=>getWidgetTypeOrder().map(t=>WIDGET_TYPE_DEFS.find(w=>w.type===t)).filter(Boolean);
 const PB_COLORS=['#B3A369','#e07b4a','#5b8dee','#9AAFBF','#5cb87a','#9b7fe8','#e8c56a','#e05b5b'];
 let pbDotColor=PB_COLORS[0];
 let pbWidgets=[];
@@ -551,9 +776,9 @@ const pbSelectColor=c=>{pbDotColor=c;renderPbColors();};
 const renderPbWidgetTypes=()=>{
   const wrap=document.getElementById('pb-widget-types');
   if(!wrap) return;
-  wrap.innerHTML=WIDGET_TYPE_DEFS.map(w=>`
+  wrap.innerHTML=orderedWidgetTypeDefs().map(w=>`
     <div class="set-row">
-      <div><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
+      <div class="set-row-info"><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
       <div class="hcheck" onclick="pbToggleWidget('${w.type}','${w.label}',this)"></div>
     </div>`).join('');
 };
@@ -579,18 +804,26 @@ const renderPbSelected=()=>{
       <button class="del" onclick="pbRemoveWidget('${w.clientId}')">×</button>
     </div>`).join('');
 };
-const pbReset=()=>{
-  document.getElementById('pb-name').value='';
-  document.getElementById('pb-timeframe').value='';
-  document.getElementById('pb-location').value='';
-  pbDotColor=PB_COLORS[0];
+// null = creating a new page (the original flow); a page id = editing that
+// existing page's own row instead — set by openPageEditor below, which
+// reuses this exact same overlay/form rather than building a separate one.
+let pbEditingPageId=null;
+const pbReset=(editRow=null)=>{
+  pbEditingPageId=editRow?editRow.id:null;
+  document.getElementById('pb-name').value=editRow?editRow.name:'';
+  document.getElementById('pb-timeframe').value=editRow?(editRow.timeframe||''):'';
+  document.getElementById('pb-location').value=editRow?(editRow.location||''):'';
+  pbDotColor=editRow?.dot_color||PB_COLORS[0];
   pbWidgets=[];
   renderPbColors();
   renderPbSelected();
   document.getElementById('pb-step1').style.display='block';
   document.getElementById('pb-step2').style.display='none';
-  document.getElementById('pb-title').textContent='Page builder · step 1 of 2';
+  const nextBtn=document.getElementById('pb-next-btn');
+  document.getElementById('pb-title').textContent=editRow?'Edit page':'Page builder · step 1 of 2';
+  nextBtn.textContent=editRow?'Save changes':'Next: choose widgets';
 };
+const pbNextOrSave=()=>{ pbEditingPageId!=null?pbSaveEdit():pbGoStep2(); };
 const pbGoStep2=()=>{
   const name=document.getElementById('pb-name').value.trim();
   if(!name){alert('Page name is required.');return;}
@@ -605,6 +838,49 @@ const pbBackStep1=()=>{
 };
 const openPageBuilder=()=>{const overlay=document.getElementById('page-builder-overlay');if(!overlay)return;pbReset();overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');};
 const closePageBuilder=()=>{const overlay=document.getElementById('page-builder-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
+// Sidebar edit-pencil entry point — reuses this same overlay/form in place
+// of a separate "edit page" UI, prefilled from the already-cached sidebar
+// row (see sidebarPageRows in renderPagesSidebar) rather than refetching.
+const openPageEditor=id=>{
+  const row=sidebarPageRows.find(r=>String(r.id)===String(id));
+  if(!row)return;
+  const overlay=document.getElementById('page-builder-overlay');
+  if(!overlay)return;
+  pbReset(row);
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden','false');
+};
+const pbSaveEdit=async()=>{
+  const name=document.getElementById('pb-name').value.trim();
+  if(!name){alert('Page name is required.');return;}
+  const timeframe=document.getElementById('pb-timeframe').value.trim();
+  const location=document.getElementById('pb-location').value.trim();
+  const id=pbEditingPageId;
+  const btn=document.getElementById('pb-next-btn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    const body={name,timeframe:timeframe||null,location:location||null,dot_color:pbDotColor};
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_pages?id=eq.${id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify(body)});
+    if(!resp.ok) throw new Error(`Page update failed ${resp.status}`);
+    // Update the cached sidebar row and re-render from it instead of
+    // refetching — same reasoning as the drag-reorder path just above.
+    const cached=sidebarPageRows.find(r=>String(r.id)===String(id));
+    if(cached)Object.assign(cached,body);
+    renderPagesSidebarRows();
+    // If the page being edited is the one currently open, refresh its own
+    // header/accent color immediately rather than waiting for a reload.
+    if(String(id)===String(pageId)&&pageRow){
+      Object.assign(pageRow,body);
+      showPageContent();
+    }
+    closePageBuilder();
+  }catch(e){
+    console.error('pbSaveEdit failed',e);
+    alert('Failed to save changes — try again.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=pbEditingPageId!=null?'Save changes':'Next: choose widgets';}
+  }
+};
 const buildPage=async()=>{
   const name=document.getElementById('pb-name').value.trim();
   if(!name){alert('Page name is required.');return;}
@@ -1852,23 +2128,44 @@ const renderDashboardTabContent=wrap=>{
   });
 };
 
-// Widgets are laid out as a sequence of rows (1 or 2 widgets each), not a
-// fixed-column grid. Default: walk widgets in sort_order and greedily pair
-// up consecutive ones — a lone widget (odd one out, or the only widget on
-// the tab) gets a full-width row to itself. schedule always gets its own
-// full-width row regardless (unchanged from before). Dragging a widget onto
-// the bottom portion of another (see onWidgetGridDrop) sets config.fullRow=
-// true, which forces it out of pairing permanently until dragged into a
-// normal (pairing-eligible) drop zone again.
-const widgetIsRowForced=w=>w.widget_type==='schedule'||!!w.config?.fullRow;
+// Each widget has an effective size of 'small' | 'half' | 'full'. schedule
+// is always 'full' regardless of anything else (unchanged from before). An
+// explicit config.size (set via the size picker — see openWidgetSizeMenu)
+// always wins otherwise; config.fullRow is the legacy flag the drag-stack
+// gesture (dragging onto the bottom quarter of another card, see
+// onWidgetGridDrop) still sets, consulted only when config.size hasn't
+// been explicitly chosen yet, so a widget dragged into a size-picker
+// choice doesn't get silently overridden by a stale drag-stack flag.
+const widgetSize=w=>{
+  if(w.widget_type==='schedule')return 'full';
+  if(w.config?.size)return w.config.size;
+  if(w.config?.fullRow)return 'full';
+  return 'half';
+};
+// Widgets are laid out as a sequence of rows, not a fixed-column grid.
+// 'full' gets its own full-width row. 'half' greedily pairs consecutive
+// half widgets two per row (a lone one gets a full-width row to itself).
+// 'small' widgets are grouped by consecutive run into a single row that
+// wraps via flex-wrap (see .widget-row/.card.size-small CSS) — however
+// many fit per line is left to the browser based on available width,
+// rather than a hardcoded per-row count.
 const computeWidgetRows=widgets=>{
   const rows=[];
   let i=0;
   while(i<widgets.length){
     const w=widgets[i];
-    if(widgetIsRowForced(w)){ rows.push([w]); i+=1; continue; }
+    const size=widgetSize(w);
+    if(size==='full'){ rows.push([w]); i+=1; continue; }
+    if(size==='small'){
+      const group=[w];
+      let j=i+1;
+      while(j<widgets.length&&widgetSize(widgets[j])==='small'){ group.push(widgets[j]); j+=1; }
+      rows.push(group);
+      i=j;
+      continue;
+    }
     const next=widgets[i+1];
-    if(next&&!widgetIsRowForced(next)){ rows.push([w,next]); i+=2; }
+    if(next&&widgetSize(next)==='half'){ rows.push([w,next]); i+=2; }
     else{ rows.push([w]); i+=1; }
   }
   return rows;
@@ -1890,10 +2187,10 @@ const renderWidgets=()=>{
   }
   const widgetsToShow=builderWidgetsToShow();
   const widgetCardHtml=w=>`
-    <div class="card" id="widget-card-${w.id}">
+    <div class="card${widgetSize(w)==='small'?' size-small':''}" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
-          <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder widget" title="Drag to reorder">⠿</span>
+          <span class="widget-drag-handle" id="widget-handle-${w.id}" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" onclick="openWidgetSizeMenu(event,${w.id})" aria-label="Reorder or resize widget" title="Drag to reorder, click to resize">⠿</span>
           <button class="widget-fav-btn${w.config?.favorited?' on':''}" id="widget-fav-${w.id}" onclick="toggleWidgetFavorite(${w.id})" aria-label="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}" title="${w.config?.favorited?'Remove from Dashboard':'Add to Dashboard'}">${WIDGET_FAV_ICON_SVG}</button>
           <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
@@ -2067,7 +2364,7 @@ const beginTabDrag=(id,wrap,e)=>{
   dragTabId=id;
   tabDragPreview=null;
   wrap.classList.add('dragging');
-  document.body.classList.add('tab-dragging-active');
+  document.body.classList.add('drag-active');
   const wrapRect=wrap.getBoundingClientRect();
   tabDragGrab={offsetX:e.clientX-wrapRect.left,width:wrapRect.width};
   const bar=document.getElementById('page-tab-bar');
@@ -2168,7 +2465,7 @@ const updateTabDrag=(e,wrap)=>{
 const endTabDrag=()=>{
   const wrap=dragTabId!=null?document.getElementById(`tab-wrap-${dragTabId}`):null;
   if(wrap){wrap.classList.remove('dragging');wrap.style.transform='';}
-  document.body.classList.remove('tab-dragging-active');
+  document.body.classList.remove('drag-active');
   if(dragTabId==null)return;
 
   // Dashboard is excluded from this reorderable set entirely — reindexing
@@ -2232,6 +2529,59 @@ const deleteTabInstance=async id=>{
     alert('Delete failed — try again.');
   }
 };
+
+// Click-triggered size picker on the widget drag handle — a separate
+// interaction from dragging the same handle (see onWidgetDragStart below),
+// not a replacement for it. Native draggable="true" elements only start a
+// real drag on an actual drag gesture, so a plain click here is safe and
+// needs no click-vs-drag suppression the way the pointer-based tab/sidebar
+// drags did. Portal-rendered and anchored to the clicked handle, same
+// pattern as the tab rename/delete panel (renderTabEditPortal).
+let widgetSizeMenuId=null;
+const WIDGET_SIZE_OPTIONS=[{value:'small',label:'Small (square)'},{value:'half',label:'Half width'},{value:'full',label:'Full width'}];
+const openWidgetSizeMenu=(e,id)=>{
+  e.preventDefault();e.stopPropagation();
+  widgetSizeMenuId=(String(widgetSizeMenuId)===String(id))?null:id;
+  renderWidgetSizePortal();
+};
+const closeWidgetSizeMenu=()=>{widgetSizeMenuId=null;renderWidgetSizePortal();};
+const renderWidgetSizePortal=()=>{
+  const portal=document.getElementById('widget-size-portal');
+  if(!portal)return;
+  if(widgetSizeMenuId==null){portal.innerHTML='';return;}
+  const w=findWidget(widgetSizeMenuId);
+  const anchor=document.getElementById(`widget-handle-${widgetSizeMenuId}`);
+  if(!w||!anchor){portal.innerHTML='';return;}
+  const r=anchor.getBoundingClientRect();
+  const current=widgetSize(w);
+  portal.innerHTML=`
+    <div class="tab-edit-panel" style="position:fixed;top:${r.bottom+4}px;left:${r.left}px">
+      ${WIDGET_SIZE_OPTIONS.map(opt=>`<button class="widget-size-option${opt.value===current?' sel':''}" onclick="setWidgetSize(${w.id},'${opt.value}')">${opt.value===current?'✓ ':''}${opt.label}</button>`).join('')}
+    </div>`;
+};
+const setWidgetSize=async(id,size)=>{
+  const w=findWidget(id);
+  if(!w)return;
+  const newConfig={...(w.config||{}),size};
+  closeWidgetSizeMenu();
+  w.config=newConfig; // optimistic — matches favorited/dashboardOrder's own pattern elsewhere
+  renderWidgets();
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${id}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({config:newConfig})});
+    if(!resp.ok) throw new Error(`Widget size save failed ${resp.status}`);
+  }catch(e){
+    console.error('setWidgetSize failed',e);
+    alert('Failed to save widget size — try again.');
+  }
+};
+document.addEventListener('click',event=>{
+  if(widgetSizeMenuId==null)return;
+  const handle=document.getElementById(`widget-handle-${widgetSizeMenuId}`);
+  const portal=document.getElementById('widget-size-portal');
+  const insideHandle=handle&&handle.contains(event.target);
+  const insidePortal=portal&&portal.contains(event.target);
+  if(!insideHandle&&!insidePortal) closeWidgetSizeMenu();
+});
 
 // Widget reorder — same constrained-drop pattern as tabs: dragging is scoped
 // to the widget grid's own bounding box, and a drop outside it is a no-op.
@@ -2577,11 +2927,146 @@ const addTab=async()=>{
 const renderMiniWidgetTypes=()=>{
   const wrap=document.getElementById('mwp-widget-types');
   if(!wrap)return;
-  wrap.innerHTML=WIDGET_TYPE_DEFS.map(w=>`
-    <div class="set-row">
-      <div><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
+  wrap.innerHTML=orderedWidgetTypeDefs().map(w=>`
+    <div class="set-row" id="type-row-${w.type}">
+      <span class="widget-drag-handle" onpointerdown="onTypePointerDown(event,'${w.type}')" aria-label="Reorder widget type" title="Drag to reorder">⠿</span>
+      <div class="set-row-info"><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
       <div class="hcheck" onclick="addWidgetToTab('${w.type}','${w.label}')"></div>
     </div>`).join('');
+};
+// Pointer-based vertical drag-reorder for the widget-type picker — same
+// approach as the tab strip (see onTabPointerDown): native HTML5 DnD's
+// ghost is an OS-composited overlay no CSS can contain, so this hand-tracks
+// the pointer instead. Simpler than tabs in one respect: the drag handle
+// and the click target (.hcheck, which adds the widget) are separate
+// elements here, so there's no click-vs-drag suppression to worry about.
+const TYPE_DRAG_THRESHOLD=4;
+let dragTypeId=null,typeDragPreview=null,typeDragSnapshot=null,typeDragGrab=null;
+const onTypePointerDown=(e,type)=>{
+  if(e.button!=null&&e.button!==0)return;
+  const row=document.getElementById(`type-row-${type}`);
+  if(!row)return;
+  const startY=e.clientY;
+  let active=false;
+  const finish=()=>{
+    window.removeEventListener('pointermove',onMove);
+    window.removeEventListener('pointerup',finish);
+    window.removeEventListener('pointercancel',finish);
+    if(active)endTypeDrag();
+  };
+  const onMove=ev=>{
+    if(!active){
+      if(Math.abs(ev.clientY-startY)<TYPE_DRAG_THRESHOLD)return;
+      active=true;
+      beginTypeDrag(type,row,ev);
+    }
+    ev.preventDefault();
+    updateTypeDrag(ev,row);
+  };
+  window.addEventListener('pointermove',onMove);
+  window.addEventListener('pointerup',finish);
+  window.addEventListener('pointercancel',finish);
+};
+const beginTypeDrag=(type,row,e)=>{
+  dragTypeId=type;
+  typeDragPreview=null;
+  row.classList.add('dragging');
+  document.body.classList.add('drag-active');
+  const rect=row.getBoundingClientRect();
+  typeDragGrab={offsetY:e.clientY-rect.top,height:rect.height};
+  const wrap=document.getElementById('mwp-widget-types');
+  typeDragSnapshot=wrap?[...wrap.querySelectorAll('.set-row')].map(el=>({id:el.id.replace('type-row-',''),rect:el.getBoundingClientRect()})):[];
+};
+const findTypeDropTarget=(clientY,snapshot)=>{
+  if(!snapshot||!snapshot.length)return null;
+  let nearest=null,nearestDist=Infinity;
+  snapshot.forEach(item=>{
+    const cy=item.rect.top+item.rect.height/2;
+    const dist=Math.abs(clientY-cy);
+    if(dist<nearestDist){nearestDist=dist;nearest=item;}
+  });
+  const r=nearest.rect;
+  return {targetId:nearest.id,before:clientY<r.top+r.height/2};
+};
+const resolveTypeDropIndex=(idsToShow,target)=>{
+  if(!target)return idsToShow.length;
+  const idx=idsToShow.indexOf(target.targetId);
+  if(idx<0)return idsToShow.length;
+  return target.before?idx:idx+1;
+};
+const typesWithPreview=(idsToShow,fromIdx,toIdx)=>{
+  const sorted=[...idsToShow];
+  const [moved]=sorted.splice(fromIdx,1);
+  let insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  insertAt=Math.max(0,Math.min(insertAt,sorted.length));
+  sorted.splice(insertAt,0,moved);
+  return sorted;
+};
+const relayoutTypeDOM=ids=>{
+  const wrap=document.getElementById('mwp-widget-types');
+  if(!wrap)return;
+  const rows=[...wrap.querySelectorAll('.set-row')];
+  const firstRects=new Map(rows.map(el=>[el.id,el.getBoundingClientRect()]));
+  ids.forEach(type=>{
+    const el=document.getElementById(`type-row-${type}`);
+    if(el) wrap.appendChild(el);
+  });
+  rows.forEach(el=>{
+    if(el.id===`type-row-${dragTypeId}`)return;
+    const first=firstRects.get(el.id);
+    if(!first)return;
+    const last=el.getBoundingClientRect();
+    const dy=first.top-last.top;
+    if(Math.abs(dy)>1){
+      el.style.transition='none';
+      el.style.transform=`translateY(${dy}px)`;
+      requestAnimationFrame(()=>{ el.style.transition='transform .18s ease'; el.style.transform=''; });
+    }
+  });
+};
+const updateTypeDrag=(e,row)=>{
+  const wrap=document.getElementById('mwp-widget-types');
+  if(!wrap||dragTypeId==null)return;
+  const wrapRect=wrap.getBoundingClientRect();
+  const grab=typeDragGrab;
+  let desiredTop=e.clientY-grab.offsetY;
+  desiredTop=Math.max(wrapRect.top,Math.min(wrapRect.bottom-grab.height,desiredTop));
+
+  const idsToShow=getWidgetTypeOrder();
+  const fromIdx=idsToShow.indexOf(dragTypeId);
+  if(fromIdx>=0){
+    const centerY=desiredTop+grab.height/2;
+    const target=findTypeDropTarget(centerY,typeDragSnapshot);
+    const toIdx=resolveTypeDropIndex(idsToShow,target);
+    if(toIdx!==typeDragPreview){
+      typeDragPreview=toIdx;
+      relayoutTypeDOM(typesWithPreview(idsToShow,fromIdx,toIdx));
+    }
+  }
+  row.style.transform='';
+  const flowRect=row.getBoundingClientRect();
+  const dy=desiredTop-flowRect.top;
+  row.style.transform=`translateY(${dy}px)`;
+};
+const endTypeDrag=()=>{
+  const row=dragTypeId!=null?document.getElementById(`type-row-${dragTypeId}`):null;
+  if(row){row.classList.remove('dragging');row.style.transform='';}
+  document.body.classList.remove('drag-active');
+  if(dragTypeId==null)return;
+  const idsToShow=getWidgetTypeOrder();
+  const fromIdx=idsToShow.indexOf(dragTypeId);
+  const toIdx=typeDragPreview;
+  dragTypeId=null;typeDragPreview=null;typeDragSnapshot=null;typeDragGrab=null;
+  if(fromIdx<0||toIdx==null||fromIdx===toIdx||fromIdx===toIdx-1){
+    renderMiniWidgetTypes();
+    return;
+  }
+  const sorted=[...idsToShow];
+  const [moved]=sorted.splice(fromIdx,1);
+  const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
+  sorted.splice(insertAt,0,moved);
+  setWidgetTypeOrder(sorted);
+  renderMiniWidgetTypes();
 };
 const openMiniWidgetPicker=()=>{const o=document.getElementById('mini-widget-picker-overlay');if(!o)return;renderMiniWidgetTypes();o.classList.add('active');o.setAttribute('aria-hidden','false');};
 const closeMiniWidgetPicker=()=>{const o=document.getElementById('mini-widget-picker-overlay');if(!o)return;o.classList.remove('active');o.setAttribute('aria-hidden','true');};
