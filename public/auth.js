@@ -1,6 +1,20 @@
 // Shared Supabase session handling for index.html, gt.html, mission.html.
 // The login form itself (password input + handleLogin) lives only in index.html;
 // this file lets every page read, refresh, and use the session that form creates.
+
+// Registered here since every top-level page already loads this file — one
+// registration point instead of duplicating the same snippet 5 times. The
+// path 'sw.js' resolves relative to the CALLING page's URL (all 5 pages
+// live at the repo root), not this file's own /public/ location, so it
+// correctly registers /sw.js with root scope regardless of which page
+// loaded it. See sw.js itself for what it does and (deliberately) doesn't
+// cache.
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.warn('SW registration failed',e));
+  });
+}
+
 const SB_URL="https://bezcgrtihvmktxjkbfrl.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJlemNncnRpaHZta3R4amtiZnJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzQ2OTQsImV4cCI6MjA5Njg1MDY5NH0.7BhpVFAsjW0fDDvk1r9RMITYtzoosLHqsX80AAQSqA8";
 
