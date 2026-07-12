@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="SOS">
 <meta name="theme-color" content="#0e0e0f">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="icons/sos_final_180.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* Enables the browser's native cross-fade between same-origin page
@@ -46,11 +46,14 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
 .grid-2>*,.grid-4>*{min-width:0}
 .widget-rows{display:flex;flex-direction:column;align-items:stretch;gap:1rem}
-/* flex-wrap is harmless for the half/full case (a row never has more than
-   2 cards, both flex:1, so they always exactly fill the row and never
-   wrap) — it's only load-bearing for a row of 'small' cards, which use a
-   fixed basis instead of flex:1 so however many fit per line wraps
-   naturally based on available width. */
+/* flex-wrap matters for small/quarter rows, which use a fixed basis instead
+   of flex:1 so however many fit per line wraps naturally based on available
+   width. It's also why 'half' needs its OWN fixed basis below rather than a
+   bare flex:1 — a half widget whose row-sibling changed size (see
+   computeWidgetRows) can end up alone in a row, and flex:1 on a lone card
+   fills the entire row, silently rendering as "full" even though its
+   config.size is still 'half'. An explicit max-width keeps a half card's
+   rendered width the same whether or not it currently has a row partner. */
 .widget-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start}
 .widget-row>.card{flex:1;min-width:0}
 /* Deliberately just a fixed width, not a forced aspect-ratio square — actual
@@ -58,6 +61,8 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
    for a hard square to avoid clipping something eventually. "Square" here
    means "compact," not a strictly enforced 1:1 box. */
 .widget-row>.card.size-small{flex:0 1 200px;max-width:200px}
+.widget-row>.card.size-quarter{flex:0 1 calc(25% - 12px);max-width:calc(25% - 12px)}
+.widget-row>.card.size-half{flex:0 1 calc(50% - 8px);max-width:calc(50% - 8px)}
 .tab-bar{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
 .tab-bar::-webkit-scrollbar{display:none}
 .tab-btn{padding:10px 18px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;font-family:'DM Sans',sans-serif}
@@ -76,9 +81,11 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;al
 .tab-edit-toggle:hover{opacity:1;color:var(--text)}
 .tab-edit-panel{z-index:1050;background:var(--card);border:1px solid var(--border-light);border-radius:8px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:6px;min-width:160px}
 .tab-edit-panel input{font-size:12px}
-.widget-size-option{padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;background:none;border:none;color:var(--text);text-align:left;font-family:'DM Sans',sans-serif;transition:background .15s}
+.widget-size-option{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;background:none;border:none;color:var(--text);text-align:left;font-family:'DM Sans',sans-serif;transition:background .15s}
 .widget-size-option:hover{background:var(--faint)}
 .widget-size-option.sel{color:var(--accent);font-weight:600}
+.widget-size-option svg{flex-shrink:0}
+.widget-size-check{margin-left:auto}
 .tab-del-btn{margin-top:1px;font-size:10px;font-family:'DM Mono',monospace;color:var(--danger);background:none;border:1px solid var(--danger);border-radius:6px;cursor:pointer;padding:4px 8px;text-align:center}
 .tab-del-btn:hover{background:color-mix(in srgb,var(--danger) 14%,var(--card))}
 .tab-add-btn{padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;flex-shrink:0}
@@ -210,6 +217,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    alignment this file's other .os-sb centering already relies on. */
 .sb-footer{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
 .sb-action{border:none;background:none;width:36px;height:36px;color:var(--text)}
+/* Every other rail child (.sb-toggle, .sb-page-wrap, .sb-div, #sb-pages)
+   grows to width:100% when open — .sb-action never got the same override,
+   so it stayed pinned at its collapsed 36px square even while open, and its
+   label (needing far more than 36px) fell into its own overflow-x:auto
+   scrollbar instead of ever having room to actually display. */
+.os-sb.open .sb-action{width:100%;height:auto}
 .sb-action .sb-dot{width:24px;height:24px;font-size:24px;display:flex;align-items:center;justify-content:center}
 /* Collapsed rail: every item (toggle, page-dot rows, and — via .sb-item,
    which .sb-action also carries — the footer buttons) gets the SAME
@@ -626,12 +639,46 @@ const sbOpenMax=()=>Math.max(SB_OPEN_MIN,window.innerWidth-96);
 // .sb-item, three levels of percentage rounding) — without it, names sitting
 // right at the threshold could still trip the scrollbar by a few px.
 const SB_OPEN_PADDING_X=28;
-const sizeSidebarToContent=()=>{
+// Measuring .sb-item.scrollWidth only works if the OPEN-state CSS is
+// actually in effect: collapsed mode forces gap:0 and smaller padding on
+// .sb-item (see .os-sb:not(.open) .sb-item), so measuring while collapsed
+// silently undercounts. Forcing the .open class on for the duration of a
+// synchronous measurement (then reverting) sidesteps that without ever
+// painting the forced state — the browser doesn't repaint mid-script, so
+// there's no visible flash. Also has to walk BOTH #sb-pages (page rows,
+// each possibly paired with a sibling .sb-item-edit button that isn't part
+// of the .sb-item itself) AND .sb-footer (New/Archive/Settings) — .sb-footer
+// is a sibling of #sb-pages, not a descendant, so a #sb-pages-only query
+// silently ignores the footer buttons' own required width entirely.
+// .sb-action is width:100% when open (of the sidebar's OWN current width),
+// so if --sb-open-width is still at its old/stale value while we measure,
+// that stale width caps how much room .sb-action's label has to lay out in
+// — silently shrinking its own scrollWidth below its true content need.
+// Forcing --sb-open-width to its max during measurement breaks that
+// circularity so every item reports its true, unclamped content width.
+const measureSidebarWidest=()=>{
   const sb=document.getElementById('os-sb');
   const container=document.getElementById('sb-pages');
-  if(!sb||!container)return;
-  const widest=[...container.querySelectorAll('.sb-item')].reduce((m,el)=>Math.max(m,el.scrollWidth),0);
-  const target=Math.max(SB_OPEN_MIN,Math.min(sbOpenMax(),widest+SB_OPEN_PADDING_X));
+  const footer=document.querySelector('.sb-footer');
+  if(!sb||!container)return 0;
+  const wasOpen=sb.classList.contains('open');
+  const prevWidth=sb.style.getPropertyValue('--sb-open-width');
+  if(!wasOpen)sb.classList.add('open');
+  sb.style.setProperty('--sb-open-width',`${sbOpenMax()}px`);
+  const items=[...container.querySelectorAll('.sb-item'),...(footer?footer.querySelectorAll('.sb-item'):[])];
+  const widest=items.reduce((m,el)=>{
+    const editBtn=el.closest('.sb-page-wrap')?.querySelector('.sb-item-edit');
+    return Math.max(m,el.scrollWidth+(editBtn?editBtn.scrollWidth:0));
+  },0);
+  if(!wasOpen)sb.classList.remove('open');
+  if(prevWidth)sb.style.setProperty('--sb-open-width',prevWidth);
+  else sb.style.removeProperty('--sb-open-width');
+  return widest;
+};
+const sizeSidebarToContent=()=>{
+  const sb=document.getElementById('os-sb');
+  if(!sb)return;
+  const target=Math.max(SB_OPEN_MIN,Math.min(sbOpenMax(),measureSidebarWidest()+SB_OPEN_PADDING_X));
   sb.style.setProperty('--sb-open-width',`${target}px`);
   // Google Fonts loads with display=swap (see the stylesheet <link> in
   // <head>): text first paints in a fallback font, THEN swaps to DM Sans
@@ -640,8 +687,7 @@ const sizeSidebarToContent=()=>{
   // re-measuring once fonts finish loading is what actually fixed the
   // "moderately long name still scrolls" bug, not the padding math alone.
   document.fonts?.ready?.then(()=>{
-    const widestNow=[...container.querySelectorAll('.sb-item')].reduce((m,el)=>Math.max(m,el.scrollWidth),0);
-    const targetNow=Math.max(SB_OPEN_MIN,Math.min(sbOpenMax(),widestNow+SB_OPEN_PADDING_X));
+    const targetNow=Math.max(SB_OPEN_MIN,Math.min(sbOpenMax(),measureSidebarWidest()+SB_OPEN_PADDING_X));
     sb.style.setProperty('--sb-open-width',`${targetNow}px`);
   });
 };
@@ -777,7 +823,8 @@ const renderPbWidgetTypes=()=>{
   const wrap=document.getElementById('pb-widget-types');
   if(!wrap) return;
   wrap.innerHTML=orderedWidgetTypeDefs().map(w=>`
-    <div class="set-row">
+    <div class="set-row" id="${typeRowId('pb-widget-types',w.type)}">
+      <span class="widget-drag-handle" onpointerdown="onTypePointerDown(event,'${w.type}','pb-widget-types')" aria-label="Reorder widget type" title="Drag to reorder">⠿</span>
       <div class="set-row-info"><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
       <div class="hcheck" onclick="pbToggleWidget('${w.type}','${w.label}',this)"></div>
     </div>`).join('');
@@ -2108,10 +2155,10 @@ const renderDashboardTabContent=wrap=>{
   const dashCardHtml=w=>{
     const starred=!!w.config?.hubStarred;
     return `
-    <div class="card" id="widget-card-${w.id}">
+    <div class="card size-${widgetSize(w)}" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
-          <span class="widget-drag-handle" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" aria-label="Reorder dashboard card" title="Drag to reorder">⠿</span>
+          <span class="widget-drag-handle" id="widget-handle-${w.id}" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" onclick="openWidgetSizeMenu(event,${w.id})" aria-label="Reorder or resize dashboard card" title="Drag to reorder, click to resize">⠿</span>
           <div class="section-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <button class="hub-star-btn${starred?' on':''}" id="hub-star-${w.id}" onclick="toggleHubStar(${w.id})" aria-label="${starred?'Unstar':'Star for hub'}" title="${starred?'Unstar':'Star for hub'}">${WIDGET_HUB_STAR_ICON_SVG}</button>
@@ -2144,11 +2191,16 @@ const widgetSize=w=>{
 };
 // Widgets are laid out as a sequence of rows, not a fixed-column grid.
 // 'full' gets its own full-width row. 'half' greedily pairs consecutive
-// half widgets two per row (a lone one gets a full-width row to itself).
-// 'small' widgets are grouped by consecutive run into a single row that
-// wraps via flex-wrap (see .widget-row/.card.size-small CSS) — however
-// many fit per line is left to the browser based on available width,
-// rather than a hardcoded per-row count.
+// half widgets two per row (a lone one gets a full-width row to itself —
+// but still renders at half-width, not full, thanks to .card.size-half's
+// own fixed basis rather than a bare flex:1; see the CSS comment). 'small'
+// and 'quarter' widgets are each grouped by consecutive run of the SAME
+// size into a single row that wraps via flex-wrap (see .widget-row/
+// .card.size-small/.card.size-quarter CSS) — however many fit per line is
+// left to the browser based on available width, rather than a hardcoded
+// per-row count. A 'small' run and a 'quarter' run never share a row even
+// if adjacent, since mixing two different fixed bases in one wrapping row
+// would look inconsistent.
 const computeWidgetRows=widgets=>{
   const rows=[];
   let i=0;
@@ -2156,10 +2208,10 @@ const computeWidgetRows=widgets=>{
     const w=widgets[i];
     const size=widgetSize(w);
     if(size==='full'){ rows.push([w]); i+=1; continue; }
-    if(size==='small'){
+    if(size==='small'||size==='quarter'){
       const group=[w];
       let j=i+1;
-      while(j<widgets.length&&widgetSize(widgets[j])==='small'){ group.push(widgets[j]); j+=1; }
+      while(j<widgets.length&&widgetSize(widgets[j])===size){ group.push(widgets[j]); j+=1; }
       rows.push(group);
       i=j;
       continue;
@@ -2187,7 +2239,7 @@ const renderWidgets=()=>{
   }
   const widgetsToShow=builderWidgetsToShow();
   const widgetCardHtml=w=>`
-    <div class="card${widgetSize(w)==='small'?' size-small':''}" id="widget-card-${w.id}">
+    <div class="card size-${widgetSize(w)}" id="widget-card-${w.id}">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.9rem">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
           <span class="widget-drag-handle" id="widget-handle-${w.id}" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" onclick="openWidgetSizeMenu(event,${w.id})" aria-label="Reorder or resize widget" title="Drag to reorder, click to resize">⠿</span>
@@ -2538,7 +2590,17 @@ const deleteTabInstance=async id=>{
 // drags did. Portal-rendered and anchored to the clicked handle, same
 // pattern as the tab rename/delete panel (renderTabEditPortal).
 let widgetSizeMenuId=null;
-const WIDGET_SIZE_OPTIONS=[{value:'small',label:'Small (square)'},{value:'half',label:'Half width'},{value:'full',label:'Full width'}];
+// Each glyph is a shape at the proportion it names (a small square, a
+// square with one quadrant filled, a wide rectangle half-filled, a wide
+// rectangle fully filled) rather than text — same stroke-based style as
+// WIDGET_FAV_ICON_SVG/WIDGET_HUB_STAR_ICON_SVG above.
+const WIDGET_SIZE_ICONS={
+  small:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="8" y="8" width="8" height="8" rx="1"/></svg>',
+  quarter:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1.5"/><rect x="3" y="3" width="9" height="9" fill="currentColor" stroke="none"/></svg>',
+  half:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="1.5"/><rect x="2" y="7" width="10" height="10" fill="currentColor" stroke="none"/></svg>',
+  full:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="8" width="20" height="8" rx="1.5" fill="currentColor"/></svg>',
+};
+const WIDGET_SIZE_OPTIONS=[{value:'small',label:'Small'},{value:'quarter',label:'Quarter'},{value:'half',label:'Half'},{value:'full',label:'Full'}];
 const openWidgetSizeMenu=(e,id)=>{
   e.preventDefault();e.stopPropagation();
   widgetSizeMenuId=(String(widgetSizeMenuId)===String(id))?null:id;
@@ -2556,7 +2618,7 @@ const renderWidgetSizePortal=()=>{
   const current=widgetSize(w);
   portal.innerHTML=`
     <div class="tab-edit-panel" style="position:fixed;top:${r.bottom+4}px;left:${r.left}px">
-      ${WIDGET_SIZE_OPTIONS.map(opt=>`<button class="widget-size-option${opt.value===current?' sel':''}" onclick="setWidgetSize(${w.id},'${opt.value}')">${opt.value===current?'✓ ':''}${opt.label}</button>`).join('')}
+      ${WIDGET_SIZE_OPTIONS.map(opt=>`<button class="widget-size-option${opt.value===current?' sel':''}" onclick="setWidgetSize(${w.id},'${opt.value}')" aria-label="${opt.label}" title="${opt.label}">${WIDGET_SIZE_ICONS[opt.value]}<span>${opt.label}</span>${opt.value===current?'<span class="widget-size-check">✓</span>':''}</button>`).join('')}
     </div>`;
 };
 const setWidgetSize=async(id,size)=>{
@@ -2928,8 +2990,8 @@ const renderMiniWidgetTypes=()=>{
   const wrap=document.getElementById('mwp-widget-types');
   if(!wrap)return;
   wrap.innerHTML=orderedWidgetTypeDefs().map(w=>`
-    <div class="set-row" id="type-row-${w.type}">
-      <span class="widget-drag-handle" onpointerdown="onTypePointerDown(event,'${w.type}')" aria-label="Reorder widget type" title="Drag to reorder">⠿</span>
+    <div class="set-row" id="${typeRowId('mwp-widget-types',w.type)}">
+      <span class="widget-drag-handle" onpointerdown="onTypePointerDown(event,'${w.type}','mwp-widget-types')" aria-label="Reorder widget type" title="Drag to reorder">⠿</span>
       <div class="set-row-info"><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
       <div class="hcheck" onclick="addWidgetToTab('${w.type}','${w.label}')"></div>
     </div>`).join('');
@@ -2940,11 +3002,20 @@ const renderMiniWidgetTypes=()=>{
 // the pointer instead. Simpler than tabs in one respect: the drag handle
 // and the click target (.hcheck, which adds the widget) are separate
 // elements here, so there's no click-vs-drag suppression to worry about.
+// Shared by BOTH places a widget-type list renders — the "Add widget to
+// tab" picker (#mwp-widget-types) and the "New page" builder's widget list
+// (#pb-widget-types, see renderPbWidgetTypes) — hence every row id and DOM
+// query here is keyed off a wrapId rather than hardcoding one container, and
+// row ids are prefixed per-wrap so the two pickers' rows never collide even
+// though they render the same underlying WIDGET_TYPE_DEFS list.
 const TYPE_DRAG_THRESHOLD=4;
-let dragTypeId=null,typeDragPreview=null,typeDragSnapshot=null,typeDragGrab=null;
-const onTypePointerDown=(e,type)=>{
+let dragTypeId=null,dragTypeWrapId=null,typeDragPreview=null,typeDragSnapshot=null,typeDragGrab=null;
+const typeRowId=(wrapId,type)=>`${wrapId}-row-${type}`;
+const TYPE_WRAP_RENDERERS={'mwp-widget-types':()=>renderMiniWidgetTypes(),'pb-widget-types':()=>renderPbWidgetTypes()};
+const renderTypeWrap=wrapId=>{TYPE_WRAP_RENDERERS[wrapId]?.();};
+const onTypePointerDown=(e,type,wrapId)=>{
   if(e.button!=null&&e.button!==0)return;
-  const row=document.getElementById(`type-row-${type}`);
+  const row=document.getElementById(typeRowId(wrapId,type));
   if(!row)return;
   const startY=e.clientY;
   let active=false;
@@ -2958,7 +3029,7 @@ const onTypePointerDown=(e,type)=>{
     if(!active){
       if(Math.abs(ev.clientY-startY)<TYPE_DRAG_THRESHOLD)return;
       active=true;
-      beginTypeDrag(type,row,ev);
+      beginTypeDrag(type,row,ev,wrapId);
     }
     ev.preventDefault();
     updateTypeDrag(ev,row);
@@ -2967,15 +3038,16 @@ const onTypePointerDown=(e,type)=>{
   window.addEventListener('pointerup',finish);
   window.addEventListener('pointercancel',finish);
 };
-const beginTypeDrag=(type,row,e)=>{
+const beginTypeDrag=(type,row,e,wrapId)=>{
   dragTypeId=type;
+  dragTypeWrapId=wrapId;
   typeDragPreview=null;
   row.classList.add('dragging');
   document.body.classList.add('drag-active');
   const rect=row.getBoundingClientRect();
   typeDragGrab={offsetY:e.clientY-rect.top,height:rect.height};
-  const wrap=document.getElementById('mwp-widget-types');
-  typeDragSnapshot=wrap?[...wrap.querySelectorAll('.set-row')].map(el=>({id:el.id.replace('type-row-',''),rect:el.getBoundingClientRect()})):[];
+  const wrap=document.getElementById(wrapId);
+  typeDragSnapshot=wrap?[...wrap.querySelectorAll('.set-row')].map(el=>({id:el.id.replace(`${wrapId}-row-`,''),rect:el.getBoundingClientRect()})):[];
 };
 const findTypeDropTarget=(clientY,snapshot)=>{
   if(!snapshot||!snapshot.length)return null;
@@ -3003,16 +3075,16 @@ const typesWithPreview=(idsToShow,fromIdx,toIdx)=>{
   return sorted;
 };
 const relayoutTypeDOM=ids=>{
-  const wrap=document.getElementById('mwp-widget-types');
+  const wrap=document.getElementById(dragTypeWrapId);
   if(!wrap)return;
   const rows=[...wrap.querySelectorAll('.set-row')];
   const firstRects=new Map(rows.map(el=>[el.id,el.getBoundingClientRect()]));
   ids.forEach(type=>{
-    const el=document.getElementById(`type-row-${type}`);
+    const el=document.getElementById(typeRowId(dragTypeWrapId,type));
     if(el) wrap.appendChild(el);
   });
   rows.forEach(el=>{
-    if(el.id===`type-row-${dragTypeId}`)return;
+    if(el.id===typeRowId(dragTypeWrapId,dragTypeId))return;
     const first=firstRects.get(el.id);
     if(!first)return;
     const last=el.getBoundingClientRect();
@@ -3025,7 +3097,7 @@ const relayoutTypeDOM=ids=>{
   });
 };
 const updateTypeDrag=(e,row)=>{
-  const wrap=document.getElementById('mwp-widget-types');
+  const wrap=document.getElementById(dragTypeWrapId);
   if(!wrap||dragTypeId==null)return;
   const wrapRect=wrap.getBoundingClientRect();
   const grab=typeDragGrab;
@@ -3049,16 +3121,17 @@ const updateTypeDrag=(e,row)=>{
   row.style.transform=`translateY(${dy}px)`;
 };
 const endTypeDrag=()=>{
-  const row=dragTypeId!=null?document.getElementById(`type-row-${dragTypeId}`):null;
+  const row=dragTypeId!=null?document.getElementById(typeRowId(dragTypeWrapId,dragTypeId)):null;
   if(row){row.classList.remove('dragging');row.style.transform='';}
   document.body.classList.remove('drag-active');
   if(dragTypeId==null)return;
   const idsToShow=getWidgetTypeOrder();
   const fromIdx=idsToShow.indexOf(dragTypeId);
   const toIdx=typeDragPreview;
-  dragTypeId=null;typeDragPreview=null;typeDragSnapshot=null;typeDragGrab=null;
+  const wrapId=dragTypeWrapId;
+  dragTypeId=null;dragTypeWrapId=null;typeDragPreview=null;typeDragSnapshot=null;typeDragGrab=null;
   if(fromIdx<0||toIdx==null||fromIdx===toIdx||fromIdx===toIdx-1){
-    renderMiniWidgetTypes();
+    renderTypeWrap(wrapId);
     return;
   }
   const sorted=[...idsToShow];
@@ -3066,7 +3139,7 @@ const endTypeDrag=()=>{
   const insertAt=toIdx>fromIdx?toIdx-1:toIdx;
   sorted.splice(insertAt,0,moved);
   setWidgetTypeOrder(sorted);
-  renderMiniWidgetTypes();
+  renderTypeWrap(wrapId);
 };
 const openMiniWidgetPicker=()=>{const o=document.getElementById('mini-widget-picker-overlay');if(!o)return;renderMiniWidgetTypes();o.classList.add('active');o.setAttribute('aria-hidden','false');};
 const closeMiniWidgetPicker=()=>{const o=document.getElementById('mini-widget-picker-overlay');if(!o)return;o.classList.remove('active');o.setAttribute('aria-hidden','true');};
