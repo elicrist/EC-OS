@@ -398,10 +398,14 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    separate HTML/SVG positioning systems) so they can't drift out of sync.
    Tip travels via translate() in the same coordinate space the line draws
    in via stroke-dashoffset, starting at the scribble's far corner and
-   moving toward the nib as it draws. */
-.sb-item-edit svg{overflow:visible}
+   moving toward the nib as it draws. Shared by all three edit-pencil
+   affordances (sidebar page rename, widget settings, tab rename) — see
+   pencilIconSvg(). Each gets its own w/h at the call site (sidebar's is
+   ~20% bigger — it read too small there — while widget/tab edit sit in
+   tighter buttons and use the original scale). */
+.sb-item-edit svg,.widget-edit-btn svg,.tab-edit-toggle svg{overflow:visible}
 .trace-line{transition:none}
-.sb-item-edit:hover .trace-line{animation:scribble 2.1s ease-in-out infinite}
+.sb-item-edit:hover .trace-line,.widget-edit-btn:hover .trace-line,.tab-edit-toggle:hover .trace-line{animation:scribble 2.1s ease-in-out infinite}
 @keyframes scribble{
   0%{stroke-dashoffset:21;opacity:1;}
   7%{stroke-dashoffset:18.17;}
@@ -417,7 +421,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   98%{opacity:1;stroke-dashoffset:21;}
   100%{stroke-dashoffset:21;opacity:1;}
 }
-.sb-item-edit:hover .pencil-tip{animation:movetip4 2.1s ease-in-out infinite}
+.sb-item-edit:hover .pencil-tip,.widget-edit-btn:hover .pencil-tip,.tab-edit-toggle:hover .pencil-tip{animation:movetip4 2.1s ease-in-out infinite}
 @keyframes movetip4{
   0%{transform:translate(8px,6px);opacity:1;}
   7%{transform:translate(6px,8px);}
@@ -474,6 +478,8 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   #sb-archive-btn:hover .thread-line,#sb-archive-btn:hover .spider2-part,
   #sb-settings-btn:hover .gear-svg,
   .sb-item-edit:hover .trace-line,.sb-item-edit:hover .pencil-tip,
+  .widget-edit-btn:hover .trace-line,.widget-edit-btn:hover .pencil-tip,
+  .tab-edit-toggle:hover .trace-line,.tab-edit-toggle:hover .pencil-tip,
   .widget-fav-btn:hover svg,
   .hub-star-btn:hover svg,.hub-star-btn:hover .star-shim{
     animation:none!important;
@@ -655,7 +661,7 @@ const renderPagesSidebarRows=()=>{
     // points at, so only genuinely dynamic (builder-created) pages get the
     // edit affordance — static ones (GT OS, Mission OS, etc.) stay
     // reorderable like any other page, just not editable here.
-    const editBtn=r.page_kind==='static'?'':`<button class="sb-item-edit" onclick="onPageEditClick(event,'${r.id}')" aria-label="Edit page" title="Edit page"><svg width="17.25" height="19.5" viewBox="0 0 30 34" style="overflow:visible"><path class="trace-line" d="M27,36 L25,38 L25,35 L23,37 L23,34 L21,36 L21,33 L19,30" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="21" stroke-dashoffset="21"/><text class="pencil-tip" x="15.5" y="30.5" font-size="11" fill="currentColor" text-anchor="middle" style="transform-box:fill-box;transform-origin:83% 58%">✎</text></svg></button>`;
+    const editBtn=r.page_kind==='static'?'':`<button class="sb-item-edit" onclick="onPageEditClick(event,'${r.id}')" aria-label="Edit page" title="Edit page">${pencilIconSvg(20.7,23.4)}</button>`;
     return `<div class="sb-page-wrap" id="sb-page-wrap-${r.id}">
       <a class="sb-item${active}" href="${href}" draggable="false" onpointerdown="onPageItemPointerDown(event,'${r.id}')" onclick="onPageItemClick(event,'${r.id}')"><span class="sb-dot" ${dotStyle}></span><span class="sb-label">${r.name}</span></a>
       ${editBtn}
@@ -1234,6 +1240,15 @@ const patchWidgetConfig=async(id,newConfig)=>{
 // (sidebar icons, ⠿/✎) rather than a colorful emoji glyph — filled via
 // .widget-fav-btn.on's CSS fill:currentColor when favorited, plain outline
 // otherwise.
+// Animated edit-pencil icon, shared by all three edit affordances (sidebar
+// page rename, widget settings, tab rename) — one shared builder instead of
+// tripling the markup, so the trace-line/pencil-tip structure (and the
+// hover-drawn scribble CSS keyed off those two classes) can't drift out of
+// sync between call sites the way separate copies eventually would. w/h are
+// the only thing that varies per context — each caller's container sizes
+// the glyph differently (see the size-specific CSS rules alongside the
+// scribble/movetip keyframes).
+const pencilIconSvg=(w,h)=>`<svg width="${w}" height="${h}" viewBox="0 0 30 34" style="overflow:visible"><path class="trace-line" d="M27,36 L25,38 L25,35 L23,37 L23,34 L21,36 L21,33 L19,30" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="21" stroke-dashoffset="21"/><text class="pencil-tip" x="15.5" y="30.5" font-size="11" fill="currentColor" text-anchor="middle" style="transform-box:fill-box;transform-origin:83% 58%">✎</text></svg>`;
 const WIDGET_FAV_ICON_SVG='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round" aria-hidden="true"><path d="M6,3 L18,3 L18,21 L12,15 L6,21 Z"/></svg>';
 const toggleWidgetFavorite=async id=>{
   const w=findWidget(id);
@@ -2463,7 +2478,7 @@ const renderWidgets=()=>{
           <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-sm" onclick="openWidgetSettings(${w.id})" aria-label="Edit widget settings">✎</button>
+          <button class="btn btn-sm widget-edit-btn" onclick="openWidgetSettings(${w.id})" aria-label="Edit widget settings">${pencilIconSvg(13,14.7)}</button>
           <button class="btn btn-sm btn-danger" onclick="deleteWidgetInstance(${w.id})" aria-label="Delete widget">×</button>
         </div>
       </div>
@@ -2506,7 +2521,7 @@ const renderTabBar=()=>{
         <button class="tab-btn${isActive?' active':''}" id="tab-btn-${t.id}"
           onpointerdown="onTabPointerDown(event,${t.id})"
           onclick="onTabClick(event,${t.id})">${t.name}</button>
-        <button class="tab-edit-toggle" onclick="toggleTabEdit(event,${t.id})" aria-label="Edit tab" title="Rename or delete tab">✎</button>
+        <button class="tab-edit-toggle" onclick="toggleTabEdit(event,${t.id})" aria-label="Edit tab" title="Rename or delete tab">${pencilIconSvg(13,14.7)}</button>
       </div>
     </div>`;
   }).join('')
