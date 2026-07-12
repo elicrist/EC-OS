@@ -291,6 +291,194 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sched-block-body{flex:1}
 .sched-block-label{font-size:13px;font-weight:500}
 .sched-block-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px}
+
+/* === Sidebar icon micro-animations ===
+   Ported verbatim (percentages/timing/coordinates) from the confirmed
+   reference sos-icon-animations-v14.html — see that file for the working
+   preview this was built against. Every trigger below hovers the actual
+   button (#sb-new-btn etc.), not a dedicated wrapper class, since our real
+   buttons already play that role. prefers-reduced-motion disables all of
+   it in one place at the bottom of this block. */
+
+/* New page: + rebuilt as two CSS bars (a text glyph can't center-rotate
+   reliably) plus three dots that rise into a vertical stack. #sb-new-btn
+   needs its own overflow:visible override since the shared .sb-item rule
+   clips overflow (needed elsewhere for text truncation) and the dots are
+   deliberately designed to rise outside the icon's own box. */
+#sb-new-btn{overflow:visible}
+.sb-dot.np-icon{position:relative;overflow:visible;background:none}
+.plus-glyph{position:relative;width:14px;height:14px;display:inline-block}
+.plus-bar{position:absolute;background:currentColor;border-radius:1px}
+.plus-bar-h{top:50%;left:0;width:100%;height:1.8px;transform:translateY(-50%)}
+.plus-bar-v{left:50%;top:0;width:1.8px;height:100%;transform:translateX(-50%)}
+.np-dot{position:absolute;top:50%;left:50%;width:10px;height:10px;border-radius:50%;background:currentColor;transform:translate(-50%,-50%) translateY(0) scale(.3);opacity:0}
+#sb-new-btn:hover .plus-glyph{animation:plusSpin 3.2s ease-in-out infinite}
+@keyframes plusSpin{
+  0%{transform:rotate(0deg);}
+  30%{transform:rotate(-360deg);}
+  50%{transform:rotate(-360deg);}
+  80%{transform:rotate(0deg);}
+  100%{transform:rotate(0deg);}
+}
+#sb-new-btn:hover .np-dot-b{animation:dotRiseB 3.2s linear infinite}
+#sb-new-btn:hover .np-dot-m{animation:dotRiseM 3.2s linear infinite}
+#sb-new-btn:hover .np-dot-t{animation:dotRiseT 3.2s linear infinite}
+/* np-dot-b: rises first (0-20%), recedes last (60-80%) */
+@keyframes dotRiseB{
+  0%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  2%{opacity:1;}
+  20%{transform:translate(-50%,-50%) translateY(-20px) scale(1);opacity:1;}
+  60%{transform:translate(-50%,-50%) translateY(-20px) scale(1);opacity:1;}
+  78%{opacity:0;}
+  80%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  100%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+}
+/* np-dot-m: rises second (5-25%), recedes second (55-75%) */
+@keyframes dotRiseM{
+  0%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  5%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  7%{opacity:1;}
+  25%{transform:translate(-50%,-50%) translateY(-35px) scale(1);opacity:1;}
+  55%{transform:translate(-50%,-50%) translateY(-35px) scale(1);opacity:1;}
+  73%{opacity:0;}
+  75%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  100%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+}
+/* np-dot-t: rises last (10-30%), recedes first (50-70%) */
+@keyframes dotRiseT{
+  0%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  10%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  12%{opacity:1;}
+  30%{transform:translate(-50%,-50%) translateY(-50px) scale(1);opacity:1;}
+  50%{transform:translate(-50%,-50%) translateY(-50px) scale(1);opacity:1;}
+  68%{opacity:0;}
+  70%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+  100%{transform:translate(-50%,-50%) translateY(0) scale(0.3);opacity:0;}
+}
+
+/* Archive: the spider already on the corner thread moves up/down (thread
+   itself scaleY-shrinks rather than translating) while its legs wiggle on
+   an independent nested transform; a second, larger spider crawls down
+   from the top-left corner and back up on the same shared loop. */
+.spider1-legs{animation:none}
+#sb-archive-btn:hover .spider1-legs{animation:legwiggle .5s ease-in-out infinite}
+@keyframes legwiggle{0%,100%{transform:rotate(-4deg);}50%{transform:rotate(4deg);}}
+#sb-archive-btn:hover .spider1-pos{animation:spiderUpDown2 2.4s ease-in-out infinite}
+@keyframes spiderUpDown2{
+  0%{transform:translateY(0);}
+  25%{transform:translateY(-6px);}
+  50%{transform:translateY(-6px);}
+  75%{transform:translateY(0);}
+  100%{transform:translateY(0);}
+}
+#sb-archive-btn:hover .thread-line{animation:threadShrink 2.4s ease-in-out infinite}
+@keyframes threadShrink{
+  0%{transform:scaleY(1);}
+  25%{transform:scaleY(0.45);}
+  50%{transform:scaleY(0.45);}
+  75%{transform:scaleY(1);}
+  100%{transform:scaleY(1);}
+}
+.spider2-part{opacity:0;transform:translate(12px,3px) scale(1)}
+#sb-archive-btn:hover .spider2-part{animation:crawldown3 2.4s ease-in-out infinite}
+@keyframes crawldown3{
+  0%{opacity:0;transform:translate(12px,3px) scale(0.9);}
+  15%{opacity:1;transform:translate(11px,4px) scale(1);}
+  50%{opacity:1;transform:translate(9.4px,7.5px) scale(1);}
+  85%{opacity:1;transform:translate(11px,4px) scale(1);}
+  95%{opacity:0;transform:translate(12px,3px) scale(0.9);}
+  100%{opacity:0;}
+}
+
+/* Settings: simple continuous spin, no further design changes needed. */
+#sb-settings-btn:hover .gear-svg{animation:spin 2.6s linear infinite}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+/* Edit/pencil: trace line and pencil tip live as siblings in ONE svg (not
+   separate HTML/SVG positioning systems) so they can't drift out of sync.
+   Tip travels via translate() in the same coordinate space the line draws
+   in via stroke-dashoffset, starting at the scribble's far corner and
+   moving toward the nib as it draws. */
+.sb-item-edit svg{overflow:visible}
+.trace-line{transition:none}
+.sb-item-edit:hover .trace-line{animation:scribble 2.1s ease-in-out infinite}
+@keyframes scribble{
+  0%{stroke-dashoffset:21;opacity:1;}
+  7%{stroke-dashoffset:18.17;}
+  14%{stroke-dashoffset:15.17;}
+  21%{stroke-dashoffset:12.34;}
+  28%{stroke-dashoffset:9.34;}
+  34%{stroke-dashoffset:6.51;}
+  41%{stroke-dashoffset:3.51;}
+  48%{stroke-dashoffset:0;}
+  75%{stroke-dashoffset:0;}
+  90%{opacity:0;}
+  92%{stroke-dashoffset:21;opacity:0;}
+  98%{opacity:1;stroke-dashoffset:21;}
+  100%{stroke-dashoffset:21;opacity:1;}
+}
+.sb-item-edit:hover .pencil-tip{animation:movetip4 2.1s ease-in-out infinite}
+@keyframes movetip4{
+  0%{transform:translate(8px,6px);opacity:1;}
+  7%{transform:translate(6px,8px);}
+  14%{transform:translate(6px,5px);}
+  21%{transform:translate(4px,7px);}
+  28%{transform:translate(4px,4px);}
+  34%{transform:translate(2px,6px);}
+  41%{transform:translate(2px,3px);}
+  48%{transform:translate(0px,0px);}
+  75%{transform:translate(0px,0px);}
+  90%{opacity:0;}
+  92%{transform:translate(8px,6px);opacity:0;}
+  98%{opacity:1;transform:translate(8px,6px);}
+  100%{transform:translate(8px,6px);opacity:1;}
+}
+
+/* Bookmark: clean squash-expand unroll — the honest ceiling of what a flat
+   2D vector shape can sell as "unrolling" without a genuinely different
+   two-frame illustrated asset. No bounce, no clip-path, kept simple after
+   a few failed attempts at literal scroll-unroll physics. */
+.widget-fav-btn svg{transform:scaleY(1);transform-origin:12px 3px}
+.widget-fav-btn:hover svg{animation:unrollClean .7s cubic-bezier(.22,.61,.36,1)}
+@keyframes unrollClean{
+  0%{transform:scaleY(0.08);}
+  100%{transform:scaleY(1);}
+}
+
+/* Star/hub-star: pop-scale, and at the EXACT moment of peak scale (not the
+   animation's end) 10 short lines flash simultaneously — one just outside
+   each of the star's 5 outer points, one (longer) outside each of the 5
+   inner divots. Nested rotation groups: the outer .star-pt span rotates
+   around the star's true center, the inner .star-shim is offset outward —
+   flattening this into one transform was the bug that misplaced the lines
+   before. Distances are scaled down from the reference's 22px star to
+   match our real 13px hub-star icon (×0.59), same relative geometry. */
+.hub-star-btn{position:relative}
+.hub-star-btn svg{transform:scale(1)}
+.hub-star-btn:hover svg{animation:starpop3 .55s cubic-bezier(.34,1.56,.64,1)}
+@keyframes starpop3{
+  0%{transform:scale(1);}
+  10%{transform:scale(0.3);}
+  70%{transform:scale(1.25);}
+  100%{transform:scale(1);}
+}
+.star-pt{position:absolute;top:50%;left:50%;width:0;height:0}
+.star-shim{position:absolute;left:-0.6px;width:1.2px;background:currentColor;opacity:0;border-radius:1px}
+.hub-star-btn:hover .star-shim{animation:shimflash4 .55s ease-out .35s}
+@keyframes shimflash4{0%{opacity:0;}15%{opacity:1;}100%{opacity:0;}}
+
+@media (prefers-reduced-motion: reduce){
+  #sb-new-btn:hover .plus-glyph,
+  #sb-new-btn:hover .np-dot-b,#sb-new-btn:hover .np-dot-m,#sb-new-btn:hover .np-dot-t,
+  #sb-archive-btn:hover .spider1-legs,#sb-archive-btn:hover .spider1-pos,
+  #sb-archive-btn:hover .thread-line,#sb-archive-btn:hover .spider2-part,
+  #sb-settings-btn:hover .gear-svg,
+  .sb-item-edit:hover .trace-line,.sb-item-edit:hover .pencil-tip,
+  .widget-fav-btn:hover svg,
+  .hub-star-btn:hover svg,.hub-star-btn:hover .star-shim{
+    animation:none!important;
+  }
+}
 </style>
 </head>
 <body>
@@ -299,9 +487,9 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   <div class="sb-div"></div>
   <div id="sb-pages"></div>
   <div class="sb-footer">
-    <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot">+</span><span class="sb-label">New page</span></button>
-    <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><line x1="3" y1="3" x2="3.0" y2="21.5"/><line x1="3" y1="3" x2="10.1" y2="20.1"/><line x1="3" y1="3" x2="16.1" y2="16.1"/><line x1="3" y1="3" x2="20.1" y2="10.1"/><line x1="3" y1="3" x2="21.5" y2="3.0"/><path d="M3.0,12.0 Q5.0,13.0 6.4,11.3 Q8.7,11.5 9.4,9.4 Q11.5,8.7 11.3,6.4 Q13.0,5.0 12.0,3.0"/><path d="M3.0,18.5 Q6.2,19.3 8.9,17.3 Q12.2,16.8 14.0,14.0 Q16.8,12.2 17.3,8.9 Q19.3,6.2 18.5,3.0"/><line x1="20.1" y1="10.1" x2="20.1" y2="20.9" stroke-width="0.7"/><circle cx="20.1" cy="21.5" r="0.6" fill="currentColor" stroke="none"/><line x1="20.1" y1="21.5" x2="22.0" y2="19.2" stroke-width="1"/><line x1="20.1" y1="21.5" x2="23.0" y2="20.6" stroke-width="1"/><line x1="20.1" y1="21.5" x2="23.0" y2="22.4" stroke-width="1"/><line x1="20.1" y1="21.5" x2="22.0" y2="23.8" stroke-width="1"/><line x1="20.1" y1="21.5" x2="18.2" y2="23.8" stroke-width="1"/><line x1="20.1" y1="21.5" x2="17.2" y2="22.4" stroke-width="1"/><line x1="20.1" y1="21.5" x2="17.2" y2="20.6" stroke-width="1"/><line x1="20.1" y1="21.5" x2="18.2" y2="19.2" stroke-width="1"/></svg></span><span class="sb-label">Archive</span></button>
-    <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
+    <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot np-icon"><span class="plus-glyph"><span class="plus-bar plus-bar-h"></span><span class="plus-bar plus-bar-v"></span></span><span class="np-dot np-dot-b"></span><span class="np-dot np-dot-m"></span><span class="np-dot np-dot-t"></span></span><span class="sb-label">New page</span></button>
+    <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true" style="overflow:visible"><line x1="3" y1="3" x2="3.0" y2="21.5"/><line x1="3" y1="3" x2="10.1" y2="20.1"/><line x1="3" y1="3" x2="16.1" y2="16.1"/><line x1="3" y1="3" x2="20.1" y2="10.1"/><line x1="3" y1="3" x2="21.5" y2="3.0"/><path d="M3.0,12.0 Q5.0,13.0 6.4,11.3 Q8.7,11.5 9.4,9.4 Q11.5,8.7 11.3,6.4 Q13.0,5.0 12.0,3.0"/><path d="M3.0,18.5 Q6.2,19.3 8.9,17.3 Q12.2,16.8 14.0,14.0 Q16.8,12.2 17.3,8.9 Q19.3,6.2 18.5,3.0"/><line class="thread-line" x1="20.1" y1="10.1" x2="20.1" y2="20.9" stroke-width="0.7" style="transform-origin:20.1px 10.1px"/><g class="spider1-pos" style="transform-origin:20.1px 10.1px"><g class="spider1-legs" stroke-width="1" style="transform-origin:20.1px 20.9px"><circle cx="20.1" cy="20.9" r="0.6" fill="currentColor" stroke="none"/><line x1="20.1" y1="20.9" x2="22.0" y2="18.6"/><line x1="20.1" y1="20.9" x2="23.0" y2="20.0"/><line x1="20.1" y1="20.9" x2="23.0" y2="21.8"/><line x1="20.1" y1="20.9" x2="22.0" y2="23.2"/><line x1="20.1" y1="20.9" x2="18.2" y2="23.2"/><line x1="20.1" y1="20.9" x2="17.2" y2="21.8"/><line x1="20.1" y1="20.9" x2="17.2" y2="20.0"/><line x1="20.1" y1="20.9" x2="18.2" y2="18.6"/></g></g><g class="spider2-part" stroke-width="1.1"><circle cx="0" cy="0" r="0.9" fill="currentColor" stroke="none"/><line x1="0" y1="0" x2="2.3" y2="-2.3"/><line x1="0" y1="0" x2="3" y2="0"/><line x1="0" y1="0" x2="2.3" y2="2.3"/><line x1="0" y1="0" x2="0" y2="3"/><line x1="0" y1="0" x2="-2.3" y2="2.3"/><line x1="0" y1="0" x2="-3" y2="0"/><line x1="0" y1="0" x2="-2.3" y2="-2.3"/><line x1="0" y1="0" x2="0" y2="-3"/></g></svg></span><span class="sb-label">Archive</span></button>
+    <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg class="gear-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
   </div>
 </div>
 <div id="settings-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeSettingsOverlay)">
@@ -467,7 +655,7 @@ const renderPagesSidebarRows=()=>{
     // points at, so only genuinely dynamic (builder-created) pages get the
     // edit affordance — static ones (GT OS, Mission OS, etc.) stay
     // reorderable like any other page, just not editable here.
-    const editBtn=r.page_kind==='static'?'':`<button class="sb-item-edit" onclick="onPageEditClick(event,'${r.id}')" aria-label="Edit page" title="Edit page">✎</button>`;
+    const editBtn=r.page_kind==='static'?'':`<button class="sb-item-edit" onclick="onPageEditClick(event,'${r.id}')" aria-label="Edit page" title="Edit page"><svg width="17.25" height="19.5" viewBox="0 0 30 34" style="overflow:visible"><path class="trace-line" d="M27,36 L25,38 L25,35 L23,37 L23,34 L21,36 L21,33 L19,30" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="21" stroke-dashoffset="21"/><text class="pencil-tip" x="15.5" y="30.5" font-size="11" fill="currentColor" text-anchor="middle" style="transform-box:fill-box;transform-origin:83% 58%">✎</text></svg></button>`;
     return `<div class="sb-page-wrap" id="sb-page-wrap-${r.id}">
       <a class="sb-item${active}" href="${href}" draggable="false" onpointerdown="onPageItemPointerDown(event,'${r.id}')" onclick="onPageItemClick(event,'${r.id}')"><span class="sb-dot" ${dotStyle}></span><span class="sb-label">${r.name}</span></a>
       ${editBtn}
@@ -2186,7 +2374,7 @@ const renderDashboardTabContent=wrap=>{
           <span class="widget-drag-handle" id="widget-handle-${w.id}" draggable="true" ondragstart="onWidgetDragStart(event,${w.id})" ondragend="onWidgetDragEnd(event)" onclick="openWidgetSizeMenu(event,${w.id})" aria-label="Reorder or resize dashboard card" title="Drag to reorder, click to resize">⠿</span>
           <div class="section-title" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
-        <button class="hub-star-btn${starred?' on':''}" id="hub-star-${w.id}" onclick="toggleHubStar(${w.id})" aria-label="${starred?'Unstar':'Star for hub'}" title="${starred?'Unstar':'Star for hub'}">${WIDGET_HUB_STAR_ICON_SVG}</button>
+        <button class="hub-star-btn${starred?' on':''}" id="hub-star-${w.id}" onclick="toggleHubStar(${w.id})" aria-label="${starred?'Unstar':'Star for hub'}" title="${starred?'Unstar':'Star for hub'}">${WIDGET_HUB_STAR_ICON_SVG}<span class="star-pt" style="transform:rotate(0deg)"><span class="star-shim" style="top:-8.3px;height:3px"></span></span><span class="star-pt" style="transform:rotate(43deg)"><span class="star-shim" style="top:-8px;height:5.3px"></span></span><span class="star-pt" style="transform:rotate(77deg)"><span class="star-shim" style="top:-8.5px;height:3px"></span></span><span class="star-pt" style="transform:rotate(117deg)"><span class="star-shim" style="top:-8.4px;height:5.3px"></span></span><span class="star-pt" style="transform:rotate(147deg)"><span class="star-shim" style="top:-9.1px;height:3px"></span></span><span class="star-pt" style="transform:rotate(180deg)"><span class="star-shim" style="top:-8.7px;height:5.3px"></span></span><span class="star-pt" style="transform:rotate(213deg)"><span class="star-shim" style="top:-9px;height:3px"></span></span><span class="star-pt" style="transform:rotate(243deg)"><span class="star-shim" style="top:-8.4px;height:5.3px"></span></span><span class="star-pt" style="transform:rotate(283deg)"><span class="star-shim" style="top:-8.5px;height:3px"></span></span><span class="star-pt" style="transform:rotate(317deg)"><span class="star-shim" style="top:-8px;height:5.3px"></span></span></button>
       </div>
       <div id="dash-summary-${w.id}"></div>
     </div>`;
