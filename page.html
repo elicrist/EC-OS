@@ -1008,6 +1008,10 @@ const WIDGET_TYPE_DEFS=[
   {type:'workout_log',label:'Workout log',sub:'Log of workout sets/reps',defaultConfig:()=>({})},
   {type:'golf_log',label:'Golf log',sub:'Log of golf rounds',defaultConfig:()=>({})},
   {type:'tennis_log',label:'Tennis log',sub:'Log of tennis sessions',defaultConfig:()=>({})},
+  {type:'activity_log',label:'Activity log',sub:'Log of dated activities with an outcome',defaultConfig:()=>({})},
+  {type:'contact_list',label:'Contact list',sub:'Persistent list of contacts, editable not append-only',defaultConfig:()=>({})},
+  {type:'session_log',label:'Session log',sub:'Log of dated sessions with a duration',defaultConfig:()=>({})},
+  {type:'budget',label:'Budget',sub:'Track spending against a monthly limit',defaultConfig:()=>({monthly_limit:0})},
 ];
 // User-customizable display order for widget TYPES themselves (not any
 // particular widget instance) — a personal UI preference about which types
@@ -2179,6 +2183,208 @@ async function delTennisEntry(id,entryId){
   try{await saveWidgetData(id);}catch(e){console.error('delTennisEntry save failed',e);alert('Save failed — try again.');}
 }
 
+// --- activity_log ---
+function renderActivityLogWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const entries=data.entries||[];
+  const sorted=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  body.innerHTML=`
+    <div class="form-row">
+      <div class="field"><label>date</label><input type="date" id="al-date-${w.id}" value="${todayStr()}"></div>
+      <div class="field"><label>title</label><input type="text" id="al-title-${w.id}" placeholder="e.g. Case comp final round"></div>
+      <div class="field"><label>result</label><input type="text" id="al-result-${w.id}" placeholder="e.g. 1st place"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>notes</label><input type="text" id="al-notes-${w.id}" placeholder="optional"></div>
+      <button class="btn btn-primary" onclick="addActivityLogEntry(${w.id})">Log</button>
+    </div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>Date</th><th>Title</th><th>Result</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${sorted.length?sorted.map(e=>`
+        <tr><td>${e.date||'—'}</td><td>${e.title||'—'}</td><td>${e.result||'—'}</td><td>${e.notes||'—'}</td>
+        <td><button class="del" onclick="delActivityLogEntry(${w.id},'${e.id}')">×</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty">No activities logged yet.</td></tr>'}</tbody>
+    </table></div>`;
+}
+async function addActivityLogEntry(id){
+  const date=document.getElementById(`al-date-${id}`).value;
+  const title=document.getElementById(`al-title-${id}`).value.trim();
+  if(!date||!title)return;
+  const result=document.getElementById(`al-result-${id}`).value.trim();
+  const notes=document.getElementById(`al-notes-${id}`).value.trim();
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.push({id:String(Date.now()),date,title,result,notes});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addActivityLogEntry save failed',e);alert('Save failed — try again.');}
+}
+async function delActivityLogEntry(id,entryId){
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delActivityLogEntry save failed',e);alert('Save failed — try again.');}
+}
+
+// --- session_log ---
+function renderSessionLogWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const entries=data.entries||[];
+  const totalMin=entries.reduce((s,e)=>s+(Number(e.duration_minutes)||0),0);
+  const sorted=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  body.innerHTML=`
+    <div class="grid-2" style="margin-bottom:1rem">
+      <div class="stat"><div class="stat-label">sessions</div><div class="stat-value" style="font-size:18px">${entries.length}</div></div>
+      <div class="stat"><div class="stat-label">total minutes</div><div class="stat-value" style="font-size:18px">${totalMin}</div></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>date</label><input type="date" id="sl-date-${w.id}" value="${todayStr()}"></div>
+      <div class="field"><label>duration (min)</label><input type="number" id="sl-dur-${w.id}" placeholder="30"></div>
+      <div class="field"><label>notes</label><input type="text" id="sl-notes-${w.id}" placeholder="optional"></div>
+      <button class="btn btn-primary" onclick="addSessionLogEntry(${w.id})">Log</button>
+    </div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>Date</th><th>Duration</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${sorted.length?sorted.map(e=>`
+        <tr><td>${e.date||'—'}</td><td>${e.duration_minutes??'—'} min</td><td>${e.notes||'—'}</td>
+        <td><button class="del" onclick="delSessionLogEntry(${w.id},'${e.id}')">×</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No sessions logged yet.</td></tr>'}</tbody>
+    </table></div>`;
+}
+async function addSessionLogEntry(id){
+  const date=document.getElementById(`sl-date-${id}`).value;
+  const duration_minutes=parseInt(document.getElementById(`sl-dur-${id}`).value);
+  if(!date||isNaN(duration_minutes))return;
+  const notes=document.getElementById(`sl-notes-${id}`).value.trim();
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.push({id:String(Date.now()),date,duration_minutes,notes});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addSessionLogEntry save failed',e);alert('Save failed — try again.');}
+}
+async function delSessionLogEntry(id,entryId){
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delSessionLogEntry save failed',e);alert('Save failed — try again.');}
+}
+
+// --- budget (spending DOWN against a monthly limit — intentionally distinct
+// from savings, which tracks progress UP toward a goal; don't merge them) ---
+function renderBudgetWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const cfg=w.config||{};
+  const limit=Number(cfg.monthly_limit)||0;
+  const data=widgetDataMap[w.id].data||{};
+  const entries=data.entries||[];
+  const spent=entries.reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const pct=limit?Math.min(100,(spent/limit)*100):0;
+  const over=limit>0&&spent>limit;
+  const sorted=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  body.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="stat-value${over?' danger':''}" style="margin-top:0">$${spent.toFixed(2)}</div>
+      <div class="stat-sub">of $${limit.toFixed(2)} this month</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%${over?';background:var(--danger)':''}"></div></div>
+    <div class="form-row" style="margin-top:1rem">
+      <div class="field"><label>date</label><input type="date" id="bg-date-${w.id}" value="${todayStr()}"></div>
+      <div class="field"><label>amount ($)</label><input type="number" id="bg-amt-${w.id}" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label>category</label><input type="text" id="bg-cat-${w.id}" placeholder="optional"></div>
+      <button class="btn btn-primary" onclick="addBudgetEntry(${w.id})">Add</button>
+    </div>
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr><th>Date</th><th>Amount</th><th>Category</th><th></th></tr></thead>
+      <tbody>${sorted.length?sorted.map(e=>`
+        <tr><td>${e.date||'—'}</td><td>$${(Number(e.amount)||0).toFixed(2)}</td><td>${e.category||'—'}</td>
+        <td><button class="del" onclick="delBudgetEntry(${w.id},'${e.id}')">×</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty">No spending logged yet.</td></tr>'}</tbody>
+    </table></div>`;
+}
+async function addBudgetEntry(id){
+  const date=document.getElementById(`bg-date-${id}`).value;
+  const amount=parseFloat(document.getElementById(`bg-amt-${id}`).value);
+  if(!date||isNaN(amount))return;
+  const category=document.getElementById(`bg-cat-${id}`).value.trim();
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.push({id:String(Date.now()),date,amount,category});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addBudgetEntry save failed',e);alert('Save failed — try again.');}
+}
+async function delBudgetEntry(id,entryId){
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delBudgetEntry save failed',e);alert('Save failed — try again.');}
+}
+
+// --- contact_list (persistent list, entries EDITED in place — not a
+// chronological log like the others above; e.g. updating last_contacted
+// on an existing contact rather than appending a new row) ---
+let contactEditingId={}; // {widgetId: contactId|null} — which contact's fields are currently loaded into the form
+function renderContactListWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const contacts=data.contacts||[];
+  const editingId=contactEditingId[w.id]||null;
+  const editing=editingId?contacts.find(c=>String(c.id)===String(editingId)):null;
+  const sorted=[...contacts].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  body.innerHTML=`
+    <div>${sorted.length?sorted.map(c=>`
+      <div class="check-row">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500">${c.name||'—'}${c.tag?` <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">· ${c.tag}</span>`:''}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${c.last_contacted?'last contacted '+c.last_contacted:'not yet contacted'}</div>
+          ${c.notes?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${c.notes}</div>`:''}
+        </div>
+        <button class="btn btn-sm" onclick="editContact(${w.id},'${c.id}')">Edit</button>
+        <button class="del" onclick="delContact(${w.id},'${c.id}')">×</button>
+      </div>`).join(''):'<div class="empty">No contacts yet.</div>'}</div>
+    <div class="form-row" style="margin-top:1rem">
+      <div class="field"><label>name</label><input type="text" id="ct-name-${w.id}" value="${(editing?.name||'').replace(/"/g,'&quot;')}" placeholder="Full name"></div>
+      <div class="field"><label>tag</label><input type="text" id="ct-tag-${w.id}" value="${(editing?.tag||'').replace(/"/g,'&quot;')}" placeholder="optional"></div>
+      <div class="field"><label>last contacted</label><input type="date" id="ct-lc-${w.id}" value="${editing?.last_contacted||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>notes</label><input type="text" id="ct-notes-${w.id}" value="${(editing?.notes||'').replace(/"/g,'&quot;')}" placeholder="optional"></div>
+      <button class="btn btn-primary" onclick="saveContact(${w.id})">${editing?'Save changes':'Add contact'}</button>
+      ${editing?`<button class="btn btn-sm" onclick="cancelContactEdit(${w.id})">Cancel</button>`:''}
+    </div>`;
+}
+function editContact(id,contactId){
+  contactEditingId[id]=contactId;
+  renderWidgetById(id);
+}
+function cancelContactEdit(id){
+  contactEditingId[id]=null;
+  renderWidgetById(id);
+}
+async function saveContact(id){
+  const name=document.getElementById(`ct-name-${id}`).value.trim();
+  if(!name)return;
+  const tag=document.getElementById(`ct-tag-${id}`).value.trim();
+  const last_contacted=document.getElementById(`ct-lc-${id}`).value;
+  const notes=document.getElementById(`ct-notes-${id}`).value.trim();
+  const data=widgetDataMap[id].data;
+  if(!data.contacts)data.contacts=[];
+  const editingId=contactEditingId[id];
+  if(editingId){
+    const c=data.contacts.find(c=>String(c.id)===String(editingId));
+    if(c){c.name=name;c.tag=tag;c.last_contacted=last_contacted;c.notes=notes;}
+  }else{
+    data.contacts.push({id:String(Date.now()),name,tag,last_contacted,notes});
+  }
+  contactEditingId[id]=null;
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('saveContact save failed',e);alert('Save failed — try again.');}
+}
+async function delContact(id,contactId){
+  const data=widgetDataMap[id].data;
+  data.contacts=(data.contacts||[]).filter(c=>String(c.id)!==String(contactId));
+  if(String(contactEditingId[id])===String(contactId))contactEditingId[id]=null;
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delContact save failed',e);alert('Save failed — try again.');}
+}
+
 
 // --- editable widget settings (title always; type-specific config where it exists) ---
 const WIDGET_SETTINGS_FIELDS={
@@ -2195,6 +2401,9 @@ const WIDGET_SETTINGS_FIELDS={
   funded_checklist:[
     {key:'target_count',label:'target count',type:'number'},
     {key:'label',label:'label',type:'text'},
+  ],
+  budget:[
+    {key:'monthly_limit',label:'monthly limit ($)',type:'number',step:'0.01'},
   ],
 };
 let wsEditingId=null;
@@ -2254,6 +2463,10 @@ const WIDGET_RENDERERS={
   workout_log:renderWorkoutLogWidget,
   golf_log:renderGolfLogWidget,
   tennis_log:renderTennisLogWidget,
+  activity_log:renderActivityLogWidget,
+  contact_list:renderContactListWidget,
+  session_log:renderSessionLogWidget,
+  budget:renderBudgetWidget,
 };
 
 // Compact, read-only summaries for the Dashboard tab — one per favorited
@@ -2367,6 +2580,40 @@ const WIDGET_SUMMARY_RENDERERS={
       <div class="stat"><div class="stat-label">sessions</div><div class="stat-value" style="font-size:18px">${entries.length}</div></div>
       <div class="stat"><div class="stat-label">record</div><div class="stat-value" style="font-size:18px">${wins}-${matches.length-wins}</div></div>
     </div>`;
+  },
+  activity_log:w=>{
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    if(!entries.length)return '<div class="empty">No activities logged yet.</div>';
+    const latest=[...entries].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+    return `<div style="font-size:13px;font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${String(latest.title||'').replace(/"/g,'&quot;')}">${latest.title||'—'}</div>
+    <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${latest.date||''}${latest.result?' · '+latest.result:''}</div>`;
+  },
+  contact_list:w=>{
+    const contacts=(widgetDataMap[w.id]?.data?.contacts)||[];
+    if(!contacts.length)return '<div class="empty">No contacts yet.</div>';
+    return `<div class="stat-value" style="margin-top:0;font-size:20px">${contacts.length}</div><div class="stat-sub">contacts</div>`;
+  },
+  session_log:w=>{
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    if(!entries.length)return '<div class="empty">No sessions logged yet.</div>';
+    const totalMin=entries.reduce((s,e)=>s+(Number(e.duration_minutes)||0),0);
+    return `<div class="grid-2">
+      <div class="stat"><div class="stat-label">sessions</div><div class="stat-value" style="font-size:18px">${entries.length}</div></div>
+      <div class="stat"><div class="stat-label">total min</div><div class="stat-value" style="font-size:18px">${totalMin}</div></div>
+    </div>`;
+  },
+  budget:w=>{
+    const cfg=w.config||{};
+    const limit=Number(cfg.monthly_limit)||0;
+    const entries=(widgetDataMap[w.id]?.data?.entries)||[];
+    const spent=entries.reduce((s,e)=>s+(Number(e.amount)||0),0);
+    const pct=limit?Math.min(100,(spent/limit)*100):0;
+    const over=limit>0&&spent>limit;
+    return `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <div class="stat-value${over?' danger':''}" style="margin-top:0">$${spent.toFixed(2)}</div>
+      <div class="stat-sub">of $${limit.toFixed(2)}</div>
+    </div>
+    <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%${over?';background:var(--danger)':''}"></div></div>`;
   },
 };
 
