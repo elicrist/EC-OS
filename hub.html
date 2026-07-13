@@ -24,8 +24,6 @@
   --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
   --accent:#B3A369;--danger:#e05b5b;
   --summer:#e07b4a;--summer-bg:#2e1a0e;
-  --gt:#B3A369;--gt-bg:#1e1c0a;
-  --mission:#9AAFBF;--mission-bg:#0f1a22;
 }
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column}
 header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -45,21 +43,20 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;justify-conten
    always outranks any stylesheet selector regardless of specificity. */
 .os-card{background:var(--card);border:1px solid var(--card-border,var(--border));border-radius:14px;padding:2rem 1.75rem;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:all .2s;min-width:0}
 /* --card-accent is set per card (from its own dot/accent color) so hover
-   always matches THAT page's color — never a fixed app-wide one. Set via a
-   class for the 2 hardcoded cards (.g/.m below) and inline per dynamic card. */
+   always matches THAT page's color — never a fixed app-wide one. Every
+   card left today is dynamic and sets this inline; .s below is the one
+   remaining pre-multi-tenancy holdover (Summer), out of scope here. */
 .os-card:hover{transform:translateY(-3px);border-color:var(--card-accent,var(--border-light));box-shadow:0 8px 36px color-mix(in srgb,var(--card-accent,transparent) 20%,transparent)}
-.os-card.g{--card-accent:var(--gt)}
-.os-card.m{--card-accent:var(--mission)}
 .os-phase{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:.6rem;display:flex;align-items:center;gap:6px}
-.s .os-phase{color:var(--summer)}.g .os-phase{color:var(--gt)}.m .os-phase{color:var(--mission)}
+.s .os-phase{color:var(--summer)}
 .pulse{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:pulse 2s ease-in-out infinite}
-.s .pulse{background:var(--summer)}.g .pulse{background:var(--gt)}.m .pulse{background:var(--mission)}
+.s .pulse{background:var(--summer)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .os-name{font-size:22px;font-weight:600;letter-spacing:-.4px;margin-bottom:.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .os-tags{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.8}
 .os-cd{margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)}
 .cd-num{font-size:32px;font-weight:600;letter-spacing:-.6px;line-height:1;color:var(--card-accent,var(--text))}
-.s .cd-num{color:var(--summer)}.g .cd-num{color:var(--gt)}.m .cd-num{color:var(--mission)}
+.s .cd-num{color:var(--summer)}
 .cd-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:5px}
 .cd-prompt{font-size:11px;color:var(--muted);line-height:1.5}
 .os-open{margin-top:1.5rem;font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);transition:color .15s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -98,28 +95,7 @@ input{background:var(--surface);border:1px solid var(--border-light);color:var(-
     <div class="greeting-tagline" id="greeting-tagline"></div>
   </div>
   <div class="eyebrow">select your operating system</div>
-  <div class="os-grid" id="os-grid">
-    <a class="os-card g" href="gt.html" id="os-card-gt">
-      <div class="os-phase">georgia tech · fall 2026</div>
-      <div class="os-name">GT OS</div>
-      <div class="os-tags">courses · case comps<br>networking · finance · hustle</div>
-      <div class="os-cd">
-        <div class="cd-num" id="cd-g">—</div>
-        <div class="cd-label">days until move-in</div>
-      </div>
-      <div class="os-open">→ open GT OS</div>
-    </a>
-    <a class="os-card m" href="mission.html" id="os-card-mission">
-      <div class="os-phase">lds mission · 2027 — 2029</div>
-      <div class="os-name">Mission OS</div>
-      <div class="os-tags">prep · language · habits<br>mission fund · notes</div>
-      <div class="os-cd">
-        <div class="cd-num" id="cd-m">—</div>
-        <div class="cd-label" id="cd-m-label">days until set apart</div>
-      </div>
-      <div class="os-open">→ open Mission OS</div>
-    </a>
-  </div>
+  <div class="os-grid" id="os-grid"></div>
 </main>
 <div id="first-page-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeFirstPageModal)">
   <div class="overlay-card">
@@ -139,15 +115,6 @@ input{background:var(--surface);border:1px solid var(--border-light);color:var(-
 <script src="public/auth.js"></script>
 <script>
 const today=new Date();today.setHours(0,0,0,0);
-const GT=new Date('2026-08-17');
-const MS=localStorage.getItem('lds_mission_date');
-const MISSION=MS?new Date(MS):null;
-function days(d){return d?Math.ceil((d-today)/86400000):null;}
-const dG=days(GT);
-document.getElementById('cd-g').textContent=dG??'—';
-const dM=days(MISSION);
-document.getElementById('cd-m').textContent=dM??'TBD';
-if(!dM)document.getElementById('cd-m-label').textContent='set date in Mission OS';
 document.getElementById('hdr-date').textContent=today.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
 
 // Derived from the actual signed-in session, never a hardcoded name — this
@@ -168,7 +135,7 @@ document.getElementById('greeting-title').textContent=greeting.title;
 document.getElementById('greeting-tagline').textContent=greeting.tagline;
 
 // hub.html sources its page list from ec_pages — same source of truth the
-// sidebar on every other surface uses — rather than only the 3 hardcoded cards.
+// sidebar on every other surface uses — rather than a hardcoded list.
 const sbFetchJson=async(url)=>{
   const resp=await fetch(url,{headers:buildHeaders()});
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);
@@ -176,9 +143,8 @@ const sbFetchJson=async(url)=>{
 };
 
 // Minimal duplicates of page.html's stat-calculation helpers — hub.html is a
-// separate static file with no shared JS module between them (same pattern
-// as the sidebar markup duplicated across gt.html/mission.html/page.html),
-// so these are copied rather than imported. Kept intentionally small: only
+// separate static file with no shared JS module between them, so these are
+// copied rather than imported. Kept intentionally small: only
 // what's needed to derive a single headline {value,label} pair per widget
 // type, not the full rich Dashboard-tab summary rendering.
 function hubTodayStr(){return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
@@ -312,8 +278,8 @@ const closeOverlayIfBackdrop=(event,closeFn)=>{ if(event.target===event.currentT
 // duplicating page.html's full 2-step builder overlay into this file. Once
 // this first page exists, its own sidebar "+ New page" covers the rest.
 // dot_color is required — every other ec_pages insert in this codebase
-// (page.html/gt.html/mission.html's buildPage, migrate.html) always sets
-// it, and this was the one call site that didn't, which is why "Build your
+// (page.html's buildPage, migrate.html) always sets it, and this was the
+// one call site that didn't, which is why "Build your
 // first page" failed outright on a real empty account (confirmed by
 // comparing this against every other working insert; ec_pages.dot_color
 // has no default, so leaving it out fails the insert before it ever reaches
@@ -364,19 +330,22 @@ const submitFirstPage=async()=>{
 // gate) but stays mapped here so its stale ec_pages static row — if it still
 // exists — gets treated as "already accounted for" and filtered out of the
 // dynamic list below, instead of leaking through as a broken generic card.
-const KNOWN_STATIC_CARDS={'index.html':'os-card-summer','gt.html':'os-card-gt','mission.html':'os-card-mission'};
+// gt.html/mission.html used to be here too — retired in Phase 6, rebuilt as
+// ordinary dynamic Pages with no page_kind==='static' row ever created for
+// them, so there's no stale row for this map to guard against anymore.
+const KNOWN_STATIC_CARDS={'index.html':'os-card-summer'};
 (async()=>{
   const authed=await initAuth();
-  if(!authed) return; // anon RLS sees nothing; the 2 hardcoded cards still work for nav
+  if(!authed) return; // anon RLS sees nothing
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
     const extra=[];
     rows.forEach(r=>{
       const knownId=r.page_kind==='static'?KNOWN_STATIC_CARDS[String(r.url||'').split('/').pop()]:null;
-      if(knownId) return; // one of the 3 hand-built cards — already shown, just confirmed active
+      if(knownId) return; // a hand-built card — already shown, just confirmed active
       extra.push(r);
     });
-    // Hide any of the 3 known static cards whose own row is archived (not in the active set).
+    // Hide any known static card whose own row is archived (not in the active set).
     Object.entries(KNOWN_STATIC_CARDS).forEach(([url,domId])=>{
       const stillActive=rows.some(r=>r.page_kind==='static'&&String(r.url||'').split('/').pop()===url);
       const el=document.getElementById(domId);
@@ -398,9 +367,9 @@ const KNOWN_STATIC_CARDS={'index.html':'os-card-summer','gt.html':'os-card-gt','
         </a>`;
       }).join(''));
     }
-    // A brand-new account has none of the 3 known static rows yet either, so
-    // every hardcoded card above just got hidden and extra is empty — the
-    // grid would otherwise be silently blank instead of inviting first use.
+    // A brand-new account has no known static row either, so the one
+    // hardcoded card above just got hidden and extra is empty — the grid
+    // would otherwise be silently blank instead of inviting first use.
     const visibleCards=[...document.querySelectorAll('#os-grid .os-card')].filter(el=>el.style.display!=='none');
     if(!visibleCards.length){
       document.getElementById('os-grid').innerHTML=`

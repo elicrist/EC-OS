@@ -629,7 +629,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
 // SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
-// shared with index.html, gt.html and mission.html.
+// shared with index.html and hub.html.
 // The only entry point with a login form today. A later phase adds an
 // animated home screen in front of it — when that lands, change this one
 // constant rather than hunting for hardcoded redirects.

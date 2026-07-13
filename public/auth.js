@@ -1,10 +1,13 @@
-// Shared Supabase session handling for index.html, gt.html, mission.html.
+// Shared Supabase session handling for index.html, hub.html, page.html.
 // The login form itself (password input + handleLogin) lives only in index.html;
 // this file lets every page read, refresh, and use the session that form creates.
+// (gt.html and mission.html used to be two more consumers here — both retired
+// in Phase 6, rebuilt as ordinary Pages through page.html instead of hardcoded
+// files, so there's nothing special about them left to migrate.)
 
 // Registered here since every top-level page already loads this file — one
-// registration point instead of duplicating the same snippet 5 times. The
-// path 'sw.js' resolves relative to the CALLING page's URL (all 5 pages
+// registration point instead of duplicating the same snippet 3 times. The
+// path 'sw.js' resolves relative to the CALLING page's URL (all 3 pages
 // live at the repo root), not this file's own /public/ location, so it
 // correctly registers /sw.js with root scope regardless of which page
 // loaded it. See sw.js itself for what it does and (deliberately) doesn't
