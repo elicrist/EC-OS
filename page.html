@@ -64,6 +64,13 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);box-shadow:0 1p
    rendered width the same whether or not it currently has a row partner. */
 .widget-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-start}
 .widget-row>.card{flex:1;min-width:0}
+/* EXPERIMENTAL — "let's see how it looks," may get reverted. Deliberately
+   an isolated rule (not merged into .widget-row>.card above or the shared
+   .card rule other overlays/settings use) specifically so pulling it back
+   out later is a one-line deletion, not untangling shared styles. Subtler
+   than the hub card glow on purpose (smaller blur, lower opacity) — that
+   one's the max-intensity reference point. */
+.widget-row>.card{box-shadow:0 0 18px -6px color-mix(in srgb,var(--accent-default) 30%,transparent)}
 /* Deliberately just a fixed width, not a forced aspect-ratio square — actual
    widget content varies too much (a progress bar vs. a single streak dot)
    for a hard square to avoid clipping something eventually. "Square" here
@@ -86,7 +93,7 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);box-shadow:0 1p
 .tab-btn-row{display:flex;align-items:center}
 .tab-edit-toggle{font-size:10px;background:none;border:none;color:var(--muted);cursor:pointer;padding:0 6px;opacity:0;transition:opacity .15s ease}
 .tab-wrap:hover .tab-edit-toggle,.tab-wrap:focus-within .tab-edit-toggle,.tab-wrap.editing .tab-edit-toggle{opacity:.85}
-.tab-edit-toggle:hover{opacity:1;color:var(--text)}
+.tab-edit-toggle:hover{opacity:1;color:var(--accent-default)}
 .tab-edit-panel{z-index:1050;background:var(--card);border:1px solid var(--border-light);border-radius:8px;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:6px;min-width:160px}
 .tab-edit-panel input{font-size:12px}
 .widget-size-option{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:6px;font-size:12px;cursor:pointer;background:none;border:none;color:var(--text);text-align:left;font-family:'DM Sans',sans-serif;transition:background .15s}
@@ -104,12 +111,12 @@ header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);box-shadow:0 1p
 .widget-drag-handle:hover{color:var(--accent)}
 .card.widget-dragging{opacity:.4}
 .widget-fav-btn{background:none;border:1px solid var(--border-light);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all .15s;padding:0}
-.widget-fav-btn:hover{border-color:var(--accent);color:var(--accent)}
+.widget-fav-btn:hover{border-color:var(--accent-default);color:var(--accent-default)}
 .widget-fav-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
 .widget-fav-btn svg{display:block}
 .widget-fav-btn.on svg{fill:currentColor}
 .hub-star-btn{background:none;border:1px solid var(--border-light);border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all .15s;padding:0}
-.hub-star-btn:hover{border-color:var(--accent);color:var(--accent)}
+.hub-star-btn:hover{border-color:var(--accent-default);color:var(--accent-default)}
 .hub-star-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
 .hub-star-btn svg{display:block}
 .hub-star-btn.on svg{fill:currentColor}
@@ -183,7 +190,14 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    switch anyway: every direct child here (toggle, .sb-div, #sb-pages,
    .sb-footer) already becomes width:100% when open, at which point
    centering a full-width box is visually identical to left-aligning it. */
-.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease,padding .2s ease;overflow:hidden}
+/* inset, not a normal outward box-shadow: .os-sb has overflow:hidden (needed
+   for the collapse/expand animation and open-state horizontal scrollbars),
+   which would clip an outward shadow entirely — inset renders INSIDE the
+   box instead, so the glow shows without ever touching the actual page
+   content past the sidebar's own right edge. Deliberately narrower/dimmer
+   than the hub card glow (smaller blur, lower opacity) — that one's the
+   max-intensity reference point, everything else should read quieter. */
+.os-sb{position:fixed;left:0;top:0;bottom:0;width:52px;background:var(--surface);border-right:1px solid var(--border);box-shadow:inset 0 0 26px -10px color-mix(in srgb,var(--accent-default) 30%,transparent);z-index:500;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:4px;transition:width .2s ease,padding .2s ease;overflow:hidden}
 .os-sb.open{width:var(--sb-open-width,168px);padding:14px 10px}
 /* Without this, #sb-pages (no width of its own) shrink-wraps to its widest
    child's natural content width in the cross axis, and every .sb-item's
@@ -199,7 +213,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    axis instead of lining up as one consistent column. */
 .sb-toggle{width:36px;height:36px;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:18px;transition:all .2s ease;margin-bottom:6px;flex-shrink:0;background:none;border:none;padding:0}
 .os-sb.open .sb-toggle{width:100%;justify-content:flex-start;padding:0 8px}
-.sb-toggle:hover{background:var(--faint);color:var(--text)}
+.sb-toggle:hover{background:var(--faint);color:var(--text);box-shadow:0 0 10px -3px color-mix(in srgb,var(--accent-default) 40%,transparent)}
 .sb-div{width:24px;height:1px;background:color-mix(in srgb,var(--accent-default) 40%,var(--border));box-shadow:0 0 6px -1px color-mix(in srgb,var(--accent-default) 50%,transparent);margin:4px auto;flex-shrink:0;transition:width .2s}
 .os-sb.open .sb-div{width:100%}
 /* .sb-page-wrap owns the sizing (width/height) that .sb-item used to own
@@ -211,11 +225,19 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sb-page-wrap.dragging{opacity:.4}
 .sb-item{display:flex;align-items:center;gap:9px;text-decoration:none;color:var(--muted);padding:8px;border-radius:8px;transition:all .2s ease;overflow:hidden;white-space:nowrap;flex:1;min-width:0}
 .os-sb.open .sb-item{padding:9px 10px;overflow-x:auto;scrollbar-width:thin}
-.sb-item:hover{background:var(--faint);color:var(--text)}
+.sb-item:hover{background:var(--faint);color:var(--text);box-shadow:0 0 10px -3px color-mix(in srgb,var(--accent-default) 40%,transparent)}
+/* Icon-only color shift on hover, scoped to the .sb-dot icon specifically
+   (not the whole .sb-item, which would also tint ordinary page-row name
+   text) — and only for these 3 specific buttons, not page rows in general,
+   which keep their own per-page dot_color untouched. Reverts to white
+   (inherited var(--muted)/var(--text) via .sb-item's own rules) on
+   mouse-leave for free, since this is just a plain :hover rule — no JS,
+   same start/stop timing as the hover animations themselves. */
+#sb-new-btn:hover .sb-dot,#sb-archive-btn:hover .sb-dot,#sb-settings-btn:hover .sb-dot{color:var(--accent-default)}
 .sb-item-edit{opacity:0;transition:opacity .15s ease;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:4px;flex-shrink:0;display:none}
 .os-sb.open .sb-item-edit{display:block}
 .sb-page-wrap:hover .sb-item-edit{opacity:.85}
-.sb-item-edit:hover{color:var(--text)}
+.sb-item-edit:hover{color:var(--accent-default)}
 .sb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 /* "You are here" cue for the currently-open page, independent of hover —
    replaces the persistent gray box removed earlier. Slightly bigger + a
@@ -266,6 +288,22 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .overlay.active{display:flex}
 .overlay-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.5rem;max-width:520px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,.35);overscroll-behavior:contain}
 .overlay-card.wide{max-width:580px}
+/* Full-screen takeover view (currently just Settings) — distinct from
+   .overlay/.overlay-card: a centered modal card doesn't scale past a
+   couple hundred px of content before its own close button scrolls off
+   the top of the viewport with no way back short of a hard reload
+   (confirmed: Settings' close button rendered 124px above y=0 once the
+   Appearance card pushed total height past the viewport). This fills the
+   whole viewport instead, with its own header pinned via flex-shrink:0 so
+   the back button is always reachable regardless of how tall the body
+   content gets — only .fullscreen-view-body scrolls. */
+.fullscreen-view{position:fixed;inset:0;background:var(--bg);z-index:1000;display:none;flex-direction:column}
+.fullscreen-view.active{display:flex}
+.fullscreen-view-header{padding:1.1rem 2rem;border-bottom:1px solid var(--border);box-shadow:0 1px 12px -2px color-mix(in srgb,var(--accent-default) 35%,transparent);display:flex;align-items:center;gap:1rem;flex-shrink:0}
+.fullscreen-back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;padding:6px 4px;font-family:'DM Sans',sans-serif;transition:color .15s}
+.fullscreen-back-btn:hover{color:var(--text)}
+.fullscreen-view-body{flex:1;overflow-y:auto;padding:1.5rem 2rem}
+.fullscreen-view-body-inner{max-width:640px;margin:0 auto}
 .archive-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
 .archive-row:last-child{border-bottom:none}
 /* gap+flex:1 on .set-row-info instead of justify-content:space-between —
@@ -418,6 +456,11 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    ~20% bigger — it read too small there — while widget/tab edit sit in
    tighter buttons and use the original scale). */
 .sb-item-edit svg,.widget-edit-btn svg,.tab-edit-toggle svg{overflow:visible}
+/* More specific than the generic .btn:hover{color:var(--accent)} it would
+   otherwise inherit — this pencil instance should shift to the GLOBAL
+   theme accent on hover like the other 5 animated icons, not whichever
+   page's own dot_color .btn:hover would normally pick up. */
+.widget-edit-btn:hover{border-color:var(--accent-default);color:var(--accent-default)}
 .trace-line{transition:none}
 .sb-item-edit:hover .trace-line,.widget-edit-btn:hover .trace-line,.tab-edit-toggle:hover .trace-line{animation:scribble 2.1s ease-in-out infinite}
 @keyframes scribble{
@@ -535,79 +578,84 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
     <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg class="gear-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
   </div>
 </div>
-<div id="settings-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeSettingsOverlay)">
-  <div class="overlay-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
-      <div class="section-title" style="margin:0">Settings</div>
-      <button class="btn btn-sm" onclick="closeSettingsOverlay()">Close</button>
-    </div>
-    <div class="card" style="margin-bottom:1rem">
-      <div class="section-title">pages</div>
-      <div style="display:flex;gap:1.5rem">
-        <div><div class="stat-value" id="set-pages-total" style="font-size:20px;margin-top:0">—</div><div class="stat-label">total</div></div>
-        <div><div class="stat-value" id="set-pages-active" style="font-size:20px;margin-top:0">—</div><div class="stat-label">active</div></div>
-        <div><div class="stat-value" id="set-pages-archived" style="font-size:20px;margin-top:0">—</div><div class="stat-label">archived</div></div>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:1rem">
-      <div class="section-title">account</div>
-      <div class="set-row">
-        <div class="set-label" id="set-auth-status">Not signed in</div>
-        <button class="btn btn-sm" id="set-signout-btn" onclick="signOut()" style="display:none">Sign out</button>
-      </div>
-    </div>
-    <div class="card" style="margin-bottom:1rem">
-      <div class="section-title">appearance</div>
-      <div class="set-sub" style="margin-bottom:8px">mode</div>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <button type="button" class="theme-mode-btn" id="theme-mode-btn-light" onclick="setThemeMode('light')">Light</button>
-        <button type="button" class="theme-mode-btn" id="theme-mode-btn-dark" onclick="setThemeMode('dark')">Dark</button>
-        <button type="button" class="theme-mode-btn" id="theme-mode-btn-auto" onclick="setThemeMode('auto')">Auto</button>
-      </div>
-      <div class="form-row" id="theme-auto-times" style="display:none">
-        <div class="field"><label>switch to dark at</label><input type="time" id="theme-dark-time" onchange="onThemeTimeChange()"></div>
-        <div class="field"><label>switch to light at</label><input type="time" id="theme-light-time" onchange="onThemeTimeChange()"></div>
-      </div>
-      <div class="set-sub" style="margin:16px 0 8px">accent color</div>
-      <div style="display:flex;align-items:center;gap:14px">
-        <input type="color" id="theme-accent-spectrum" class="theme-swatch-input" oninput="onThemeAccentSpectrum(this.value)">
-        <div class="field" style="flex:1"><label>hex code</label><input type="text" id="theme-accent-hex" maxlength="7" placeholder="#B3A369" oninput="onThemeAccentHex(this.value)"></div>
-      </div>
-      <div class="set-sub" style="margin:20px 0 8px">live preview</div>
-      <!-- --accent overridden to --accent-default for this whole panel: every
-           element inside (tab-btn.active, btn-primary) normally reads the
-           PAGE-level --accent, which would make this preview show whichever
-           page you happened to open Settings from instead of the global
-           theme accent actually being configured here. -->
-      <div class="card" style="background:var(--surface);--accent:var(--accent-default)">
-        <div class="card" style="margin-bottom:12px;box-shadow:0 0 20px -4px color-mix(in srgb,var(--accent-default) 55%,transparent)">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Page card glow</div>
-          <div style="font-size:14px;font-weight:600">Summer</div>
-        </div>
-        <div style="display:flex;gap:14px;margin-bottom:12px">
-          <div class="tab-btn" style="padding:6px 0">Dashboard</div>
-          <div class="tab-btn active" style="padding:6px 0">Main</div>
-        </div>
-        <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px">Add widget</button>
-        <div class="theme-preview-divider"></div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="theme-preview-dot"></div>
-          <span style="font-size:12px;color:var(--muted)">Sample link text</span>
+<div id="settings-overlay" class="fullscreen-view" aria-hidden="true">
+  <div class="fullscreen-view-header">
+    <button class="fullscreen-back-btn" onclick="closeSettingsOverlay()" aria-label="Back to page">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Back
+    </button>
+    <div class="section-title" style="margin:0">Settings</div>
+  </div>
+  <div class="fullscreen-view-body">
+    <div class="fullscreen-view-body-inner">
+      <div class="card" style="margin-bottom:1rem">
+        <div class="section-title">pages</div>
+        <div style="display:flex;gap:1.5rem">
+          <div><div class="stat-value" id="set-pages-total" style="font-size:20px;margin-top:0">—</div><div class="stat-label">total</div></div>
+          <div><div class="stat-value" id="set-pages-active" style="font-size:20px;margin-top:0">—</div><div class="stat-label">active</div></div>
+          <div><div class="stat-value" id="set-pages-archived" style="font-size:20px;margin-top:0">—</div><div class="stat-label">archived</div></div>
         </div>
       </div>
-    </div>
-    <div style="margin-bottom:1rem">
-      <div class="section-title">install as app</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.8">
-        <strong style="color:var(--text)">Safari on Mac:</strong> File → Add to Dock<br>
-        <strong style="color:var(--text)">Safari on iPhone:</strong> Share → Add to Home Screen<br>
-        <strong style="color:var(--text)">Chrome:</strong> Install icon in address bar<br>
-        <span style="opacity:.8">Already installed from before? Remove it and re-add — the old shortcut won't pick up the new icon/app window on its own.</span>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="section-title">account</div>
+        <div class="set-row">
+          <div class="set-label" id="set-auth-status">Not signed in</div>
+          <button class="btn btn-sm" id="set-signout-btn" onclick="signOut()" style="display:none">Sign out</button>
+        </div>
       </div>
-    </div>
-    <div>
-      <div class="section-title">deploying changes</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.8">Changes are made locally via Claude Code, then deployed with git add, git commit, git push — live in about a minute.</div>
+      <div class="card" style="margin-bottom:1rem">
+        <div class="section-title">appearance</div>
+        <div class="set-sub" style="margin-bottom:8px">mode</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button type="button" class="theme-mode-btn" id="theme-mode-btn-light" onclick="setThemeMode('light')">Light</button>
+          <button type="button" class="theme-mode-btn" id="theme-mode-btn-dark" onclick="setThemeMode('dark')">Dark</button>
+          <button type="button" class="theme-mode-btn" id="theme-mode-btn-auto" onclick="setThemeMode('auto')">Auto</button>
+        </div>
+        <div class="form-row" id="theme-auto-times" style="display:none">
+          <div class="field"><label>switch to dark at</label><input type="time" id="theme-dark-time" onchange="onThemeTimeChange()"></div>
+          <div class="field"><label>switch to light at</label><input type="time" id="theme-light-time" onchange="onThemeTimeChange()"></div>
+        </div>
+        <div class="set-sub" style="margin:16px 0 8px">accent color</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <input type="color" id="theme-accent-spectrum" class="theme-swatch-input" oninput="onThemeAccentSpectrum(this.value)">
+          <div class="field" style="flex:1"><label>hex code</label><input type="text" id="theme-accent-hex" maxlength="7" placeholder="#B3A369" oninput="onThemeAccentHex(this.value)"></div>
+        </div>
+        <div class="set-sub" style="margin:20px 0 8px">live preview</div>
+        <!-- --accent overridden to --accent-default for this whole panel: every
+             element inside (tab-btn.active, btn-primary) normally reads the
+             PAGE-level --accent, which would make this preview show whichever
+             page you happened to open Settings from instead of the global
+             theme accent actually being configured here. -->
+        <div class="card" style="background:var(--surface);--accent:var(--accent-default)">
+          <div class="card" style="margin-bottom:12px;box-shadow:0 0 20px -4px color-mix(in srgb,var(--accent-default) 55%,transparent)">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Page card glow</div>
+            <div style="font-size:14px;font-weight:600">Summer</div>
+          </div>
+          <div style="display:flex;gap:14px;margin-bottom:12px">
+            <div class="tab-btn" style="padding:6px 0">Dashboard</div>
+            <div class="tab-btn active" style="padding:6px 0">Main</div>
+          </div>
+          <button type="button" class="btn btn-primary" style="width:100%;margin-bottom:12px">Add widget</button>
+          <div class="theme-preview-divider"></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="theme-preview-dot"></div>
+            <span style="font-size:12px;color:var(--muted)">Sample link text</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:1rem">
+        <div class="section-title">install as app</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8">
+          <strong style="color:var(--text)">Safari on Mac:</strong> File → Add to Dock<br>
+          <strong style="color:var(--text)">Safari on iPhone:</strong> Share → Add to Home Screen<br>
+          <strong style="color:var(--text)">Chrome:</strong> Install icon in address bar<br>
+          <span style="opacity:.8">Already installed from before? Remove it and re-add — the old shortcut won't pick up the new icon/app window on its own.</span>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">deploying changes</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.8">Changes are made locally via Claude Code, then deployed with git add, git commit, git push — live in about a minute.</div>
+      </div>
     </div>
   </div>
 </div>
