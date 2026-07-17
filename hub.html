@@ -382,10 +382,11 @@ const submitFirstPage=async()=>{
   }
 };
 
-// index.html has no card/DOM id of its own anymore (it's just the login
-// gate) but stays mapped here so its stale ec_pages static row — if it still
-// exists — gets treated as "already accounted for" and filtered out of the
-// dynamic list below, instead of leaking through as a broken generic card.
+// index.html has no card/DOM id of its own anymore (it's just the splash/
+// landing gate in front of login.html/signup.html) but stays mapped here so
+// its stale ec_pages static row — if it still exists — gets treated as
+// "already accounted for" and filtered out of the dynamic list below,
+// instead of leaking through as a broken generic card.
 // gt.html/mission.html used to be here too — retired in Phase 6, rebuilt as
 // ordinary dynamic Pages with no page_kind==='static' row ever created for
 // them, so there's no stale row for this map to guard against anymore.

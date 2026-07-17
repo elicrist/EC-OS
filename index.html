@@ -12,127 +12,127 @@
 <link rel="apple-touch-icon" href="icons/sos_final_180.png">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Enables the browser's native cross-fade between same-origin page
-   navigations (hub<->page<->gt/mission/index) — no JS needed. Degrades
-   to today's instant snap on browsers without support (e.g. Firefox).
-   Doesn't affect in-page interactions (tab switches, widget adds, etc.)
-   since those never trigger a real navigation. */
-@view-transition { navigation: auto; }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
-  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
-  --accent:#e07b4a;--danger:#e05b5b;
-  /* App-wide theme accent, set from the user's Appearance choice (page.html
-     Settings) — see the flash-prevention script right after this style
-     block. index.html has no per-page concept, so --accent itself gets
-     overridden to the same theme value too (unlike page.html, which keeps
-     --accent/--accent-default distinct for its per-page dot_color). */
-  --accent-default:#e07b4a;
+html,body{background:#000000}
+#ringGlow, #letterGlow {
+  animation: colorCycle 12s ease-in-out infinite;
 }
-[data-theme="light"]{
-  --bg:#f4f4f2;--surface:#ffffff;--card:#ffffff;--border:#e2e0da;--border-light:#d3d0c8;
-  --text:#1a1a18;--muted:#6b6a63;--faint:#ece9e2;
+@keyframes colorCycle {
+  0%, 14%   { background-color: #ff3b30; }
+  16.6%, 30.6% { background-color: #ff9500; }
+  33.3%, 47.3% { background-color: #ffcc00; }
+  50%, 64%  { background-color: #34c759; }
+  66.6%, 80.6% { background-color: #5b8def; }
+  83.3%, 97.3% { background-color: #af52de; }
+  100% { background-color: #ff3b30; }
 }
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;max-width:360px;width:100%}
-.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
-.form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
-input{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
-input:focus{border-color:var(--accent)}
-.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;width:100%}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn-primary{background:var(--danger);background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent);box-shadow:0 0 16px -3px color-mix(in srgb,var(--accent) 45%,transparent)}
 </style>
-<script>
-// Applied synchronously before first paint to avoid a flash of the wrong
-// theme. Duplicated verbatim from page.html/hub.html (same no-shared-module
-// pattern as everything else here) — see page.html for the fuller
-// explanation and the Appearance settings UI that writes these keys.
-(function(){
-  var mode=localStorage.getItem('theme_mode')||'dark';
-  var visual=mode;
-  if(mode==='auto'){
-    var now=new Date();
-    var dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-    var lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
-    var nowMin=now.getHours()*60+now.getMinutes();
-    var darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
-    visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
-  }
-  document.documentElement.setAttribute('data-theme',visual);
-  var accent=localStorage.getItem('theme_accent')||'#B3A369';
-  document.documentElement.style.setProperty('--accent',accent);
-  document.documentElement.style.setProperty('--accent-default',accent);
-})();
-</script>
 </head>
 <body>
-<div id="login-screen">
-  <div class="card">
-    <div class="section-title">Sign in</div>
-    <p style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter your email and password to unlock SOS.</p>
-    <div class="form-row" style="margin-bottom:0.75rem">
-      <input type="email" id="login-email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
-    </div>
-    <div class="form-row" style="margin-bottom:1rem">
-      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') handleLogin()">
-    </div>
-    <button class="btn btn-primary" onclick="handleLogin()">Unlock</button>
-    <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:18px"></div>
+<!--
+  New app entry point: splash badge -> click -> intro video -> landing
+  (Get started / Sign in). Ported from the tuned sos-full-sequence.html
+  reference verbatim for the animation/timing/asset handling. The
+  sign-in form that used to live at index.html now lives at login.html;
+  this file is the gate everyone passes through first. Badge/mask/video
+  are real files under media/ instead of the reference's embedded
+  base64 — the reference's second, hidden <img> and <video> (unused,
+  unreferenced, never unhidden) were dropped rather than ported.
+-->
+<div id="glowScreen" style="width:100vw;height:100vh;background:#000000;display:none;align-items:center;justify-content:center;font-family:sans-serif;cursor:pointer;overflow:hidden;margin:0;position:relative;">
+  <div style="position:relative;width:100vmin;height:100vmin;z-index:1;filter:brightness(0.763);">
+    <img src="media/splash-badge.png" style="width:100%;height:100%;display:block;object-fit:contain;">
+    <div id="ringGlow" style="position:absolute;inset:0;mix-blend-mode:color;opacity:0.22;pointer-events:none;
+         -webkit-mask-image:radial-gradient(circle closest-side, transparent 79.5%, black 80.5%, black 88%, transparent 89%);
+         mask-image:radial-gradient(circle closest-side, transparent 79.5%, black 80.5%, black 88%, transparent 89%);"></div>
+    <div id="letterGlow" style="position:absolute;inset:0;mix-blend-mode:color;opacity:0.75;pointer-events:none;
+         -webkit-mask-image:url(media/splash-badge-mask.png);
+         mask-image:url(media/splash-badge-mask.png);
+         -webkit-mask-size:contain;
+         mask-size:contain;
+         -webkit-mask-repeat:no-repeat;
+         mask-repeat:no-repeat;"></div>
   </div>
 </div>
+
+<div id="videoScreen" style="display:none;width:100vw;height:100vh;background:#000000;margin:0;overflow:hidden;position:relative;align-items:center;justify-content:center;">
+  <div style="position:relative;width:100vmin;height:100vmin;z-index:1;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+    <video id="introVideo" src="media/splash-intro.mp4" autoplay muted playsinline
+      style="width:100%;height:100%;object-fit:contain;display:block;transform:scale(1.3086);"></video>
+  </div>
+</div>
+
+<div id="landingScreen" style="display:none;min-height:100vh;background:#ffffff;align-items:center;justify-content:center;font-family:sans-serif;color:#fff;transition:background-color 1.2s ease;">
+  <div style="max-width:380px;width:100%;padding:32px;text-align:center;">
+    <div style="width:76px;height:76px;border-radius:20px;margin:0 auto 24px;overflow:hidden;background:#1e1e1e;display:flex;align-items:center;justify-content:center;">
+      <span style="font-size:22px;font-weight:800;color:#fff;">SOS</span>
+    </div>
+    <div style="font-size:24px;font-weight:700;margin-bottom:8px;">Simple Operating Systems</div>
+    <div style="font-size:14px;color:#888;line-height:1.5;margin-bottom:40px;">One place for the parts of life you actually want to track.</div>
+    <button id="signupBtn" style="width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:12px;">Get started</button>
+    <button id="signinBtn" style="width:100%;padding:14px;background:transparent;border:1px solid #3a3a3a;border-radius:10px;font-size:15px;font-weight:600;color:#fff;cursor:pointer;">Sign in</button>
+  </div>
+</div>
+
 <script src="public/auth.js"></script>
 <script>
-// index.html is the sole login entry point (see public/auth.js) — every other
-// page redirects here when initAuth() fails, and reads the resulting session
-// from localStorage. Its only job is to authenticate and hand off to hub.html;
-// it holds no dashboard or data of its own.
-const handleLogin=async()=>{
-  const errEl=document.getElementById('login-error');
-  const emailEl=document.getElementById('login-email');
-  const pwEl=document.getElementById('login-password');
-  const email=emailEl.value.trim();
-  const pw=pwEl.value.trim();
-  errEl.textContent='';
-  if(!email){errEl.textContent='Enter your email.';return;}
-  if(!pw){errEl.textContent='Enter your password.';return;}
-  try{
-    const body={email,password:pw};
-    const url=`${SB_URL}/auth/v1/token?grant_type=password`;
-    const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const data=await resp.json().catch(()=>null);
-    if(!resp.ok){
-      console.error('Login failed',{status:resp.status,data});
-      throw new Error('auth-failed');
-    }
-    setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
-    window.location.href='hub.html';
-  }catch(e){
-    console.error('Login error',e);
-    pwEl.value='';
-    errEl.textContent='Incorrect email/password.';
-  }
-};
-
+// Already-authenticated visitors skip the splash entirely and land on the
+// hub, same as the old index.html's login form did — glowScreen stays
+// display:none (set above) until we know that check came back false, so
+// there's no visible flash of the intro animation before the redirect.
 (async function(){
-  const authed=await initAuth();
-  if(authed) window.location.href='hub.html';
+  const authed = await initAuth();
+  if(authed){ window.location.href='hub.html'; return; }
+  document.getElementById('glowScreen').style.display='flex';
 })();
 
-// Re-applies the auto-mode day/night switch against the LIVE local clock
-// every 30s, in case someone sits on the login screen through the switch
-// time — cheap no-op in light/dark modes.
-setInterval(()=>{
-  if((localStorage.getItem('theme_mode')||'dark')!=='auto')return;
-  const now=new Date();
-  const dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-  const lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
-  const nowMin=now.getHours()*60+now.getMinutes();
-  const darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
-  const visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
-  document.documentElement.setAttribute('data-theme',visual);
-},30000);
+const accent = '#5B8DEF';
+document.getElementById('signupBtn').style.background = accent;
+document.getElementById('signinBtn').addEventListener('mouseenter', e => e.target.style.borderColor = accent);
+document.getElementById('signinBtn').addEventListener('mouseleave', e => e.target.style.borderColor = '#3a3a3a');
+
+document.getElementById('signupBtn').addEventListener('click', () => window.location.href='signup.html');
+document.getElementById('signinBtn').addEventListener('click', () => window.location.href='login.html');
+
+const glowScreen = document.getElementById('glowScreen');
+const ringGlow = document.getElementById('ringGlow');
+const letterGlow = document.getElementById('letterGlow');
+const videoScreen = document.getElementById('videoScreen');
+const video = document.getElementById('introVideo');
+const landing = document.getElementById('landingScreen');
+
+glowScreen.addEventListener('click', () => {
+  const currentRing = getComputedStyle(ringGlow).backgroundColor;
+  const currentLetter = getComputedStyle(letterGlow).backgroundColor;
+
+  ringGlow.style.animation = 'none';
+  letterGlow.style.animation = 'none';
+  ringGlow.style.backgroundColor = currentRing;
+  letterGlow.style.backgroundColor = currentLetter;
+
+  void ringGlow.offsetWidth;
+
+  ringGlow.style.transition = 'background-color 0.7s ease';
+  letterGlow.style.transition = 'background-color 0.7s ease';
+  ringGlow.style.backgroundColor = '#ffffff';
+  letterGlow.style.backgroundColor = '#ffffff';
+
+  setTimeout(() => {
+    glowScreen.style.display = 'none';
+    videoScreen.style.display = 'flex';
+  }, 700);
+});
+
+video.addEventListener('ended', () => {
+  videoScreen.style.display = 'none';
+  landing.style.display = 'flex';
+  landing.style.background = '#ffffff';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      landing.style.background = '#141414';
+    });
+  });
+});
 </script>
 </body>
 </html>

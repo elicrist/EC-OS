@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOS">
+<meta name="theme-color" content="#0e0e0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/sos_final_180.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Enables the browser's native cross-fade between same-origin page
+   navigations (hub<->page<->index/login/signup) — no JS needed. Degrades
+   to today's instant snap on browsers without support (e.g. Firefox).
+   Doesn't affect in-page interactions (tab switches, widget adds, etc.)
+   since those never trigger a real navigation. */
+@view-transition { navigation: auto; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --accent:#e07b4a;--danger:#e05b5b;
+  /* App-wide theme accent, set from the user's Appearance choice (page.html
+     Settings) — see the flash-prevention script right after this style
+     block. login.html has no per-page concept, so --accent itself gets
+     overridden to the same theme value too (unlike page.html, which keeps
+     --accent/--accent-default distinct for its per-page dot_color). */
+  --accent-default:#e07b4a;
+}
+[data-theme="light"]{
+  --bg:#f4f4f2;--surface:#ffffff;--card:#ffffff;--border:#e2e0da;--border-light:#d3d0c8;
+  --text:#1a1a18;--muted:#6b6a63;--faint:#ece9e2;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;max-width:360px;width:100%}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
+.form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
+input{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
+input:focus{border-color:var(--accent)}
+.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;width:100%}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn-primary{background:var(--danger);background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent);box-shadow:0 0 16px -3px color-mix(in srgb,var(--accent) 45%,transparent)}
+.auth-crosslink{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
+.auth-crosslink a{color:var(--accent);text-decoration:none}
+.auth-crosslink a:hover{text-decoration:underline}
+</style>
+<script>
+// Applied synchronously before first paint to avoid a flash of the wrong
+// theme. Duplicated verbatim from page.html/hub.html (same no-shared-module
+// pattern as everything else here) — see page.html for the fuller
+// explanation and the Appearance settings UI that writes these keys.
+(function(){
+  var mode=localStorage.getItem('theme_mode')||'dark';
+  var visual=mode;
+  if(mode==='auto'){
+    var now=new Date();
+    var dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
+    var lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
+    var nowMin=now.getHours()*60+now.getMinutes();
+    var darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
+    visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
+  }
+  document.documentElement.setAttribute('data-theme',visual);
+  var accent=localStorage.getItem('theme_accent')||'#B3A369';
+  document.documentElement.style.setProperty('--accent',accent);
+  document.documentElement.style.setProperty('--accent-default',accent);
+})();
+</script>
+</head>
+<body>
+<div id="login-screen">
+  <div class="card">
+    <div class="section-title">Sign in</div>
+    <p style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter your email and password to unlock SOS.</p>
+    <div class="form-row" style="margin-bottom:0.75rem">
+      <input type="email" id="login-email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
+    </div>
+    <div class="form-row" style="margin-bottom:1rem">
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') handleLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="handleLogin()">Unlock</button>
+    <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:18px"></div>
+    <div class="auth-crosslink">Don't have an account? <a href="signup.html">Sign up here</a></div>
+  </div>
+</div>
+<script src="public/auth.js"></script>
+<script>
+// login.html is the real sign-in entry point (see public/auth.js) — every
+// other page redirects here when initAuth() fails, and reads the resulting
+// session from localStorage. index.html (the splash/landing gate) is the
+// only thing that points here from a fresh, unauthenticated visit; nothing
+// else has a dashboard or data of its own on this page.
+const handleLogin=async()=>{
+  const errEl=document.getElementById('login-error');
+  const emailEl=document.getElementById('login-email');
+  const pwEl=document.getElementById('login-password');
+  const email=emailEl.value.trim();
+  const pw=pwEl.value.trim();
+  errEl.textContent='';
+  if(!email){errEl.textContent='Enter your email.';return;}
+  if(!pw){errEl.textContent='Enter your password.';return;}
+  try{
+    const body={email,password:pw};
+    const url=`${SB_URL}/auth/v1/token?grant_type=password`;
+    const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok){
+      console.error('Login failed',{status:resp.status,data});
+      throw new Error('auth-failed');
+    }
+    setAuthSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+data.expires_in*1000,user:data.user});
+    window.location.href='hub.html';
+  }catch(e){
+    console.error('Login error',e);
+    pwEl.value='';
+    errEl.textContent='Incorrect email/password.';
+  }
+};
+
+(async function(){
+  const authed=await initAuth();
+  if(authed) window.location.href='hub.html';
+})();
+
+// Re-applies the auto-mode day/night switch against the LIVE local clock
+// every 30s, in case someone sits on the login screen through the switch
+// time — cheap no-op in light/dark modes.
+setInterval(()=>{
+  if((localStorage.getItem('theme_mode')||'dark')!=='auto')return;
+  const now=new Date();
+  const dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
+  const lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
+  const nowMin=now.getHours()*60+now.getMinutes();
+  const darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
+  const visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
+  document.documentElement.setAttribute('data-theme',visual);
+},30000);
+</script>
+</body>
+</html>

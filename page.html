@@ -548,9 +548,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 // theme (e.g. light-mode user briefly seeing dark on load). The fuller
 // theming logic — auto-mode's live re-check interval, and the Appearance
 // settings UI that writes these same localStorage keys — lives further
-// down with the rest of the app JS. Duplicated verbatim in hub.html and
-// index.html (same no-shared-module pattern as everything else here) so
-// every top-level page reflects the same theme independently.
+// down with the rest of the app JS. Duplicated verbatim in hub.html,
+// login.html, and signup.html (same no-shared-module pattern as everything
+// else here) so every top-level page reflects the same theme independently.
+// index.html (the splash/landing gate) deliberately opts out — its glow/
+// video/landing sequence uses its own fixed black/white/#141414 palette
+// regardless of theme, by design.
 (function(){
   var mode=localStorage.getItem('theme_mode')||'dark';
   var visual=mode;
@@ -754,11 +757,11 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
 // SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
-// shared with index.html and hub.html.
-// The only entry point with a login form today. A later phase adds an
-// animated home screen in front of it — when that lands, change this one
-// constant rather than hunting for hardcoded redirects.
-const LOGIN_ENTRY_POINT='index.html';
+// shared with index.html, login.html, signup.html, and hub.html.
+// The sign-in form lives at login.html — index.html is now the splash/landing
+// gate in front of it (and would replay the intro on every session-expiry
+// redirect if used here instead), so re-auth goes straight to the form.
+const LOGIN_ENTRY_POINT='login.html';
 const sbFetchJson=async(url)=>{
   const resp=await fetch(url,{headers:buildHeaders()});
   if(!resp.ok) throw new Error(`Fetch failed ${resp.status}`);

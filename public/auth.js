@@ -1,6 +1,9 @@
-// Shared Supabase session handling for index.html, hub.html, page.html.
-// The login form itself (password input + handleLogin) lives only in index.html;
-// this file lets every page read, refresh, and use the session that form creates.
+// Shared Supabase session handling for index.html, login.html, signup.html,
+// hub.html, page.html. The sign-in form (password input + handleLogin) lives
+// in login.html; the sign-up form lives in signup.html. index.html is the
+// splash/landing gate that sits in front of both — everyone lands there
+// first and gets routed to one or the other. This file lets every page read,
+// refresh, and use the session those forms create.
 // (gt.html and mission.html used to be two more consumers here — both retired
 // in Phase 6, rebuilt as ordinary Pages through page.html instead of hardcoded
 // files, so there's nothing special about them left to migrate.)

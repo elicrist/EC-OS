@@ -429,7 +429,7 @@ async function runMigration(){
 
 (async function(){
   const authed=await initAuth();
-  if(!authed){ window.location.href='index.html'; return; }
+  if(!authed){ window.location.href='login.html'; return; }
   try{
     await loadOldData();
   }catch(e){
