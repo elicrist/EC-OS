@@ -48,33 +48,21 @@ input:focus{border-color:var(--accent)}
 .auth-crosslink a:hover{text-decoration:underline}
 </style>
 <script>
-// Applied synchronously before first paint to avoid a flash of the wrong
-// theme. Duplicated verbatim from page.html/hub.html (same no-shared-module
-// pattern as everything else here) — see page.html for the fuller
-// explanation and the Appearance settings UI that writes these keys.
-(function(){
-  var mode=localStorage.getItem('theme_mode')||'dark';
-  var visual=mode;
-  if(mode==='auto'){
-    var now=new Date();
-    var dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-    var lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
-    var nowMin=now.getHours()*60+now.getMinutes();
-    var darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
-    visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
-  }
-  document.documentElement.setAttribute('data-theme',visual);
-  var accent=localStorage.getItem('theme_accent')||'#B3A369';
-  document.documentElement.style.setProperty('--accent',accent);
-  document.documentElement.style.setProperty('--accent-default',accent);
-})();
+// Theme is owner-scoped (see page.html's scopedGet/scopedSet) — but nobody
+// is signed in yet on a pre-auth screen like this one, so there's no owner
+// whose saved mode/accent it would even be correct to read. Always renders
+// the fixed app default here rather than guessing; the real per-account
+// theme takes over the instant they land on hub.html post-login.
+document.documentElement.setAttribute('data-theme','dark');
+document.documentElement.style.setProperty('--accent','#B3A369');
+document.documentElement.style.setProperty('--accent-default','#B3A369');
 </script>
 </head>
 <body>
 <div id="login-screen">
   <div class="card">
     <div class="section-title">Sign in</div>
-    <p style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter your email and password to unlock SOS.</p>
+    <p id="login-intro" style="color:var(--muted);font-size:12px;margin:10px 0 18px">Enter your email and password to unlock SOS.</p>
     <div class="form-row" style="margin-bottom:0.75rem">
       <input type="email" id="login-email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('login-password').focus()">
     </div>
@@ -83,6 +71,7 @@ input:focus{border-color:var(--accent)}
     </div>
     <button class="btn btn-primary" onclick="handleLogin()">Unlock</button>
     <div id="login-error" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:18px"></div>
+    <div class="auth-crosslink"><a href="forgot-password.html">Forgot password?</a></div>
     <div class="auth-crosslink">Don't have an account? <a href="signup.html">Sign up here</a></div>
   </div>
 </div>
@@ -93,6 +82,12 @@ input:focus{border-color:var(--accent)}
 // session from localStorage. index.html (the splash/landing gate) is the
 // only thing that points here from a fresh, unauthenticated visit; nothing
 // else has a dashboard or data of its own on this page.
+if(new URLSearchParams(window.location.search).get('reset')==='success'){
+  const introEl=document.getElementById('login-intro');
+  introEl.textContent='Password updated — sign in with your new password.';
+  introEl.style.color='var(--ok)';
+  history.replaceState(null,'',window.location.pathname);
+}
 const handleLogin=async()=>{
   const errEl=document.getElementById('login-error');
   const emailEl=document.getElementById('login-email');
@@ -124,20 +119,6 @@ const handleLogin=async()=>{
   const authed=await initAuth();
   if(authed) window.location.href='hub.html';
 })();
-
-// Re-applies the auto-mode day/night switch against the LIVE local clock
-// every 30s, in case someone sits on the login screen through the switch
-// time — cheap no-op in light/dark modes.
-setInterval(()=>{
-  if((localStorage.getItem('theme_mode')||'dark')!=='auto')return;
-  const now=new Date();
-  const dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-  const lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
-  const nowMin=now.getHours()*60+now.getMinutes();
-  const darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
-  const visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
-  document.documentElement.setAttribute('data-theme',visual);
-},30000);
 </script>
 </body>
 </html>

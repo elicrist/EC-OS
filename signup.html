@@ -47,29 +47,20 @@ input:focus{border-color:var(--accent)}
 .auth-crosslink{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
 .auth-crosslink a{color:var(--accent);text-decoration:none}
 .auth-crosslink a:hover{text-decoration:underline}
+.pw-checklist{display:flex;flex-direction:column;gap:3px;margin:2px 0 12px;font-size:11px}
+.pw-check{color:var(--muted);transition:color .15s}
+.pw-check.met{color:var(--ok)}
+.pw-check-icon{display:inline-block;width:14px}
 </style>
 <script>
-// Applied synchronously before first paint to avoid a flash of the wrong
-// theme. Duplicated verbatim from page.html/hub.html/login.html (same
-// no-shared-module pattern as everything else here) — see page.html for
-// the fuller explanation and the Appearance settings UI that writes these
-// keys.
-(function(){
-  var mode=localStorage.getItem('theme_mode')||'dark';
-  var visual=mode;
-  if(mode==='auto'){
-    var now=new Date();
-    var dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-    var lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
-    var nowMin=now.getHours()*60+now.getMinutes();
-    var darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
-    visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
-  }
-  document.documentElement.setAttribute('data-theme',visual);
-  var accent=localStorage.getItem('theme_accent')||'#B3A369';
-  document.documentElement.style.setProperty('--accent',accent);
-  document.documentElement.style.setProperty('--accent-default',accent);
-})();
+// Theme is owner-scoped (see page.html's scopedGet/scopedSet) — but nobody
+// is signed in yet on a pre-auth screen like this one, so there's no owner
+// whose saved mode/accent it would even be correct to read. Always renders
+// the fixed app default here rather than guessing; the real per-account
+// theme takes over the instant they land on hub.html post-signup.
+document.documentElement.setAttribute('data-theme','dark');
+document.documentElement.style.setProperty('--accent','#B3A369');
+document.documentElement.style.setProperty('--accent-default','#B3A369');
 </script>
 </head>
 <body>
@@ -80,28 +71,55 @@ input:focus{border-color:var(--accent)}
     <div class="form-row" style="margin-bottom:0.75rem">
       <input type="email" id="signup-email" placeholder="Email" autocomplete="username" onkeydown="if(event.key==='Enter') document.getElementById('signup-password').focus()">
     </div>
-    <div class="form-row" style="margin-bottom:0.75rem">
-      <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password" onkeydown="if(event.key==='Enter') document.getElementById('signup-password-confirm').focus()">
+    <div class="form-row" style="margin-bottom:0.5rem">
+      <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password" oninput="checkPasswordStrength(this.value)" onkeydown="if(event.key==='Enter') document.getElementById('signup-password-confirm').focus()">
+    </div>
+    <div class="pw-checklist" id="pw-checklist">
+      <div class="pw-check" id="pw-check-length"><span class="pw-check-icon">○</span>At least 10 characters</div>
+      <div class="pw-check" id="pw-check-upper"><span class="pw-check-icon">○</span>1 uppercase letter</div>
+      <div class="pw-check" id="pw-check-number"><span class="pw-check-icon">○</span>1 number</div>
+      <div class="pw-check" id="pw-check-special"><span class="pw-check-icon">○</span>1 special character</div>
     </div>
     <div class="form-row" style="margin-bottom:1rem">
       <input type="password" id="signup-password-confirm" placeholder="Confirm password" autocomplete="new-password" onkeydown="if(event.key==='Enter') handleSignup()">
     </div>
     <button class="btn btn-primary" id="signup-btn" onclick="handleSignup()">Create account</button>
     <div id="signup-error" style="color:var(--danger);font-size:12px;margin-top:10px;min-height:18px"></div>
-    <div id="signup-success" style="color:var(--ok);font-size:12px;margin-top:-4px;min-height:18px"></div>
     <div class="auth-crosslink">Already have an account? <a href="login.html">Sign in here</a></div>
   </div>
 </div>
 <script src="public/auth.js"></script>
 <script>
+// Password strength rules — shared verbatim with reset-password.html (same
+// no-shared-module pattern as everything else here, so it's duplicated, not
+// imported). Real-time checklist, not just a rejection on submit.
+const PW_RULES={
+  length:pw=>pw.length>=10,
+  upper:pw=>/[A-Z]/.test(pw),
+  number:pw=>/[0-9]/.test(pw),
+  special:pw=>/[^A-Za-z0-9]/.test(pw),
+};
+const checkPasswordStrength=pw=>{
+  let allMet=true;
+  for(const key in PW_RULES){
+    const met=PW_RULES[key](pw);
+    if(!met)allMet=false;
+    const el=document.getElementById(`pw-check-${key}`);
+    if(el){el.classList.toggle('met',met);el.querySelector('.pw-check-icon').textContent=met?'✓':'○';}
+  }
+  return allMet;
+};
+
 // signup.html is the real account-creation entry point — reached only via
 // index.html's "Get started" button (the splash/landing gate). Uses the
 // same Supabase Auth REST calls as login.html's handleLogin, just against
-// the /signup endpoint instead of /token.
+// the /signup endpoint instead of /token, with a redirect_to so the
+// confirmation email's link lands back on confirm.html carrying a session
+// (implicit grant, same mechanism as a magic link) instead of Supabase's
+// default landing page.
 const handleSignup=async()=>{
   const btn=document.getElementById('signup-btn');
   const errEl=document.getElementById('signup-error');
-  const okEl=document.getElementById('signup-success');
   const emailEl=document.getElementById('signup-email');
   const pwEl=document.getElementById('signup-password');
   const pwConfirmEl=document.getElementById('signup-password-confirm');
@@ -109,15 +127,15 @@ const handleSignup=async()=>{
   const pw=pwEl.value;
   const pwConfirm=pwConfirmEl.value;
   errEl.textContent='';
-  okEl.textContent='';
   if(!email){errEl.textContent='Enter your email.';return;}
-  if(pw.length<6){errEl.textContent='Password must be at least 6 characters.';return;}
+  if(!checkPasswordStrength(pw)){errEl.textContent='Password doesn\'t meet all the requirements above.';return;}
   if(pw!==pwConfirm){errEl.textContent='Passwords don\'t match.';return;}
 
   btn.disabled=true;btn.textContent='Creating account…';
   try{
+    const redirectTo=new URL('confirm.html',window.location.href).href;
     const body={email,password:pw};
-    const url=`${SB_URL}/auth/v1/signup`;
+    const url=`${SB_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`;
     const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await resp.json().catch(()=>null);
 
@@ -139,9 +157,9 @@ const handleSignup=async()=>{
     }
 
     if(resp.ok){
-      // Fresh account, email confirmation required before sign-in works.
-      okEl.textContent='Account created — check your email to confirm, then sign in.';
-      btn.disabled=true;btn.textContent='Account created';
+      // Fresh account, email confirmation required before sign-in works —
+      // hand off to the dedicated waiting screen instead of a message here.
+      window.location.href=`verify-email.html?email=${encodeURIComponent(email)}`;
       return;
     }
 
@@ -164,20 +182,6 @@ const handleSignup=async()=>{
   const authed=await initAuth();
   if(authed) window.location.href='hub.html';
 })();
-
-// Re-applies the auto-mode day/night switch against the LIVE local clock
-// every 30s, in case someone sits on the signup screen through the switch
-// time — cheap no-op in light/dark modes.
-setInterval(()=>{
-  if((localStorage.getItem('theme_mode')||'dark')!=='auto')return;
-  const now=new Date();
-  const dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-  const lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
-  const nowMin=now.getHours()*60+now.getMinutes();
-  const darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
-  const visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
-  document.documentElement.setAttribute('data-theme',visual);
-},30000);
 </script>
 </body>
 </html>

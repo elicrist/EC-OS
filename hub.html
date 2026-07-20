@@ -107,18 +107,33 @@ input{background:var(--surface);border:1px solid var(--border-light);color:var(-
 // --accent and --accent-default to the same theme value rather than
 // keeping them distinct.
 (function(){
-  var mode=localStorage.getItem('theme_mode')||'dark';
+  // Owner-scoped so a shared browser/device doesn't show whoever's account
+  // last set the theme (see page.html's scopedGet/scopedSet + comment for
+  // the full story — this is a read-only duplicate of that same scoping,
+  // since hub.html has no Appearance UI of its own to write these keys).
+  // Falls back to (and migrates forward) a legacy unscoped key on first read.
+  var uid=null;
+  try{var s=JSON.parse(localStorage.getItem('sb_session'));uid=s&&s.user&&s.user.id||null;}catch(e){}
+  var sk=function(base){
+    var scoped=uid?base+':'+uid:base;
+    var v=localStorage.getItem(scoped);
+    if(v!==null)return v;
+    var legacy=scoped!==base?localStorage.getItem(base):null;
+    if(legacy!==null){localStorage.setItem(scoped,legacy);return legacy;}
+    return null;
+  };
+  var mode=sk('theme_mode')||'dark';
   var visual=mode;
   if(mode==='auto'){
     var now=new Date();
-    var dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-    var lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
+    var dt=(sk('theme_dark_time')||'20:00').split(':').map(Number);
+    var lt=(sk('theme_light_time')||'07:00').split(':').map(Number);
     var nowMin=now.getHours()*60+now.getMinutes();
     var darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
     visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
   }
   document.documentElement.setAttribute('data-theme',visual);
-  var accent=localStorage.getItem('theme_accent')||'#B3A369';
+  var accent=sk('theme_accent')||'#B3A369';
   document.documentElement.style.setProperty('--accent',accent);
   document.documentElement.style.setProperty('--accent-default',accent);
 })();
@@ -162,11 +177,20 @@ document.getElementById('hdr-date').textContent=today.toLocaleDateString('en-US'
 // flips without needing a reload — cheap no-op in light/dark modes. See
 // the flash-prevention script above (and page.html's Appearance settings,
 // the only place these localStorage keys get written) for the full story.
+const hubOwnerScopedGet=(base,fallback)=>{
+  const uid=authSession?.user?.id;
+  const scoped=uid?`${base}:${uid}`:base;
+  const v=localStorage.getItem(scoped);
+  if(v!==null)return v;
+  const legacy=scoped!==base?localStorage.getItem(base):null;
+  if(legacy!==null){localStorage.setItem(scoped,legacy);return legacy;}
+  return fallback;
+};
 setInterval(()=>{
-  if((localStorage.getItem('theme_mode')||'dark')!=='auto')return;
+  if(hubOwnerScopedGet('theme_mode','dark')!=='auto')return;
   const now=new Date();
-  const dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-  const lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
+  const dt=hubOwnerScopedGet('theme_dark_time','20:00').split(':').map(Number);
+  const lt=hubOwnerScopedGet('theme_light_time','07:00').split(':').map(Number);
   const nowMin=now.getHours()*60+now.getMinutes();
   const darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
   const visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');

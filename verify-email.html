@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOS">
+<meta name="theme-color" content="#0e0e0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/sos_final_180.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+@view-transition { navigation: auto; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --accent:#e07b4a;--danger:#e05b5b;--ok:#4ade80;
+  --accent-default:#e07b4a;
+}
+[data-theme="light"]{
+  --bg:#f4f4f2;--surface:#ffffff;--card:#ffffff;--border:#e2e0da;--border-light:#d3d0c8;
+  --text:#1a1a18;--muted:#6b6a63;--faint:#ece9e2;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;max-width:360px;width:100%;text-align:center}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
+.btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;width:100%}
+.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.auth-crosslink{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
+.auth-crosslink a{color:var(--accent);text-decoration:none}
+.auth-crosslink a:hover{text-decoration:underline}
+</style>
+<script>
+// Theme is owner-scoped elsewhere in the app (see page.html's
+// scopedGet/scopedSet) — but nobody's signed in yet on this waiting screen,
+// so there's no owner whose saved mode/accent it would be correct to read.
+// Fixed app default, same reasoning as login.html/signup.html.
+document.documentElement.setAttribute('data-theme','dark');
+document.documentElement.style.setProperty('--accent','#B3A369');
+document.documentElement.style.setProperty('--accent-default','#B3A369');
+</script>
+</head>
+<body>
+<div class="card">
+  <div class="section-title">Check your email</div>
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;margin:10px 0 20px">Check your email to confirm your account<span id="verify-email-addr"></span>. Click the link in that email and you'll be signed in automatically.</p>
+  <button class="btn" id="resend-btn" onclick="resendConfirmation()">Resend confirmation email</button>
+  <div id="resend-status" style="color:var(--muted);font-size:12px;margin-top:10px;min-height:16px"></div>
+  <div class="auth-crosslink">Wrong email? <a href="signup.html">Start over</a></div>
+</div>
+<script src="public/auth.js"></script>
+<script>
+// Reached only from signup.html's "pending confirmation" outcome, carrying
+// the email as a query param so the resend button knows what to resend to
+// without asking again. Not an auth-gated page — showing up here with no
+// email param just means it displays generic copy.
+const params=new URLSearchParams(window.location.search);
+const verifyEmail=params.get('email')||'';
+if(verifyEmail){
+  document.getElementById('verify-email-addr').textContent=` for ${verifyEmail}`;
+}
+
+const RESEND_COOLDOWN_SECONDS=30;
+let resendTimer=null;
+const startResendCooldown=()=>{
+  const btn=document.getElementById('resend-btn');
+  const statusEl=document.getElementById('resend-status');
+  let remaining=RESEND_COOLDOWN_SECONDS;
+  btn.disabled=true;
+  const tick=()=>{
+    if(remaining<=0){
+      clearInterval(resendTimer);
+      btn.disabled=false;
+      statusEl.textContent='';
+      return;
+    }
+    statusEl.textContent=`You can resend in ${remaining}s`;
+    remaining--;
+  };
+  tick();
+  resendTimer=setInterval(tick,1000);
+};
+
+const resendConfirmation=async()=>{
+  const statusEl=document.getElementById('resend-status');
+  if(!verifyEmail){
+    statusEl.style.color='var(--danger)';
+    statusEl.textContent='No email on file — go back and sign up again.';
+    return;
+  }
+  const btn=document.getElementById('resend-btn');
+  btn.disabled=true;
+  statusEl.style.color='var(--muted)';
+  statusEl.textContent='Sending…';
+  try{
+    const redirectTo=new URL('confirm.html',window.location.href).href;
+    const url=`${SB_URL}/auth/v1/resend?redirect_to=${encodeURIComponent(redirectTo)}`;
+    const resp=await fetch(url,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({type:'signup',email:verifyEmail})});
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok){
+      console.error('Resend failed',{status:resp.status,data});
+      statusEl.style.color='var(--danger)';
+      statusEl.textContent=data?.msg||data?.error_description||'Could not resend — try again shortly.';
+      btn.disabled=false;
+      return;
+    }
+    statusEl.style.color='var(--ok)';
+    statusEl.textContent='Confirmation email sent.';
+    startResendCooldown();
+  }catch(e){
+    console.error('Resend error',e);
+    statusEl.style.color='var(--danger)';
+    statusEl.textContent='Something went wrong. Try again.';
+    btn.disabled=false;
+  }
+};
+
+(async function(){
+  const authed=await initAuth();
+  if(authed) window.location.href='hub.html';
+})();
+</script>
+</body>
+</html>

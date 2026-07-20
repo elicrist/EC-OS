@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOS</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SOS">
+<meta name="theme-color" content="#0e0e0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/sos_final_180.png">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
+  --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
+  --accent:#e07b4a;--danger:#e05b5b;--ok:#4ade80;
+  --accent-default:#e07b4a;
+}
+[data-theme="light"]{
+  --bg:#f4f4f2;--surface:#ffffff;--card:#ffffff;--border:#e2e0da;--border-light:#d3d0c8;
+  --text:#1a1a18;--muted:#6b6a63;--faint:#ece9e2;
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;max-width:360px;width:100%;text-align:center}
+.section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
+.auth-crosslink{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
+.auth-crosslink a{color:var(--accent);text-decoration:none}
+.auth-crosslink a:hover{text-decoration:underline}
+</style>
+<script>
+// Fixed default theme, same reasoning as login.html/signup.html — this page
+// is on-screen for a fraction of a second either way, so it's not worth
+// reading any owner-scoped value before we've even parsed who signed in.
+document.documentElement.setAttribute('data-theme','dark');
+document.documentElement.style.setProperty('--accent','#B3A369');
+document.documentElement.style.setProperty('--accent-default','#B3A369');
+</script>
+</head>
+<body>
+<div class="card">
+  <div class="section-title" id="confirm-title">Confirming…</div>
+  <p style="color:var(--muted);font-size:13px;line-height:1.6;margin:10px 0" id="confirm-message">One moment.</p>
+  <div class="auth-crosslink" id="confirm-links" style="display:none">
+    <a href="login.html">Sign in</a> · <a href="signup.html">Sign up</a>
+  </div>
+</div>
+<script src="public/auth.js"></script>
+<script>
+// The landing page the signup confirmation email's link points at (see
+// signup.html's redirect_to and verify-email.html's resend — both point
+// here too). Supabase's implicit-grant redirect appends the session as a
+// URL hash fragment rather than a query string (same mechanism as a magic
+// link) — #access_token=...&refresh_token=...&expires_in=...&type=signup
+// on success, or #error=...&error_description=... if the link was already
+// used or has expired. Either way this page's only job is: parse it, store
+// or report it, then get out of the way.
+const showError=msg=>{
+  document.getElementById('confirm-title').textContent='Couldn\'t confirm';
+  document.getElementById('confirm-message').textContent=msg;
+  document.getElementById('confirm-links').style.display='block';
+};
+
+(async function(){
+  const hash=new URLSearchParams(window.location.hash.replace(/^#/,''));
+  const errorDescription=hash.get('error_description')||hash.get('error');
+  if(errorDescription){
+    console.error('Email confirmation link error',errorDescription);
+    showError(decodeURIComponent(errorDescription.replace(/\+/g,' ')));
+    return;
+  }
+  const accessToken=hash.get('access_token');
+  const refreshToken=hash.get('refresh_token');
+  const expiresIn=hash.get('expires_in');
+  if(!accessToken||!refreshToken){
+    showError('This confirmation link is missing or incomplete. Try signing in, or request a new confirmation email from the sign-up page.');
+    return;
+  }
+  // Fetch the real user object rather than storing user:null — several
+  // things key off authSession.user.id right away (e.g. page.html's
+  // owner-scoped theme keys), and that shouldn't silently fall back to
+  // unscoped storage just because this was populated from a link instead
+  // of the password-login endpoint.
+  let user=null;
+  try{
+    const resp=await fetch(`${SB_URL}/auth/v1/user`,{headers:{'apikey':SB_KEY,'Authorization':`Bearer ${accessToken}`}});
+    if(resp.ok) user=await resp.json();
+  }catch(e){
+    console.error('Fetching confirmed user failed',e);
+  }
+  setAuthSession({
+    access_token:accessToken,
+    refresh_token:refreshToken,
+    expires_at:Date.now()+(Number(expiresIn)||3600)*1000,
+    user,
+  });
+  // Clear the token out of the visible URL before navigating away.
+  history.replaceState(null,'',window.location.pathname);
+  window.location.href='hub.html';
+})();
+</script>
+</body>
+</html>

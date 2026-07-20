@@ -138,6 +138,7 @@ select option{background:var(--surface)}
 textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default;pointer-events:none}
 .btn-primary{background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent);box-shadow:0 0 16px -3px color-mix(in srgb,var(--accent) 45%,transparent)}
 /* Bug fix: these two buttons live inside the page-builder overlay, which can
    be opened from any page — they were picking up that page's own accent
@@ -555,18 +556,32 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 // video/landing sequence uses its own fixed black/white/#141414 palette
 // regardless of theme, by design.
 (function(){
-  var mode=localStorage.getItem('theme_mode')||'dark';
+  // Owner-scoped so a shared browser/device doesn't show whoever's account
+  // last set the theme — see the scopedGet/scopedSet helpers + comment
+  // further down with the rest of the app JS for the full explanation.
+  // Falls back to (and migrates forward) a legacy unscoped key on first read.
+  var uid=null;
+  try{var s=JSON.parse(localStorage.getItem('sb_session'));uid=s&&s.user&&s.user.id||null;}catch(e){}
+  var sk=function(base){
+    var scoped=uid?base+':'+uid:base;
+    var v=localStorage.getItem(scoped);
+    if(v!==null)return v;
+    var legacy=scoped!==base?localStorage.getItem(base):null;
+    if(legacy!==null){localStorage.setItem(scoped,legacy);return legacy;}
+    return null;
+  };
+  var mode=sk('theme_mode')||'dark';
   var visual=mode;
   if(mode==='auto'){
     var now=new Date();
-    var dt=(localStorage.getItem('theme_dark_time')||'20:00').split(':').map(Number);
-    var lt=(localStorage.getItem('theme_light_time')||'07:00').split(':').map(Number);
+    var dt=(sk('theme_dark_time')||'20:00').split(':').map(Number);
+    var lt=(sk('theme_light_time')||'07:00').split(':').map(Number);
     var nowMin=now.getHours()*60+now.getMinutes();
     var darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
     visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
   }
   document.documentElement.setAttribute('data-theme',visual);
-  document.documentElement.style.setProperty('--accent-default',localStorage.getItem('theme_accent')||'#B3A369');
+  document.documentElement.style.setProperty('--accent-default',sk('theme_accent')||'#B3A369');
 })();
 </script>
 </head>
@@ -655,10 +670,32 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
           <span style="opacity:.8">Already installed from before? Remove it and re-add — the old shortcut won't pick up the new icon/app window on its own.</span>
         </div>
       </div>
-      <div>
+      <div style="margin-bottom:1rem">
         <div class="section-title">deploying changes</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.8">Changes are made locally via Claude Code, then deployed with git add, git commit, git push — live in about a minute.</div>
       </div>
+      <div class="card" style="border-color:var(--danger)">
+        <div class="section-title" style="color:var(--danger)">danger zone</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:12px">Permanently delete your account and all of its data — every page, tab, and widget. This cannot be undone.</div>
+        <button class="btn btn-danger" onclick="openDeleteAccountOverlay()">Delete account</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="delete-account-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeDeleteAccountOverlay)">
+  <div class="overlay-card">
+    <div class="section-title" style="margin-bottom:1rem;color:var(--danger)">Delete account</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:14px">
+      This is permanent. Your account and all of its data — every page, tab, and widget — will be deleted immediately and cannot be recovered.
+    </div>
+    <div class="field" style="margin-bottom:1rem">
+      <label>Type DELETE to confirm</label>
+      <input type="text" id="delete-account-confirm-input" placeholder="DELETE" autocomplete="off" oninput="onDeleteAccountConfirmInput(this.value)" onkeydown="if(event.key==='Enter')confirmDeleteAccount()">
+    </div>
+    <div id="delete-account-error" style="color:var(--danger);font-size:12px;margin-bottom:10px;min-height:18px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1" onclick="closeDeleteAccountOverlay()">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" id="delete-account-confirm-btn" onclick="confirmDeleteAccount()" disabled>Delete my account</button>
     </div>
   </div>
 </div>
@@ -756,6 +793,33 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 <script>
 const GS=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch{return d}};
 const SS=(k,v)=>{localStorage.setItem(k,JSON.stringify(v))};
+// Owner-scoped storage: theme (mode/times/accent) and widget_type_order used
+// to be plain unscoped localStorage keys — a real bug, since anyone sharing
+// this browser/device would see the last signed-in account's preferences
+// instead of their own. Scoped to authSession.user.id (already loaded by
+// public/auth.js by the time this script runs). Falls back to the legacy
+// unscoped key ONCE on first read per key, migrating the value forward, so
+// an existing account's saved preferences don't appear to reset the first
+// time this ships.
+const ownerScopedKey=base=>{const uid=authSession?.user?.id;return uid?`${base}:${uid}`:base;};
+const scopedGet=(base,fallback)=>{
+  const scoped=ownerScopedKey(base);
+  const v=localStorage.getItem(scoped);
+  if(v!==null)return v;
+  const legacy=scoped!==base?localStorage.getItem(base):null;
+  if(legacy!==null){localStorage.setItem(scoped,legacy);return legacy;}
+  return fallback;
+};
+const scopedSet=(base,value)=>localStorage.setItem(ownerScopedKey(base),value);
+const scopedGetJSON=(base,fallback)=>{
+  const scoped=ownerScopedKey(base);
+  const v=localStorage.getItem(scoped);
+  if(v!==null){try{return JSON.parse(v);}catch{return fallback;}}
+  const legacy=scoped!==base?localStorage.getItem(base):null;
+  if(legacy!==null){localStorage.setItem(scoped,legacy);try{return JSON.parse(legacy);}catch{return fallback;}}
+  return fallback;
+};
+const scopedSetJSON=(base,value)=>localStorage.setItem(ownerScopedKey(base),JSON.stringify(value));
 // SB_URL, SB_KEY, buildHeaders, authSession, initAuth come from public/auth.js,
 // shared with index.html, login.html, signup.html, and hub.html.
 // The sign-in form lives at login.html — index.html is now the splash/landing
@@ -1063,19 +1127,19 @@ const openSettingsOverlay=()=>{const overlay=document.getElementById('settings-o
 const closeSettingsOverlay=()=>{const overlay=document.getElementById('settings-overlay');if(!overlay)return;overlay.classList.remove('active');overlay.setAttribute('aria-hidden','true');};
 
 // --- Appearance theming ---
-// mode/darkTime/lightTime/accent all live in localStorage (a personal
-// device preference, not page/widget data, same reasoning as
-// WIDGET_TYPE_ORDER_KEY) so they're read directly rather than through
-// GS/SS. The flash-prevention script in <head> (before <style> closes)
-// has its own tiny inline copy of the auto-mode math — it has to run
-// before this script block even loads to avoid a flash of the wrong
-// theme, so it can't call these. Keep the two in sync if this logic ever
-// changes.
+// mode/darkTime/lightTime/accent all live in localStorage, owner-scoped via
+// scopedGet/scopedSet (a personal-to-the-ACCOUNT preference, not page/widget
+// data, same reasoning as WIDGET_TYPE_ORDER_KEY) so they're read through the
+// scoped helpers rather than GS/SS directly. The flash-prevention script in
+// <head> (before <style> closes) has its own tiny inline copy of the
+// auto-mode math AND its own inline owner-scoping (it runs before auth.js
+// loads, so it parses sb_session itself rather than reading authSession) —
+// it can't call these. Keep the two in sync if this logic ever changes.
 const THEME_DEFAULTS={mode:'dark',darkTime:'20:00',lightTime:'07:00',accent:'#B3A369'};
-const getThemeMode=()=>localStorage.getItem('theme_mode')||THEME_DEFAULTS.mode;
-const getThemeDarkTime=()=>localStorage.getItem('theme_dark_time')||THEME_DEFAULTS.darkTime;
-const getThemeLightTime=()=>localStorage.getItem('theme_light_time')||THEME_DEFAULTS.lightTime;
-const getThemeAccent=()=>localStorage.getItem('theme_accent')||THEME_DEFAULTS.accent;
+const getThemeMode=()=>scopedGet('theme_mode',THEME_DEFAULTS.mode);
+const getThemeDarkTime=()=>scopedGet('theme_dark_time',THEME_DEFAULTS.darkTime);
+const getThemeLightTime=()=>scopedGet('theme_light_time',THEME_DEFAULTS.lightTime);
+const getThemeAccent=()=>scopedGet('theme_accent',THEME_DEFAULTS.accent);
 // Always evaluated against new Date()'s LIVE local hours/minutes — never a
 // stored/frozen timestamp — so a user who set 20:00/07:00 at home gets the
 // same 8pm/7am switch after flying to a new timezone, for free, since the
@@ -1122,16 +1186,16 @@ const reflectThemeSettingsUI=()=>{
   if(hex&&document.activeElement!==hex) hex.value=accent.toUpperCase();
 };
 const setThemeMode=mode=>{
-  localStorage.setItem('theme_mode',mode);
+  scopedSet('theme_mode',mode);
   applyTheme();
 };
 const onThemeTimeChange=()=>{
-  localStorage.setItem('theme_dark_time',document.getElementById('theme-dark-time').value||THEME_DEFAULTS.darkTime);
-  localStorage.setItem('theme_light_time',document.getElementById('theme-light-time').value||THEME_DEFAULTS.lightTime);
+  scopedSet('theme_dark_time',document.getElementById('theme-dark-time').value||THEME_DEFAULTS.darkTime);
+  scopedSet('theme_light_time',document.getElementById('theme-light-time').value||THEME_DEFAULTS.lightTime);
   applyTheme();
 };
 const setThemeAccent=hex=>{
-  localStorage.setItem('theme_accent',hex);
+  scopedSet('theme_accent',hex);
   applyTheme();
 };
 const onThemeAccentSpectrum=hex=>setThemeAccent(hex);
@@ -1178,6 +1242,54 @@ const loadSettingsOverlay=async()=>{
 const signOut=()=>{
   setAuthSession(null);
   window.location.href=LOGIN_ENTRY_POINT;
+};
+
+// --- Delete account ---
+// Client side only confirms intent and calls the delete-account Edge
+// Function with the caller's own access token — the function itself is the
+// one place this is actually allowed to happen, since deleting the
+// ec_* tables here would still leave the auth user behind (no admin API
+// reachable with just the anon key), and any client-side "delete everything
+// then delete the user" sequence would have to trust a client-passed user
+// id, which is exactly what a server-verified JWT avoids.
+const openDeleteAccountOverlay=()=>{
+  const overlay=document.getElementById('delete-account-overlay');
+  if(!overlay)return;
+  document.getElementById('delete-account-confirm-input').value='';
+  document.getElementById('delete-account-error').textContent='';
+  document.getElementById('delete-account-confirm-btn').disabled=true;
+  overlay.classList.add('active');
+  overlay.setAttribute('aria-hidden','false');
+};
+const closeDeleteAccountOverlay=()=>{
+  const overlay=document.getElementById('delete-account-overlay');
+  if(!overlay)return;
+  overlay.classList.remove('active');
+  overlay.setAttribute('aria-hidden','true');
+};
+const onDeleteAccountConfirmInput=value=>{
+  document.getElementById('delete-account-confirm-btn').disabled=value!=='DELETE';
+};
+const confirmDeleteAccount=async()=>{
+  const input=document.getElementById('delete-account-confirm-input');
+  const errEl=document.getElementById('delete-account-error');
+  const btn=document.getElementById('delete-account-confirm-btn');
+  if(input.value!=='DELETE')return;
+  errEl.textContent='';
+  btn.disabled=true;btn.textContent='Deleting…';
+  try{
+    const resp=await fetch(`${SB_URL}/functions/v1/delete-account`,{method:'POST',headers:buildHeaders()});
+    const data=await resp.json().catch(()=>null);
+    if(!resp.ok){
+      throw new Error(data?.error||`Delete failed (${resp.status})`);
+    }
+    setAuthSession(null);
+    window.location.href='index.html';
+  }catch(e){
+    console.error('Account deletion failed',e);
+    errEl.textContent=e.message||'Something went wrong. Try again.';
+    btn.disabled=false;btn.textContent='Delete my account';
+  }
 };
 const loadArchivedPages=async()=>{
   const listEl=document.getElementById('archive-list');
@@ -1238,13 +1350,13 @@ const WIDGET_TYPE_DEFS=[
 const WIDGET_TYPE_ORDER_KEY='widget_type_order';
 const getWidgetTypeOrder=()=>{
   const allTypes=WIDGET_TYPE_DEFS.map(w=>w.type);
-  const saved=GS(WIDGET_TYPE_ORDER_KEY,null);
+  const saved=scopedGetJSON(WIDGET_TYPE_ORDER_KEY,null);
   if(!Array.isArray(saved))return allTypes;
   const valid=saved.filter(t=>allTypes.includes(t));
   const missing=allTypes.filter(t=>!valid.includes(t));
   return [...valid,...missing];
 };
-const setWidgetTypeOrder=order=>SS(WIDGET_TYPE_ORDER_KEY,order);
+const setWidgetTypeOrder=order=>scopedSetJSON(WIDGET_TYPE_ORDER_KEY,order);
 const orderedWidgetTypeDefs=()=>getWidgetTypeOrder().map(t=>WIDGET_TYPE_DEFS.find(w=>w.type===t)).filter(Boolean);
 const PB_COLORS=['#B3A369','#e07b4a','#5b8dee','#9AAFBF','#5cb87a','#9b7fe8','#e8c56a','#e05b5b'];
 let pbDotColor=PB_COLORS[0];
