@@ -229,12 +229,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .sb-item:hover{background:var(--faint);color:var(--text);box-shadow:0 0 10px -3px color-mix(in srgb,var(--accent-default) 40%,transparent)}
 /* Icon-only color shift on hover, scoped to the .sb-dot icon specifically
    (not the whole .sb-item, which would also tint ordinary page-row name
-   text) — and only for these 3 specific buttons, not page rows in general,
+   text) — and only for these 4 specific buttons, not page rows in general,
    which keep their own per-page dot_color untouched. Reverts to white
    (inherited var(--muted)/var(--text) via .sb-item's own rules) on
    mouse-leave for free, since this is just a plain :hover rule — no JS,
    same start/stop timing as the hover animations themselves. */
-#sb-new-btn:hover .sb-dot,#sb-archive-btn:hover .sb-dot,#sb-settings-btn:hover .sb-dot{color:var(--accent-default)}
+#sb-new-btn:hover .sb-dot,#sb-kitchen-btn:hover .sb-dot,#sb-archive-btn:hover .sb-dot,#sb-settings-btn:hover .sb-dot{color:var(--accent-default)}
 .sb-item-edit{opacity:0;transition:opacity .15s ease;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:4px;flex-shrink:0;display:none}
 .os-sb.open .sb-item-edit{display:block}
 .sb-page-wrap:hover .sb-item-edit{opacity:.85}
