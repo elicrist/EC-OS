@@ -592,6 +592,11 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   <div id="sb-pages"></div>
   <div class="sb-footer">
     <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot np-icon"><span class="plus-glyph"><span class="plus-bar plus-bar-h"></span><span class="plus-bar plus-bar-v"></span></span><span class="np-dot np-dot-b"></span><span class="np-dot np-dot-m"></span><span class="np-dot np-dot-t"></span></span><span class="sb-label">New page</span></button>
+    <!-- Static glyph, deliberately no bespoke animation like its siblings
+         here (see the Widget Kitchen plan's addendum #1) — a plain build-
+         from-parts icon (3 solid blocks + 1 dashed "slot to fill in") is
+         enough for this entry point. -->
+    <button class="sb-item sb-action" type="button" id="sb-kitchen-btn" onclick="openWidgetKitchen()" aria-label="Build custom widget" title="Build custom widget (Widget Kitchen)"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1" stroke-dasharray="2 2"/></svg></span><span class="sb-label">Build custom widget</span></button>
     <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true" style="overflow:visible"><line x1="3" y1="3" x2="3.0" y2="21.5"/><line x1="3" y1="3" x2="10.1" y2="20.1"/><line x1="3" y1="3" x2="16.1" y2="16.1"/><line x1="3" y1="3" x2="20.1" y2="10.1"/><line x1="3" y1="3" x2="21.5" y2="3.0"/><path d="M3.0,12.0 Q5.0,13.0 6.4,11.3 Q8.7,11.5 9.4,9.4 Q11.5,8.7 11.3,6.4 Q13.0,5.0 12.0,3.0"/><path d="M3.0,18.5 Q6.2,19.3 8.9,17.3 Q12.2,16.8 14.0,14.0 Q16.8,12.2 17.3,8.9 Q19.3,6.2 18.5,3.0"/><line class="thread-line" x1="20.1" y1="10.1" x2="20.1" y2="20.9" stroke-width="0.7" style="transform-origin:20.1px 10.1px"/><g class="spider1-pos" style="transform-origin:20.1px 10.1px"><g class="spider1-legs" stroke-width="1" style="transform-origin:20.1px 20.9px"><circle cx="20.1" cy="20.9" r="0.6" fill="currentColor" stroke="none"/><line x1="20.1" y1="20.9" x2="22.0" y2="18.6"/><line x1="20.1" y1="20.9" x2="23.0" y2="20.0"/><line x1="20.1" y1="20.9" x2="23.0" y2="21.8"/><line x1="20.1" y1="20.9" x2="22.0" y2="23.2"/><line x1="20.1" y1="20.9" x2="18.2" y2="23.2"/><line x1="20.1" y1="20.9" x2="17.2" y2="21.8"/><line x1="20.1" y1="20.9" x2="17.2" y2="20.0"/><line x1="20.1" y1="20.9" x2="18.2" y2="18.6"/></g></g><g class="spider2-part" stroke-width="1.1"><circle cx="0" cy="0" r="0.9" fill="currentColor" stroke="none"/><line x1="0" y1="0" x2="2.3" y2="-2.3"/><line x1="0" y1="0" x2="3" y2="0"/><line x1="0" y1="0" x2="2.3" y2="2.3"/><line x1="0" y1="0" x2="0" y2="3"/><line x1="0" y1="0" x2="-2.3" y2="2.3"/><line x1="0" y1="0" x2="-3" y2="0"/><line x1="0" y1="0" x2="-2.3" y2="-2.3"/><line x1="0" y1="0" x2="0" y2="-3"/></g></svg></span><span class="sb-label">Archive</span></button>
     <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg class="gear-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
   </div>
@@ -759,12 +764,70 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   </div>
 </div>
 <div id="mini-widget-picker-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeMiniWidgetPicker)">
-  <div class="overlay-card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+  <div class="overlay-card" style="display:flex;flex-direction:column;max-height:85vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
       <div class="section-title" style="margin:0">Add widget to tab</div>
       <button class="btn btn-sm" onclick="closeMiniWidgetPicker()">Close</button>
     </div>
-    <div id="mwp-widget-types"></div>
+    <div id="mwp-tabs" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:.6rem;margin-bottom:.6rem;border-bottom:1px solid var(--border);flex-shrink:0"></div>
+    <div id="mwp-widget-types" style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain"></div>
+  </div>
+</div>
+<div id="widget-kitchen-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeWidgetKitchen)">
+  <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
+      <div class="section-title" id="wk-title" style="margin:0">Widget Kitchen · step 1 of 2</div>
+      <button class="btn btn-sm" onclick="closeWidgetKitchen()">Close</button>
+    </div>
+    <div id="wk-step1" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain">
+        <div class="form-row"><div class="field" style="flex:1"><label>name</label><input type="text" id="wk-name" placeholder="e.g. Bench PR log"></div></div>
+        <div class="form-row">
+          <div class="field" style="flex:1"><label>cadence</label>
+            <select id="wk-cadence"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="custom">Custom</option></select>
+          </div>
+          <div class="field" style="flex:1"><label>category</label>
+            <select id="wk-category"></select>
+          </div>
+        </div>
+        <div class="field"><label>icon color</label><div id="wk-colors" style="display:flex;gap:8px;margin-top:4px"></div></div>
+      </div>
+      <div style="padding-top:.75rem;flex-shrink:0"><button class="btn btn-primary" style="width:100%" onclick="wkGoStep2()">Next: add fields</button></div>
+    </div>
+    <div id="wk-step2" style="display:none;flex-direction:column;flex:1;min-height:0">
+      <div style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain">
+        <div class="section-title" style="margin-bottom:.5rem">Add a field</div>
+        <div id="wk-field-palette"></div>
+        <div id="wk-field-config"></div>
+        <div class="section-title" style="margin:1rem 0 .5rem">Fields added</div>
+        <div id="wk-fields-list"></div>
+        <div id="wk-fields-empty" class="empty" style="display:none">No fields yet — pick a type above.</div>
+      </div>
+      <div style="display:flex;gap:8px;padding-top:.75rem;flex-shrink:0">
+        <button class="btn" style="flex:1" onclick="wkBackStep1()">Back</button>
+        <button class="btn btn-primary" style="flex:1" id="wk-build-btn" onclick="wkBuildWidget()">Create widget</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="wk-fields-editor-overlay" class="overlay" aria-hidden="true" onclick="closeOverlayIfBackdrop(event,closeWkFieldsEditor)">
+  <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
+      <div class="section-title" style="margin:0">Edit fields</div>
+      <button class="btn btn-sm" onclick="closeWkFieldsEditor()">Close</button>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain">
+      <div class="form-row"><div class="field" style="flex:1"><label>widget name</label><input type="text" id="wke-name" onchange="wkeSaveName()"></div></div>
+      <div class="section-title" style="margin:1rem 0 .5rem">Fields</div>
+      <div id="wke-fields-live"></div>
+      <div id="wke-fields-removed-section" style="display:none">
+        <div class="section-title" style="margin:1rem 0 .5rem">Removed fields</div>
+        <div id="wke-fields-removed"></div>
+      </div>
+      <div class="section-title" style="margin:1rem 0 .5rem">Add a field</div>
+      <div id="wke-field-palette"></div>
+      <div id="wke-field-config"></div>
+    </div>
   </div>
 </div>
 <header>
@@ -1325,20 +1388,25 @@ const deletePagePermanently=async(id)=>{try{const rows=await sbFetchJson(`${SB_U
 
 // ═══ PAGE BUILDER ═══
 const WIDGET_TYPE_DEFS=[
-  {type:'savings',label:'Savings',sub:'Track progress toward a savings goal',defaultConfig:()=>({goal:1000,start:0})},
-  {type:'checklist',label:'Checklist',sub:'Simple checklist of items',defaultConfig:()=>({})},
-  {type:'habits',label:'Habit tracker',sub:'Daily habit tracker — one habit per widget',defaultConfig:()=>({})},
-  {type:'notes',label:'Notes',sub:'Freeform dated notes',defaultConfig:()=>({})},
-  {type:'schedule',label:'Schedule',sub:'Manually logged events',defaultConfig:()=>({})},
-  {type:'countdown',label:'Countdown',sub:'Countdown to a target date',defaultConfig:title=>({target_date:pbDefaultTargetDate(),label:title})},
-  {type:'funded_checklist',label:'Funded checklist',sub:'Checklist with a completion target count',defaultConfig:title=>({target_count:5,label:title})},
-  {type:'workout_log',label:'Workout log',sub:'Log of workout sets/reps',defaultConfig:()=>({})},
-  {type:'golf_log',label:'Golf log',sub:'Log of golf rounds',defaultConfig:()=>({})},
-  {type:'tennis_log',label:'Tennis log',sub:'Log of tennis sessions',defaultConfig:()=>({})},
-  {type:'activity_log',label:'Activity log',sub:'Log of dated activities with an outcome',defaultConfig:()=>({})},
-  {type:'contact_list',label:'Contact list',sub:'Persistent list of contacts, editable not append-only',defaultConfig:()=>({})},
-  {type:'session_log',label:'Session log',sub:'Log of dated sessions with a duration',defaultConfig:()=>({})},
-  {type:'budget',label:'Budget',sub:'Track spending against a monthly limit',defaultConfig:()=>({monthly_limit:0})},
+  {type:'savings',label:'Savings',sub:'Track progress toward a savings goal',category:'Savings',defaultConfig:()=>({goal:1000,start:0})},
+  {type:'checklist',label:'Checklist',sub:'Simple checklist of items',category:'Uncategorized',defaultConfig:()=>({})},
+  {type:'habits',label:'Habit tracker',sub:'Daily habit tracker — one habit per widget',category:'Habits',defaultConfig:()=>({})},
+  {type:'notes',label:'Notes',sub:'Freeform dated notes',category:'Notes',defaultConfig:()=>({})},
+  {type:'schedule',label:'Schedule',sub:'Manually logged events',category:'Uncategorized',defaultConfig:()=>({})},
+  {type:'countdown',label:'Countdown',sub:'Countdown to a target date',category:'Uncategorized',defaultConfig:title=>({target_date:pbDefaultTargetDate(),label:title})},
+  // Retired 2026-07-21: hidden from every creation surface (Widget Kitchen +
+  // per-type category picker below now cover this ground), but the type,
+  // its renderer, its settings fields, and any already-placed instance's
+  // data are all left completely alone — see orderedWidgetTypeDefs's
+  // .filter(w=>!w.retired), which is the ONLY thing that changes for these.
+  {type:'funded_checklist',label:'Funded checklist',sub:'Checklist with a completion target count',category:'Uncategorized',retired:true,defaultConfig:title=>({target_count:5,label:title})},
+  {type:'workout_log',label:'Workout log',sub:'Log of workout sets/reps',category:'Gym',defaultConfig:()=>({})},
+  {type:'golf_log',label:'Golf log',sub:'Log of golf rounds',category:'Sports',retired:true,defaultConfig:()=>({})},
+  {type:'tennis_log',label:'Tennis log',sub:'Log of tennis sessions',category:'Sports',retired:true,defaultConfig:()=>({})},
+  {type:'activity_log',label:'Activity log',sub:'Log of dated activities with an outcome',category:'Uncategorized',retired:true,defaultConfig:()=>({})},
+  {type:'contact_list',label:'Contact list',sub:'Persistent list of contacts, editable not append-only',category:'Uncategorized',retired:true,defaultConfig:()=>({})},
+  {type:'session_log',label:'Session log',sub:'Log of dated sessions with a duration',category:'Uncategorized',retired:true,defaultConfig:()=>({})},
+  {type:'budget',label:'Budget',sub:'Track spending against a monthly limit',category:'Finance',defaultConfig:()=>({monthly_limit:0})},
 ];
 // User-customizable display order for widget TYPES themselves (not any
 // particular widget instance) — a personal UI preference about which types
@@ -1357,8 +1425,39 @@ const getWidgetTypeOrder=()=>{
   return [...valid,...missing];
 };
 const setWidgetTypeOrder=order=>scopedSetJSON(WIDGET_TYPE_ORDER_KEY,order);
-const orderedWidgetTypeDefs=()=>getWidgetTypeOrder().map(t=>WIDGET_TYPE_DEFS.find(w=>w.type===t)).filter(Boolean);
+// .filter(w=>!w.retired) is the one line that hides the 6 retired types
+// (see their `retired:true` flags above) from every creation surface — both
+// the page-builder's #pb-widget-types and the tabbed #mwp-widget-types
+// consume this same function, so this single filter covers both.
+const orderedWidgetTypeDefs=()=>getWidgetTypeOrder().map(t=>WIDGET_TYPE_DEFS.find(w=>w.type===t)).filter(Boolean).filter(w=>!w.retired);
 const PB_COLORS=['#B3A369','#e07b4a','#5b8dee','#9AAFBF','#5cb87a','#9b7fe8','#e8c56a','#e05b5b'];
+// Fixed, required-at-creation-for-Kitchen category list (17) — shared by
+// Widget Kitchen's own creation picker AND, via the *_WITH_UNCATEGORIZED
+// variant, every existing hardcoded type's settings screen (added so any
+// widget, old or new, can be grouped the same way in the tabbed add-widget
+// picker). Never inferred from a widget's type/content — always a deliberate
+// choice at creation (Kitchen) or in settings (everything else).
+const WIDGET_CATEGORIES=['Sports','Gym','Cardio','Health','Habits','Reading','School','Church','Work','Savings','Finance','Goals','Social','To Do\'s','Travel','Entertainment','Notes'];
+// Only the generic per-type settings dropdown offers "Uncategorized" (an
+// existing widget that predates this feature has no category yet, and
+// forcing a real pick would be a forced migration, which the spec explicitly
+// rules out). Widget Kitchen's own creation-time picker never uses this
+// variant — category is mandatory there, chosen fresh every time.
+const WIDGET_CATEGORIES_WITH_UNCATEGORIZED=['Uncategorized',...WIDGET_CATEGORIES];
+// The 9-type field palette Widget Kitchen widgets are built from. `key` is
+// the value stored at field.type in ec_page_widgets.config.fields — treat
+// these 9 strings as fixed once any real widget exists using them.
+const KITCHEN_FIELD_TYPES=[
+  {type:'text',label:'Text'},
+  {type:'number',label:'Number'},
+  {type:'number_dir',label:'Number w/ direction'},
+  {type:'select',label:'Dropdown'},
+  {type:'multiselect',label:'Multi-select'},
+  {type:'date',label:'Date'},
+  {type:'duration',label:'Time/duration'},
+  {type:'checkbox',label:'Checkbox'},
+  {type:'rating',label:'Rating (1-5)'},
+];
 let pbDotColor=PB_COLORS[0];
 let pbWidgets=[];
 const pbDefaultTargetDate=()=>{const d=new Date();d.setDate(d.getDate()+30);return d.toLocaleDateString('en-CA');};
@@ -1401,6 +1500,337 @@ const renderPbSelected=()=>{
       <button class="del" onclick="pbRemoveWidget('${w.clientId}')">×</button>
     </div>`).join('');
 };
+
+// === Widget Kitchen — build-a-custom-widget flow ===
+// Structurally the sibling of the page-builder's own widget-picking logic
+// above, but a multi-step field-palette builder rather than an instant
+// prompt()-and-create — see the Widget Kitchen plan for the full field/
+// entry schema (config.fields[] with stable ids + typeHistory).
+const WK_FIELD_TYPE_LABEL=Object.fromEntries(KITCHEN_FIELD_TYPES.map(t=>[t.type,t.label]));
+let wkFields=[];
+let wkIconColor=PB_COLORS[0];
+let wkPendingFieldType=null;
+const wkFieldId=()=>'f_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+// Shared between the builder's "add a field" step and the fields-editor's
+// "change type" step (Section C of the plan) — same options form either way.
+const wkFieldOptionsFormHtml=(type,prefix)=>{
+  if(type==='number_dir')return `<div class="form-row"><div class="field" style="flex:1"><label>direction</label><select id="${prefix}-direction"><option value="higher">Higher is better</option><option value="lower">Lower is better</option></select></div></div>`;
+  if(type==='select'||type==='multiselect')return `<div class="field"><label>choices (one per line)</label><textarea id="${prefix}-choices" rows="3" placeholder="Option A&#10;Option B"></textarea></div>`;
+  return '';
+};
+const wkFieldOptionsFromForm=(type,prefix)=>{
+  if(type==='number_dir')return {direction:document.getElementById(`${prefix}-direction`)?.value||'higher'};
+  if(type==='select'||type==='multiselect'){
+    const raw=document.getElementById(`${prefix}-choices`)?.value||'';
+    return {choices:raw.split('\n').map(s=>s.trim()).filter(Boolean)};
+  }
+  if(type==='rating')return {min:1,max:5};
+  return {};
+};
+const renderWkColors=()=>{
+  const wrap=document.getElementById('wk-colors');
+  if(!wrap)return;
+  wrap.innerHTML=PB_COLORS.map(c=>`<button type="button" class="pb-swatch${c===wkIconColor?' sel':''}" style="background:${c}" onclick="wkSelectColor('${c}')" aria-label="${c}"></button>`).join('');
+};
+const wkSelectColor=c=>{wkIconColor=c;renderWkColors();};
+const renderWkCategories=()=>{
+  const sel=document.getElementById('wk-category');
+  if(!sel)return;
+  sel.innerHTML=WIDGET_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('');
+};
+const renderWkFieldPalette=()=>{
+  const wrap=document.getElementById('wk-field-palette');
+  if(!wrap)return;
+  wrap.innerHTML=KITCHEN_FIELD_TYPES.map(t=>`
+    <div class="set-row" onclick="wkPickFieldType('${t.type}')" style="cursor:pointer">
+      <div class="set-row-info"><div class="set-label">${t.label}</div></div>
+    </div>`).join('');
+};
+const wkCancelFieldConfig=()=>{wkPendingFieldType=null;document.getElementById('wk-field-config').innerHTML='';};
+const wkPickFieldType=type=>{
+  wkPendingFieldType=type;
+  const cfg=document.getElementById('wk-field-config');
+  cfg.innerHTML=`
+    <div class="field" style="border:1px solid var(--border);border-radius:8px;padding:.75rem;margin:.5rem 0">
+      <div class="section-title" style="margin-bottom:.5rem">${WK_FIELD_TYPE_LABEL[type]}</div>
+      <div class="form-row"><div class="field" style="flex:1"><label>field name</label><input type="text" id="wk-fc-name" placeholder="e.g. Weight"></div></div>
+      ${wkFieldOptionsFormHtml(type,'wk-fc')}
+      <div style="display:flex;gap:8px;margin-top:.5rem">
+        <button class="btn" style="flex:1" onclick="wkCancelFieldConfig()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1" onclick="wkConfirmAddField()">Add field</button>
+      </div>
+    </div>`;
+  document.getElementById('wk-fc-name').focus();
+};
+const wkConfirmAddField=()=>{
+  const nameEl=document.getElementById('wk-fc-name');
+  const name=nameEl.value.trim();
+  if(!name){alert('Field name is required.');return;}
+  if(wkFields.some(f=>f.name===name)){alert('A field with that name already exists.');return;}
+  const options=wkFieldOptionsFromForm(wkPendingFieldType,'wk-fc');
+  if((wkPendingFieldType==='select'||wkPendingFieldType==='multiselect')&&!options.choices.length){alert('Add at least one choice.');return;}
+  const now=new Date().toISOString();
+  wkFields.push({id:wkFieldId(),name,type:wkPendingFieldType,options,createdAt:now,typeHistory:[{type:wkPendingFieldType,options,activeFrom:now,activeUntil:null}],removed:false,removedAt:null});
+  wkPendingFieldType=null;
+  document.getElementById('wk-field-config').innerHTML='';
+  renderWkFieldsList();
+};
+const wkRemoveField=id=>{wkFields=wkFields.filter(f=>f.id!==id);renderWkFieldsList();};
+const renderWkFieldsList=()=>{
+  const list=document.getElementById('wk-fields-list');
+  const empty=document.getElementById('wk-fields-empty');
+  if(!list||!empty)return;
+  if(!wkFields.length){list.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  list.innerHTML=wkFields.map(f=>`
+    <div class="archive-row">
+      <div class="set-row-info"><div class="set-label">${f.name}</div><div class="set-sub">${WK_FIELD_TYPE_LABEL[f.type]}</div></div>
+      <button class="del" onclick="wkRemoveField('${f.id}')" aria-label="Remove field">×</button>
+    </div>`).join('');
+};
+const wkGoStep2=()=>{
+  if(!document.getElementById('wk-name').value.trim()){alert('Widget name is required.');return;}
+  document.getElementById('wk-step1').style.display='none';
+  document.getElementById('wk-step2').style.display='flex';
+  document.getElementById('wk-title').textContent='Widget Kitchen · step 2 of 2';
+};
+const wkBackStep1=()=>{
+  document.getElementById('wk-step2').style.display='none';
+  document.getElementById('wk-step1').style.display='flex';
+  document.getElementById('wk-title').textContent='Widget Kitchen · step 1 of 2';
+};
+const wkReset=()=>{
+  wkFields=[];wkIconColor=PB_COLORS[0];wkPendingFieldType=null;
+  document.getElementById('wk-name').value='';
+  document.getElementById('wk-cadence').value='daily';
+  renderWkColors();renderWkCategories();renderWkFieldPalette();
+  document.getElementById('wk-field-config').innerHTML='';
+  renderWkFieldsList();
+  document.getElementById('wk-step1').style.display='flex';
+  document.getElementById('wk-step2').style.display='none';
+  document.getElementById('wk-title').textContent='Widget Kitchen · step 1 of 2';
+};
+const openWidgetKitchen=()=>{
+  const o=document.getElementById('widget-kitchen-overlay');
+  if(!o)return;
+  wkReset();
+  o.classList.add('active');o.setAttribute('aria-hidden','false');
+};
+const closeWidgetKitchen=()=>{
+  const o=document.getElementById('widget-kitchen-overlay');
+  if(!o)return;
+  o.classList.remove('active');o.setAttribute('aria-hidden','true');
+};
+const wkBuildWidget=async()=>{
+  const name=document.getElementById('wk-name').value.trim();
+  if(!name){alert('Widget name is required.');return;}
+  if(!wkFields.length){alert('Add at least one field.');return;}
+  const category=document.getElementById('wk-category').value;
+  const cadence=document.getElementById('wk-cadence').value;
+  const config={kitchen:true,cadence,category,iconColor:wkIconColor,fields:wkFields};
+  const widgetId=Date.now();
+  const btn=document.getElementById('wk-build-btn');
+  if(btn){btn.disabled=true;btn.textContent='Creating…';}
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:widgetId,page_id:pageId,widget_type:'kitchen',title:name,config,sort_order:pageWidgets.length,tab_id:activeTabId})});
+    if(!resp.ok) throw new Error(`Widget insert failed ${resp.status}`);
+    const dataResp=await fetch(`${SB_URL}/rest/v1/ec_widget_data`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({page_widget_id:widgetId,data:{entries:[]}})});
+    if(!dataResp.ok) throw new Error(`Widget data insert failed ${dataResp.status}`);
+    pageWidgets.push({id:widgetId,page_id:pageId,widget_type:'kitchen',title:name,config,sort_order:pageWidgets.length,tab_id:activeTabId});
+    widgetDataMap[widgetId]={page_widget_id:widgetId,data:{entries:[]}};
+    closeWidgetKitchen();
+    renderWidgets();
+  }catch(e){
+    console.error('wkBuildWidget failed',e);
+    alert('Failed to create widget.');
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='Create widget';}
+  }
+};
+
+// === Widget Kitchen — fields editor (add/remove/rename/change-type on an
+// EXISTING kitchen widget) ===
+// Deliberately separate state from the builder's wkFields/wkPendingFieldType
+// above — this overlay mutates an already-saved widget's config.fields
+// directly and PATCHes after every action, rather than accumulating a fresh
+// fields array before one single create call.
+let wkeEditingId=null;
+let wkePendingFieldType=null;
+let wkePendingTypeChange=null; // {fieldId,newType} while the type-change confirm panel is showing
+const wkeTypeChangeConfirmHtml=f=>{
+  const newType=wkePendingTypeChange.newType;
+  return `<div class="field" style="border:1px solid var(--border);border-radius:8px;padding:.75rem;margin:.5rem 0">
+    <div style="font-size:13px;margin-bottom:.5rem">Changing "<b>${f.name}</b>" from <b>${WK_FIELD_TYPE_LABEL[f.type]}</b> to <b>${WK_FIELD_TYPE_LABEL[newType]}</b> will:</div>
+    <ul style="font-size:12px;color:var(--muted);margin:0 0 .75rem 1.1rem">
+      <li>Keep all past entries exactly as logged, shown under the old type</li>
+      <li>All entries logged from now on will use the new type</li>
+      <li>Mark this field "changed" in the log going forward</li>
+    </ul>
+    ${wkFieldOptionsFormHtml(newType,'wke-tc')}
+    <div style="display:flex;gap:8px;margin-top:.5rem">
+      <button class="btn" style="flex:1" onclick="wkeCancelTypeChange()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" onclick="wkeConfirmTypeChange()">Confirm type change</button>
+    </div>
+  </div>`;
+};
+const renderWkFieldsEditorBody=()=>{
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  const fields=w.config?.fields||[];
+  const live=fields.filter(f=>!f.removed);
+  const removed=fields.filter(f=>f.removed);
+  const rowHtml=(f,isRemoved)=>{
+    if(wkePendingTypeChange&&wkePendingTypeChange.fieldId===f.id)return wkeTypeChangeConfirmHtml(f);
+    return `<div class="archive-row"${isRemoved?' style="opacity:.5"':''}>
+      <div class="set-row-info">
+        <input type="text" value="${(f.name||'').replace(/"/g,'&quot;')}" style="width:100%;margin-bottom:2px" onchange="wkeRenameField('${f.id}',this.value)">
+        <div class="set-sub">${WK_FIELD_TYPE_LABEL[f.type]}${(f.typeHistory||[]).length>1?` · changed ${new Date(f.typeHistory[f.typeHistory.length-1].activeFrom).toLocaleDateString()}`:''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+        ${isRemoved
+          ?`<button class="btn btn-sm" onclick="wkeRestoreField('${f.id}')">Restore</button>`
+          :`<select onchange="wkeStartTypeChange('${f.id}',this.value);this.value=''" style="font-size:11px">
+              <option value="">Change type…</option>
+              ${KITCHEN_FIELD_TYPES.filter(t=>t.type!==f.type).map(t=>`<option value="${t.type}">${t.label}</option>`).join('')}
+            </select>
+            <button class="btn btn-sm" onclick="wkeRemoveField('${f.id}')" aria-label="Remove field">Remove</button>`}
+      </div>
+    </div>`;
+  };
+  document.getElementById('wke-fields-live').innerHTML=live.length?live.map(f=>rowHtml(f,false)).join(''):'<div class="empty">No fields yet.</div>';
+  const removedWrap=document.getElementById('wke-fields-removed');
+  const removedSection=document.getElementById('wke-fields-removed-section');
+  if(removed.length){removedSection.style.display='block';removedWrap.innerHTML=removed.map(f=>rowHtml(f,true)).join('');}
+  else{removedSection.style.display='none';removedWrap.innerHTML='';}
+  document.getElementById('wke-field-palette').innerHTML=KITCHEN_FIELD_TYPES.map(t=>`
+    <div class="set-row" onclick="wkePickFieldType('${t.type}')" style="cursor:pointer">
+      <div class="set-row-info"><div class="set-label">${t.label}</div></div>
+    </div>`).join('');
+  const cfg=document.getElementById('wke-field-config');
+  if(wkePendingFieldType){
+    cfg.innerHTML=`
+      <div class="field" style="border:1px solid var(--border);border-radius:8px;padding:.75rem;margin:.5rem 0">
+        <div class="section-title" style="margin-bottom:.5rem">${WK_FIELD_TYPE_LABEL[wkePendingFieldType]}</div>
+        <div class="form-row"><div class="field" style="flex:1"><label>field name</label><input type="text" id="wke-fc-name" placeholder="e.g. Weight"></div></div>
+        ${wkFieldOptionsFormHtml(wkePendingFieldType,'wke-fc')}
+        <div style="display:flex;gap:8px;margin-top:.5rem">
+          <button class="btn" style="flex:1" onclick="wkeCancelFieldConfig()">Cancel</button>
+          <button class="btn btn-primary" style="flex:1" onclick="wkeConfirmAddField()">Add field</button>
+        </div>
+      </div>`;
+  }else{
+    cfg.innerHTML='';
+  }
+};
+const openWkFieldsEditor=widgetId=>{
+  const w=findWidget(widgetId);
+  if(!w)return;
+  wkeEditingId=widgetId;
+  wkePendingFieldType=null;
+  wkePendingTypeChange=null;
+  document.getElementById('wke-name').value=w.title||'';
+  renderWkFieldsEditorBody();
+  const o=document.getElementById('wk-fields-editor-overlay');
+  o.classList.add('active');o.setAttribute('aria-hidden','false');
+};
+const closeWkFieldsEditor=()=>{
+  const o=document.getElementById('wk-fields-editor-overlay');
+  if(!o)return;
+  o.classList.remove('active');o.setAttribute('aria-hidden','true');
+  wkeEditingId=null;
+};
+const wkeSaveName=async()=>{
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  const title=document.getElementById('wke-name').value.trim()||w.title;
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets?id=eq.${wkeEditingId}`,{method:'PATCH',headers:buildHeaders(),body:JSON.stringify({title})});
+    if(!resp.ok) throw new Error(`Widget update failed ${resp.status}`);
+    w.title=title;
+    const titleEl=document.getElementById(`widget-title-${wkeEditingId}`);
+    if(titleEl)titleEl.textContent=title;
+  }catch(e){console.error('wkeSaveName failed',e);alert('Save failed — try again.');}
+};
+const wkeRenameField=async(fieldId,newName)=>{
+  const trimmed=newName.trim();
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  if(!trimmed)return renderWkFieldsEditorBody();
+  const newConfig=JSON.parse(JSON.stringify(w.config));
+  const field=newConfig.fields.find(f=>f.id===fieldId);
+  if(!field)return;
+  field.name=trimmed;
+  try{await patchWidgetConfig(wkeEditingId,newConfig);w.config=newConfig;renderWidgetById(wkeEditingId);renderWkFieldsEditorBody();}
+  catch(e){console.error('wkeRenameField failed',e);alert('Save failed — try again.');}
+};
+const wkeRemoveField=async fieldId=>{
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  const newConfig=JSON.parse(JSON.stringify(w.config));
+  const field=newConfig.fields.find(f=>f.id===fieldId);
+  if(!field)return;
+  field.removed=true;field.removedAt=new Date().toISOString();
+  try{await patchWidgetConfig(wkeEditingId,newConfig);w.config=newConfig;renderWidgetById(wkeEditingId);renderWkFieldsEditorBody();}
+  catch(e){console.error('wkeRemoveField failed',e);alert('Save failed — try again.');}
+};
+const wkeRestoreField=async fieldId=>{
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  const newConfig=JSON.parse(JSON.stringify(w.config));
+  const field=newConfig.fields.find(f=>f.id===fieldId);
+  if(!field)return;
+  field.removed=false;field.removedAt=null;
+  try{await patchWidgetConfig(wkeEditingId,newConfig);w.config=newConfig;renderWidgetById(wkeEditingId);renderWkFieldsEditorBody();}
+  catch(e){console.error('wkeRestoreField failed',e);alert('Save failed — try again.');}
+};
+const wkeStartTypeChange=(fieldId,newType)=>{
+  if(!newType)return;
+  wkePendingTypeChange={fieldId,newType};
+  renderWkFieldsEditorBody();
+};
+const wkeCancelTypeChange=()=>{wkePendingTypeChange=null;renderWkFieldsEditorBody();};
+const wkeConfirmTypeChange=async()=>{
+  if(!wkePendingTypeChange)return;
+  const {fieldId,newType}=wkePendingTypeChange;
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  const newConfig=JSON.parse(JSON.stringify(w.config));
+  const field=newConfig.fields.find(f=>f.id===fieldId);
+  if(!field)return;
+  const newOptions=wkFieldOptionsFromForm(newType,'wke-tc');
+  if((newType==='select'||newType==='multiselect')&&!newOptions.choices.length){alert('Add at least one choice.');return;}
+  const now=new Date().toISOString();
+  const last=field.typeHistory[field.typeHistory.length-1];
+  last.activeUntil=now;
+  field.typeHistory.push({type:newType,options:newOptions,activeFrom:now,activeUntil:null});
+  field.type=newType;field.options=newOptions;
+  wkePendingTypeChange=null;
+  try{await patchWidgetConfig(wkeEditingId,newConfig);w.config=newConfig;renderWidgetById(wkeEditingId);renderWkFieldsEditorBody();}
+  catch(e){console.error('wkeConfirmTypeChange failed',e);alert('Save failed — try again.');}
+};
+const wkePickFieldType=type=>{
+  wkePendingFieldType=type;
+  renderWkFieldsEditorBody();
+  setTimeout(()=>document.getElementById('wke-fc-name')?.focus(),0);
+};
+const wkeCancelFieldConfig=()=>{wkePendingFieldType=null;renderWkFieldsEditorBody();};
+const wkeConfirmAddField=async()=>{
+  const w=findWidget(wkeEditingId);
+  if(!w)return;
+  const nameEl=document.getElementById('wke-fc-name');
+  const name=nameEl.value.trim();
+  if(!name){alert('Field name is required.');return;}
+  if((w.config?.fields||[]).some(f=>!f.removed&&f.name===name)){alert('A field with that name already exists.');return;}
+  const options=wkFieldOptionsFromForm(wkePendingFieldType,'wke-fc');
+  if((wkePendingFieldType==='select'||wkePendingFieldType==='multiselect')&&!options.choices.length){alert('Add at least one choice.');return;}
+  const now=new Date().toISOString();
+  const newConfig=JSON.parse(JSON.stringify(w.config));
+  newConfig.fields.push({id:wkFieldId(),name,type:wkePendingFieldType,options,createdAt:now,typeHistory:[{type:wkePendingFieldType,options,activeFrom:now,activeUntil:null}],removed:false,removedAt:null});
+  wkePendingFieldType=null;
+  try{await patchWidgetConfig(wkeEditingId,newConfig);w.config=newConfig;renderWidgetById(wkeEditingId);renderWkFieldsEditorBody();}
+  catch(e){console.error('wkeConfirmAddField failed',e);alert('Save failed — try again.');}
+};
+
 // null = creating a new page (the original flow); a page id = editing that
 // existing page's own row instead — set by openPageEditor below, which
 // reuses this exact same overlay/form rather than building a separate one.
@@ -2714,23 +3144,42 @@ async function delContact(id,contactId){
 
 
 // --- editable widget settings (title always; type-specific config where it exists) ---
+// Every type gets a trailing {key:'category',type:'select'} entry (added
+// 2026-07-21) so any widget — new or predating this feature — can be
+// grouped in the tabbed add-widget picker. Unset config.category reads as
+// "Uncategorized" everywhere; no forced migration writes it retroactively.
+const WIDGET_CATEGORY_SETTINGS_FIELD={key:'category',label:'category',type:'select',options:WIDGET_CATEGORIES_WITH_UNCATEGORIZED};
 const WIDGET_SETTINGS_FIELDS={
   savings:[
     {key:'goal',label:'goal ($)',type:'number',step:'0.01'},
     {key:'start',label:'starting amount ($)',type:'number',step:'0.01'},
     {key:'rate',label:'hourly rate ($, optional)',type:'number',step:'0.01'},
     {key:'deadline',label:'deadline (optional)',type:'date'},
+    WIDGET_CATEGORY_SETTINGS_FIELD,
   ],
+  checklist:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  habits:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  notes:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  schedule:[WIDGET_CATEGORY_SETTINGS_FIELD],
   countdown:[
     {key:'target_date',label:'target date',type:'date'},
     {key:'label',label:'label',type:'text'},
+    WIDGET_CATEGORY_SETTINGS_FIELD,
   ],
   funded_checklist:[
     {key:'target_count',label:'target count',type:'number'},
     {key:'label',label:'label',type:'text'},
+    WIDGET_CATEGORY_SETTINGS_FIELD,
   ],
+  workout_log:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  golf_log:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  tennis_log:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  activity_log:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  contact_list:[WIDGET_CATEGORY_SETTINGS_FIELD],
+  session_log:[WIDGET_CATEGORY_SETTINGS_FIELD],
   budget:[
     {key:'monthly_limit',label:'monthly limit ($)',type:'number',step:'0.01'},
+    WIDGET_CATEGORY_SETTINGS_FIELD,
   ],
 };
 let wsEditingId=null;
@@ -2740,10 +3189,13 @@ const openWidgetSettings=id=>{
   wsEditingId=id;
   document.getElementById('ws-title').value=w.title||'';
   const fields=WIDGET_SETTINGS_FIELDS[w.widget_type]||[];
-  document.getElementById('ws-extra-fields').innerHTML=fields.map(f=>`
-    <div class="form-row">
-      <div class="field"><label>${f.label}</label><input type="${f.type}" id="ws-field-${f.key}" ${f.step?`step="${f.step}"`:''} value="${w.config?.[f.key]??''}"></div>
-    </div>`).join('');
+  document.getElementById('ws-extra-fields').innerHTML=fields.map(f=>{
+    const current=w.config?.[f.key]??'';
+    const control=f.type==='select'
+      ?`<select id="ws-field-${f.key}">${f.options.map(o=>`<option value="${o}"${o===current?' selected':''}>${o}</option>`).join('')}</select>`
+      :`<input type="${f.type}" id="ws-field-${f.key}" ${f.step?`step="${f.step}"`:''} value="${current}">`;
+    return `<div class="form-row"><div class="field"><label>${f.label}</label>${control}</div></div>`;
+  }).join('');
   const overlay=document.getElementById('widget-settings-overlay');
   overlay.classList.add('active');overlay.setAttribute('aria-hidden','false');
 };
@@ -2779,6 +3231,116 @@ const saveWidgetSettings=async()=>{
   }
 };
 
+// --- kitchen (Widget Kitchen — user-built fields, see the plan for the
+// full config.fields/typeHistory schema) ---
+// Given a field and a specific entry's loggedAt timestamp, returns the
+// {type,options} that was ACTIVE at that moment — i.e. what that entry was
+// actually logged under, which may differ from the field's CURRENT type if
+// it's been changed since. This is what makes old entries render under
+// their original type rather than being silently reinterpreted/coerced
+// under whatever the field is today.
+const kitchenFieldTypeAt=(field,loggedAt)=>{
+  const t=new Date(loggedAt).getTime();
+  const hit=(field.typeHistory||[]).find(h=>{
+    const from=new Date(h.activeFrom).getTime();
+    const until=h.activeUntil?new Date(h.activeUntil).getTime():Infinity;
+    return t>=from&&t<until;
+  });
+  return hit||field.typeHistory[field.typeHistory.length-1];
+};
+const kitchenLiveFields=w=>(w.config?.fields||[]).filter(f=>!f.removed);
+const kitchenFieldInputHtml=(widgetId,field)=>{
+  const id=`wk-in-${widgetId}-${field.id}`;
+  if(field.type==='number'||field.type==='number_dir')return `<input type="number" id="${id}">`;
+  if(field.type==='date')return `<input type="date" id="${id}">`;
+  if(field.type==='duration')return `<input type="time" id="${id}">`;
+  if(field.type==='checkbox')return `<input type="checkbox" id="${id}" style="width:auto">`;
+  if(field.type==='rating'){
+    const min=field.options?.min||1,max=field.options?.max||5;
+    const opts=[];for(let n=min;n<=max;n++)opts.push(n);
+    return `<select id="${id}"><option value="">—</option>${opts.map(n=>`<option value="${n}">${n}</option>`).join('')}</select>`;
+  }
+  if(field.type==='select')return `<select id="${id}"><option value="">—</option>${(field.options?.choices||[]).map(c=>`<option value="${c}">${c}</option>`).join('')}</select>`;
+  if(field.type==='multiselect')return `<select id="${id}" multiple size="${Math.min((field.options?.choices||[]).length||1,4)}">${(field.options?.choices||[]).map(c=>`<option value="${c}">${c}</option>`).join('')}</select>`;
+  return `<input type="text" id="${id}">`;
+};
+// Raw stored values are never coerced based on the field's CURRENT type —
+// a JS boolean/array/number/string is self-describing enough to display
+// correctly regardless of what the field has since become. kitchenFieldTypeAt
+// is only consulted for the (optional) number_dir direction annotation,
+// using whatever direction was actually active when THIS entry was logged.
+const kitchenRenderEntryValue=(field,entry)=>{
+  const raw=entry.values?.[field.id];
+  if(raw===undefined||raw===null||raw==='')return '—';
+  if(typeof raw==='boolean')return raw?'✓':'—';
+  if(Array.isArray(raw))return raw.length?raw.join(', '):'—';
+  if(typeof raw==='number'){
+    const historical=kitchenFieldTypeAt(field,entry.loggedAt);
+    if(historical?.type==='number_dir')return `${raw} <span style="color:var(--muted);font-size:9px">(${historical.options?.direction==='lower'?'lower':'higher'} is better)</span>`;
+  }
+  return String(raw);
+};
+function renderKitchenWidget(w){
+  const body=document.getElementById(`widget-body-${w.id}`);
+  const data=widgetDataMap[w.id].data||{};
+  const entries=data.entries||[];
+  const fields=w.config?.fields||[];
+  const liveFields=kitchenLiveFields(w);
+  const inputsHtml=liveFields.map(f=>{
+    const dirNote=f.type==='number_dir'?` <span style="color:var(--muted);font-size:10px">(${f.options?.direction==='lower'?'lower':'higher'} is better)</span>`:'';
+    return `<div class="form-row"><div class="field" style="flex:1"><label>${f.name}${dirNote}</label>${kitchenFieldInputHtml(w.id,f)}</div></div>`;
+  }).join('');
+  // Log columns = every live field, PLUS any removed field that still has a
+  // logged value somewhere — hiding a removed field from the log entirely
+  // would delete historical visibility, not just stop collecting new values.
+  const fieldsWithData=new Set();
+  entries.forEach(e=>Object.keys(e.values||{}).forEach(fid=>fieldsWithData.add(fid)));
+  const logFields=fields.filter(f=>!f.removed||fieldsWithData.has(f.id));
+  const changedNote=f=>(f.typeHistory||[]).length>1?`<div style="font-size:9px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400">changed ${new Date(f.typeHistory[f.typeHistory.length-1].activeFrom).toLocaleDateString()}</div>`:'';
+  const logHtml=entries.length?`
+    <div style="overflow-x:auto"><table class="log-table">
+      <thead><tr>
+        <th>Logged</th>
+        ${logFields.map(f=>`<th>${f.name}${changedNote(f)}</th>`).join('')}
+        <th></th>
+      </tr></thead>
+      <tbody>${entries.map(e=>`<tr>
+        <td>${new Date(e.loggedAt).toLocaleString()}</td>
+        ${logFields.map(f=>`<td>${kitchenRenderEntryValue(f,e)}</td>`).join('')}
+        <td><button class="del" onclick="delKitchenEntry(${w.id},'${e.id}')">×</button></td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty">No entries yet.</div>';
+  body.innerHTML=`${inputsHtml}<button class="btn btn-primary" onclick="addKitchenEntry(${w.id})">Log entry</button><div style="margin-top:1rem">${logHtml}</div>`;
+}
+const addKitchenEntry=async id=>{
+  const w=findWidget(id);
+  if(!w)return;
+  const values={};
+  kitchenLiveFields(w).forEach(f=>{
+    const el=document.getElementById(`wk-in-${id}-${f.id}`);
+    if(!el)return;
+    if(f.type==='checkbox'){values[f.id]=el.checked;return;}
+    if(f.type==='multiselect'){
+      const chosen=[...el.selectedOptions].map(o=>o.value);
+      if(chosen.length)values[f.id]=chosen;
+      return;
+    }
+    if(el.value==='')return;
+    values[f.id]=(f.type==='number'||f.type==='number_dir'||f.type==='rating')?parseFloat(el.value):el.value;
+  });
+  const data=widgetDataMap[id].data;
+  if(!data.entries)data.entries=[];
+  data.entries.unshift({id:'e_'+Date.now()+'_'+Math.random().toString(36).slice(2),loggedAt:new Date().toISOString(),values});
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('addKitchenEntry save failed',e);alert('Save failed — try again.');}
+};
+const delKitchenEntry=async(id,entryId)=>{
+  const data=widgetDataMap[id].data;
+  data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  renderWidgetById(id);
+  try{await saveWidgetData(id);}catch(e){console.error('delKitchenEntry save failed',e);alert('Save failed — try again.');}
+};
+
 const WIDGET_RENDERERS={
   savings:renderSavingsWidget,
   checklist:renderChecklistWidget,
@@ -2794,6 +3356,7 @@ const WIDGET_RENDERERS={
   contact_list:renderContactListWidget,
   session_log:renderSessionLogWidget,
   budget:renderBudgetWidget,
+  kitchen:renderKitchenWidget,
 };
 
 // Compact, read-only summaries for the Dashboard tab — one per favorited
@@ -3068,7 +3631,7 @@ const renderWidgets=()=>{
           <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-sm widget-edit-btn" onclick="openWidgetSettings(${w.id})" aria-label="Edit widget settings">${pencilIconSvg(8.68,13.08)}</button>
+          <button class="btn btn-sm widget-edit-btn" onclick="${w.widget_type==='kitchen'?`openWkFieldsEditor(${w.id})`:`openWidgetSettings(${w.id})`}" aria-label="${w.widget_type==='kitchen'?'Edit fields':'Edit widget settings'}">${pencilIconSvg(8.68,13.08)}</button>
           <button class="btn btn-sm btn-danger" onclick="deleteWidgetInstance(${w.id})" aria-label="Delete widget">×</button>
         </div>
       </div>
@@ -3813,14 +4376,87 @@ const addTab=async()=>{
   }
 };
 
-const renderMiniWidgetTypes=()=>{
+// Tabbed by category (2026-07-21 reorg) — "My Widgets" first, then the 17
+// fixed categories. Category-tab rows are no longer drag-reorderable (that
+// machinery below is keyed to the FULL global WIDGET_TYPE_DEFS order, which
+// doesn't map cleanly onto a per-category-filtered subset's indices — with
+// each category now holding only a handful of rows, reordering within one
+// isn't worth the risk of corrupting the persisted global order). The
+// page-builder's own #pb-widget-types list is untouched and keeps its
+// existing drag-reorder exactly as before.
+const MWP_TABS=['My Widgets',...WIDGET_CATEGORIES];
+let mwpActiveTab='My Widgets';
+let mwpMyWidgets=null; // this owner's kitchen widgets across all their pages — refetched every time the picker opens
+const mwpFetchMyWidgets=async()=>{
+  try{
+    mwpMyWidgets=await sbFetchJson(`${SB_URL}/rest/v1/ec_page_widgets?widget_type=eq.kitchen&select=*`);
+  }catch(e){
+    console.error('mwpFetchMyWidgets failed',e);
+    mwpMyWidgets=[];
+  }
+};
+const renderMwpTabs=()=>{
+  const wrap=document.getElementById('mwp-tabs');
+  if(!wrap)return;
+  wrap.innerHTML=MWP_TABS.map(t=>`<button type="button" class="btn btn-sm${t===mwpActiveTab?' btn-primary':''}" style="white-space:nowrap;flex-shrink:0" onclick="mwpSelectTab(${JSON.stringify(t)})">${t}</button>`).join('');
+};
+const mwpSelectTab=t=>{mwpActiveTab=t;renderMwpTabs();renderMiniWidgetTypes();};
+// Clicking a "My Widgets" row clones that widget's field structure into a
+// brand-new widget with its own fresh field ids/typeHistory and an empty
+// data row — it does NOT copy the source widget's logged entries, and it
+// does NOT persist a separate reusable "template" object (that's Phase 3's
+// job); this is just the lightest version of reuse Phase 1 needs.
+const mwpCloneKitchenWidget=async sourceId=>{
+  const source=(mwpMyWidgets||[]).find(w=>String(w.id)===String(sourceId));
+  if(!source)return;
+  const title=prompt('Title for this widget:',source.title||'');
+  if(title===null)return;
+  const trimmed=title.trim();
+  if(!trimmed)return;
+  const now=new Date().toISOString();
+  const fields=(source.config?.fields||[]).map(f=>({
+    id:wkFieldId(),name:f.name,type:f.type,options:f.options,createdAt:now,
+    typeHistory:[{type:f.type,options:f.options,activeFrom:now,activeUntil:null}],
+    removed:false,removedAt:null,
+  }));
+  const config={kitchen:true,cadence:source.config?.cadence||'daily',category:source.config?.category||WIDGET_CATEGORIES[0],iconColor:source.config?.iconColor||PB_COLORS[0],fields};
+  const widgetId=Date.now();
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_page_widgets`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({id:widgetId,page_id:pageId,widget_type:'kitchen',title:trimmed,config,sort_order:pageWidgets.length,tab_id:activeTabId})});
+    if(!resp.ok) throw new Error(`Widget insert failed ${resp.status}`);
+    const dataResp=await fetch(`${SB_URL}/rest/v1/ec_widget_data`,{method:'POST',headers:buildHeaders(),body:JSON.stringify({page_widget_id:widgetId,data:{entries:[]}})});
+    if(!dataResp.ok) throw new Error(`Widget data insert failed ${dataResp.status}`);
+    pageWidgets.push({id:widgetId,page_id:pageId,widget_type:'kitchen',title:trimmed,config,sort_order:pageWidgets.length,tab_id:activeTabId});
+    widgetDataMap[widgetId]={page_widget_id:widgetId,data:{entries:[]}};
+    closeMiniWidgetPicker();
+    renderWidgets();
+  }catch(e){
+    console.error('mwpCloneKitchenWidget failed',e);
+    alert('Failed to create widget.');
+  }
+};
+const renderMwpMyWidgets=()=>{
   const wrap=document.getElementById('mwp-widget-types');
   if(!wrap)return;
-  wrap.innerHTML=orderedWidgetTypeDefs().map(w=>`
-    <div class="set-row" id="${typeRowId('mwp-widget-types',w.type)}">
-      <span class="widget-drag-handle" onpointerdown="onTypePointerDown(event,'${w.type}','mwp-widget-types')" aria-label="Reorder widget type" title="Drag to reorder">⠿</span>
+  const widgets=mwpMyWidgets||[];
+  if(!widgets.length){wrap.innerHTML=`<div class="empty">No custom widgets built yet — use the sidebar's "Build custom widget" icon to make your first one.</div>`;return;}
+  wrap.innerHTML=widgets.map(w=>{
+    const pageName=sidebarPageRows.find(p=>String(p.id)===String(w.page_id))?.name||'—';
+    const category=w.config?.category||'Uncategorized';
+    return `<div class="set-row" onclick="mwpCloneKitchenWidget(${w.id})" style="cursor:pointer">
+      <div class="set-row-info"><div class="set-label">${w.title||'Untitled'}</div><div class="set-sub">${category} · from ${pageName}</div></div>
+    </div>`;
+  }).join('');
+};
+const renderMiniWidgetTypes=()=>{
+  if(mwpActiveTab==='My Widgets'){renderMwpMyWidgets();return;}
+  const wrap=document.getElementById('mwp-widget-types');
+  if(!wrap)return;
+  const types=orderedWidgetTypeDefs().filter(w=>(w.category||'Uncategorized')===mwpActiveTab);
+  if(!types.length){wrap.innerHTML='<div class="empty">No widget types in this category yet.</div>';return;}
+  wrap.innerHTML=types.map(w=>`
+    <div class="set-row" onclick="addWidgetToTab('${w.type}',${JSON.stringify(w.label)})" style="cursor:pointer">
       <div class="set-row-info"><div class="set-label">${w.label}</div><div class="set-sub">${w.sub}</div></div>
-      <div class="hcheck" onclick="addWidgetToTab('${w.type}','${w.label}')"></div>
     </div>`).join('');
 };
 // Pointer-based vertical drag-reorder for the widget-type picker — same
@@ -3968,7 +4604,15 @@ const endTypeDrag=()=>{
   setWidgetTypeOrder(sorted);
   renderTypeWrap(wrapId);
 };
-const openMiniWidgetPicker=()=>{const o=document.getElementById('mini-widget-picker-overlay');if(!o)return;renderMiniWidgetTypes();o.classList.add('active');o.setAttribute('aria-hidden','false');};
+const openMiniWidgetPicker=async()=>{
+  const o=document.getElementById('mini-widget-picker-overlay');
+  if(!o)return;
+  o.classList.add('active');o.setAttribute('aria-hidden','false');
+  renderMwpTabs();
+  renderMiniWidgetTypes();
+  await mwpFetchMyWidgets();
+  if(mwpActiveTab==='My Widgets')renderMiniWidgetTypes(); // re-render once the fetch lands, in case the picker opened straight onto this tab
+};
 const closeMiniWidgetPicker=()=>{const o=document.getElementById('mini-widget-picker-overlay');if(!o)return;o.classList.remove('active');o.setAttribute('aria-hidden','true');};
 const addWidgetToTab=async(type,label)=>{
   const title=prompt(`Title for this ${label} widget:`,label);
