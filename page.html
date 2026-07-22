@@ -269,13 +269,21 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 /* Kitchen icon's hover reveal: two independent, explicit CSS transitions
    (not a looping keyframe animation) — see the big markup comment above
    #sb-kitchen-btn for why this is <g> with a transform attribute (not a
-   nested <svg>) and why the hat is two nested <g>s. transform-origin is in
-   the hat's own pre-scale 24x24 unit space (roughly its visual center),
-   since this inner <g> carries no scale of its own — that comes from its
-   parent. The rat's visibility is a plain opacity toggle, independent of
-   whatever's actually behind it. */
-.wk-hat{transition:transform .35s ease;transform-origin:12px 12px}
-#sb-kitchen-btn:hover .wk-hat{transform:translate(-5.49px,5.83px) rotate(-18deg)}
+   nested <svg>) and why the hat is two nested <g>s. transform-origin is the
+   hat silhouette's own bounding-box bottom-left corner (2.998,21) in its
+   pre-scale 24x24 unit space — computed by actually sampling the path's
+   arcs/curves numerically, not eyeballed (the naive endpoint-only estimate
+   for this path is off by ~3 units on x, since one of the puff's arcs
+   bulges well past its own segment endpoints). Rotating -70deg around that
+   fixed corner swings the hat up and away like a lid tipping open, rather
+   than the earlier translate+tilt. rotate()'s sign follows the CSS spec
+   (positive = clockwise, negative = counter-clockwise) with no parent scale
+   negating either axis to flip that, but this was verified by rendering it,
+   not just trusted from the spec text. The rat's visibility is a plain
+   opacity toggle, independent of whatever's actually behind it — unchanged
+   by this. */
+.wk-hat{transition:transform .35s ease;transform-origin:2.998px 21px}
+#sb-kitchen-btn:hover .wk-hat{transform:rotate(-70deg)}
 .wk-rat{opacity:0;transition:opacity .35s ease}
 #sb-kitchen-btn:hover .wk-rat{opacity:1}
 .sb-item-edit{opacity:0;transition:opacity .15s ease;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:4px;flex-shrink:0;display:none}
