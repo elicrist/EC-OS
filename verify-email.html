@@ -17,9 +17,13 @@
 :root{
   --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
   --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
-  --accent:#e07b4a;--danger:#e05b5b;--ok:#4ade80;
-  --accent-default:#e07b4a;
+  --danger:#e05b5b;--ok:#4ade80;
 }
+/* No --accent/--accent-default variable here at all, on purpose: this page
+   renders before any user is authenticated, so there is no owner whose
+   theme it would even be correct to read. Every focus/hover/glow state
+   below is hardcoded to white directly, deliberately, as the universal
+   pre-auth default. */
 [data-theme="light"]{
   --bg:#f4f4f2;--surface:#ffffff;--card:#ffffff;--border:#e2e0da;--border-light:#d3d0c8;
   --text:#1a1a18;--muted:#6b6a63;--faint:#ece9e2;
@@ -28,20 +32,20 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.25rem;max-width:360px;width:100%;text-align:center}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;width:100%}
-.btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.btn:hover:not(:disabled){border-color:#fff;color:#fff}
 .btn:disabled{opacity:.5;cursor:default}
 .auth-crosslink{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
-.auth-crosslink a{color:var(--accent);text-decoration:none}
+.auth-crosslink a{color:#fff;text-decoration:none}
 .auth-crosslink a:hover{text-decoration:underline}
 </style>
 <script>
 // Theme is owner-scoped elsewhere in the app (see page.html's
 // scopedGet/scopedSet) — but nobody's signed in yet on this waiting screen,
 // so there's no owner whose saved mode/accent it would be correct to read.
-// Fixed app default, same reasoning as login.html/signup.html.
+// Fixed app default, same reasoning as login.html/signup.html. Accent color
+// isn't part of this at all anymore — every focus/hover state on this page
+// is a hardcoded white in the CSS above, not read from any variable.
 document.documentElement.setAttribute('data-theme','dark');
-document.documentElement.style.setProperty('--accent','#B3A369');
-document.documentElement.style.setProperty('--accent-default','#B3A369');
 </script>
 </head>
 <body>

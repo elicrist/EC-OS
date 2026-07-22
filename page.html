@@ -150,6 +150,12 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    these two are page-agnostic app chrome. See --accent-default in :root for
    the TODO on app-wide theming. */
 #pb-next-btn,#pb-build-btn{background:color-mix(in srgb,var(--accent-default) 14%,var(--card));border-color:var(--accent-default);color:var(--accent-default);box-shadow:0 0 16px -3px color-mix(in srgb,var(--accent-default) 45%,transparent)}
+/* Same page-agnostic-chrome fix, extended to the two secondary buttons —
+   these are plain .btn (not .btn-primary), so only their :hover state needs
+   redirecting to --accent-default rather than the full background/
+   box-shadow treatment above (that treatment is specifically the
+   .btn-primary "filled" look, which Close/Back correctly don't have). */
+#pb-close-btn:hover,#pb-back-btn:hover{border-color:var(--accent-default);color:var(--accent-default)}
 .theme-mode-btn{flex:1;padding:9px 10px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;transition:all .15s}
 .theme-mode-btn:hover{border-color:var(--accent-default);color:var(--accent-default)}
 .theme-mode-btn.active{background:color-mix(in srgb,var(--accent-default) 16%,var(--card));border-color:var(--accent-default);color:var(--accent-default)}
@@ -807,7 +813,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   <div class="overlay-card wide" style="display:flex;flex-direction:column;max-height:85vh">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-shrink:0">
       <div class="section-title" style="margin:0" id="pb-title">Page builder · step 1 of 2</div>
-      <button class="btn btn-sm" onclick="closePageBuilder()">Close</button>
+      <button class="btn btn-sm" id="pb-close-btn" onclick="closePageBuilder()">Close</button>
     </div>
     <div id="pb-step1" style="overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0">
       <div class="form-row">
@@ -833,7 +839,7 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
         </div>
       </div>
       <div style="display:flex;gap:8px;padding-top:.75rem;flex-shrink:0">
-        <button class="btn" style="flex:1" onclick="pbBackStep1()">Back</button>
+        <button class="btn" style="flex:1" id="pb-back-btn" onclick="pbBackStep1()">Back</button>
         <button class="btn btn-primary" style="flex:1" id="pb-build-btn" onclick="buildPage()">Build page</button>
       </div>
     </div>

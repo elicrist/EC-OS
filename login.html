@@ -22,14 +22,15 @@
 :root{
   --bg:#0e0e0f;--surface:#161618;--card:#1c1c1f;--border:#2a2a2e;--border-light:#333338;
   --text:#f0ede8;--muted:#888880;--faint:#2a2a2e;
-  --accent:#e07b4a;--danger:#e05b5b;
-  /* App-wide theme accent, set from the user's Appearance choice (page.html
-     Settings) — see the flash-prevention script right after this style
-     block. login.html has no per-page concept, so --accent itself gets
-     overridden to the same theme value too (unlike page.html, which keeps
-     --accent/--accent-default distinct for its per-page dot_color). */
-  --accent-default:#e07b4a;
+  --danger:#e05b5b;
 }
+/* No --accent/--accent-default variable here at all, on purpose: this page
+   renders before any user is authenticated, so there is no owner whose
+   theme it would even be correct to read — not the theme system pointed at
+   a fallback, not localStorage, nothing account-shaped. Every focus/hover/
+   glow state below is hardcoded to white directly, deliberately, as the
+   universal pre-auth default. See the (now-removed) old approach's history
+   if this ever looks like an oversight — it isn't one. */
 [data-theme="light"]{
   --bg:#f4f4f2;--surface:#ffffff;--card:#ffffff;--border:#e2e0da;--border-light:#d3d0c8;
   --text:#1a1a18;--muted:#6b6a63;--faint:#ece9e2;
@@ -39,23 +40,23 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:500;margin-bottom:.9rem}
 .form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:.9rem;flex-wrap:wrap}
 input{background:var(--surface);border:1px solid var(--border-light);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:7px 10px;border-radius:7px;outline:none;width:100%;transition:border-color .15s}
-input:focus{border-color:var(--accent)}
+input:focus{border-color:#fff}
 .btn{padding:7px 14px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border-light);background:var(--surface);color:var(--text);font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;width:100%}
-.btn:hover{border-color:var(--accent);color:var(--accent)}
-.btn-primary{background:var(--danger);background:color-mix(in srgb,var(--accent) 14%,var(--card));border-color:var(--accent);color:var(--accent);box-shadow:0 0 16px -3px color-mix(in srgb,var(--accent) 45%,transparent)}
+.btn:hover{border-color:#fff;color:#fff}
+.btn-primary{background:color-mix(in srgb,#fff 14%,var(--card));border-color:#fff;color:#fff;box-shadow:0 0 16px -3px color-mix(in srgb,#fff 45%,transparent)}
 .auth-crosslink{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
-.auth-crosslink a{color:var(--accent);text-decoration:none}
+.auth-crosslink a{color:#fff;text-decoration:none}
 .auth-crosslink a:hover{text-decoration:underline}
 </style>
 <script>
 // Theme is owner-scoped (see page.html's scopedGet/scopedSet) — but nobody
 // is signed in yet on a pre-auth screen like this one, so there's no owner
-// whose saved mode/accent it would even be correct to read. Always renders
-// the fixed app default here rather than guessing; the real per-account
-// theme takes over the instant they land on hub.html post-login.
+// whose saved mode/accent it would even be correct to read. Always dark
+// here; the real per-account theme takes over the instant they land on
+// hub.html post-login. Accent color isn't part of this at all anymore —
+// every focus/hover state on this page is a hardcoded white in the CSS
+// above, not read from any variable.
 document.documentElement.setAttribute('data-theme','dark');
-document.documentElement.style.setProperty('--accent','#B3A369');
-document.documentElement.style.setProperty('--accent-default','#B3A369');
 </script>
 </head>
 <body>
