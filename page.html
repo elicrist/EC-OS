@@ -235,6 +235,16 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    mouse-leave for free, since this is just a plain :hover rule — no JS,
    same start/stop timing as the hover animations themselves. */
 #sb-new-btn:hover .sb-dot,#sb-kitchen-btn:hover .sb-dot,#sb-archive-btn:hover .sb-dot,#sb-settings-btn:hover .sb-dot{color:var(--accent-default)}
+/* Kitchen icon's hover reveal: a two-state CSS transition (not a looping
+   keyframe animation) — the rat (nested svg, see markup) is drawn BEFORE
+   the hat in paint order, so it's simply covered by the hat at rest, no
+   opacity/visibility toggling involved. On hover the hat's nested <svg>
+   physically translates+rotates down-left, uncovering whatever was already
+   sitting underneath it. transform-box:fill-box is needed so the rotation's
+   transform-origin is relative to the hat's own nested viewport rather than
+   the outer 24x24 icon. */
+.wk-hat{transition:transform .35s ease;transform-box:fill-box;transform-origin:center}
+#sb-kitchen-btn:hover .wk-hat{transform:translate(-3.2px,3.4px) rotate(-18deg)}
 .sb-item-edit{opacity:0;transition:opacity .15s ease;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:4px;flex-shrink:0;display:none}
 .os-sb.open .sb-item-edit{display:block}
 .sb-page-wrap:hover .sb-item-edit{opacity:.85}
@@ -542,6 +552,10 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   .hub-star-btn:hover svg,.hub-star-btn:hover .star-shim{
     animation:none!important;
   }
+  /* The Kitchen icon's hover reveal is a transition, not an animation — still
+     motion, so it gets the same treatment here: hover still reveals the rat
+     (no functionality lost), just as an instant cut instead of an eased move. */
+  .wk-hat{transition:none!important;}
 }
 </style>
 <script>
@@ -592,21 +606,49 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   <div id="sb-pages"></div>
   <div class="sb-footer">
     <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot np-icon"><span class="plus-glyph"><span class="plus-bar plus-bar-h"></span><span class="plus-bar plus-bar-v"></span></span><span class="np-dot np-dot-b"></span><span class="np-dot np-dot-m"></span><span class="np-dot np-dot-t"></span></span><span class="sb-label">New page</span></button>
-    <!-- Static glyph, no hover animation (tried a hat-shift/rat-peek reveal
-         and a hover-color shift; both reverted — see git history — since
-         fine detail doesn't survive at 24x24 and the static hat + crossed
-         utensils reads cleanly on its own). -->
-    <button class="sb-item sb-action" type="button" id="sb-kitchen-btn" onclick="openWidgetKitchen()" aria-label="Build custom widget" title="Build custom widget (Widget Kitchen)"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="overflow:visible">
-      <path d="M7 11.2 C5.3 11.2 4.6 9.3 5.7 8.1 C4.8 6.5 6 4.8 7.8 5.1 C8.3 3.3 11.7 3.1 12.4 4.8 C14 4.3 15.8 5.6 15.2 7.3 C16.4 8.4 15.9 11.2 14 11.2 Z"/>
-      <line x1="8.7" y1="6.5" x2="8.3" y2="10" stroke-width="1"/>
-      <line x1="12.3" y1="6.3" x2="12.7" y2="10" stroke-width="1"/>
-      <rect x="6.3" y="11.2" width="11.4" height="2.6" rx="1.1"/>
-      <line x1="5.9" y1="14" x2="5.9" y2="16.4" stroke-width="1"/>
-      <line x1="7.7" y1="14" x2="7.7" y2="16.4" stroke-width="1"/>
-      <line x1="9.5" y1="14" x2="9.5" y2="16.4" stroke-width="1"/>
-      <path d="M5.9 16.4 C5.9 17.2 9.5 17.2 9.5 16.4" stroke-width="1"/>
-      <line x1="7.7" y1="17.2" x2="17.3" y2="22" stroke-width="1"/>
-      <path d="M17.8 14.3 C19 15.9 18.4 17.8 16.6 18.8 L6.9 22" stroke-width="1"/>
+    <!-- Built from 3 real Lucide icons (chef-hat, utensils-crossed, rat —
+         exact path data, not redrawn), each in its own nested <svg viewBox="0
+         0 24 24"> so the paths are used as-authored and just repositioned/
+         rescaled via the nested viewport's x/y/width/height. Each nested
+         svg's own stroke-width is set so the RENDERED result is ~1.2 in this
+         icon's own 24x24 canvas regardless of how much that nested viewport
+         shrinks it (stroke-width lives in the nested icon's local coordinate
+         space, so it gets scaled down by the same factor as everything else
+         in it — a nested icon rescaled to width W needs local
+         stroke-width = 1.2 * 24 / W to look like 1.2 once rendered). Rat is
+         drawn first (paint order) so the hat, drawn after, fully covers it
+         at rest — hover shifts .wk-hat via CSS transition to reveal it,
+         same non-looping transform mechanic as the earlier build. -->
+    <button class="sb-item sb-action" type="button" id="sb-kitchen-btn" onclick="openWidgetKitchen()" aria-label="Build custom widget" title="Build custom widget (Widget Kitchen)"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="overflow:visible">
+      <svg class="wk-rat" x="8" y="3" width="9" height="9" viewBox="0 0 24 24" stroke-width="3.2">
+        <path d="M13 22H4a2 2 0 0 1 0-4h12"/>
+        <path d="M13.236 18a3 3 0 0 0-2.2-5"/>
+        <path d="M16 9h.01"/>
+        <path d="M16.82 3.94a3 3 0 1 1 3.237 4.868l1.815 2.587a1.5 1.5 0 0 1-1.5 2.1l-2.872-.453a3 3 0 0 0-3.5 3"/>
+        <path d="M17 4.988a3 3 0 1 0-5.2 2.052A7 7 0 0 0 4 14.015 4 4 0 0 0 8 18"/>
+      </svg>
+      <svg class="wk-hat" x="5" y="0" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.06">
+        <!-- Opaque mask, same closed silhouette path as the visible outline
+             below but filled with the sidebar's own background instead of
+             fill:none — a line-art hat has a fully transparent interior, so
+             without this the rat behind it (however it's positioned) always
+             shows through; this is what actually makes "hat covers rat"
+             true. Moves as one unit with the outline (same .wk-hat group),
+             so it keeps covering whatever's currently under the hat
+             throughout the hover transition, not just at rest. Matches
+             .os-sb's own background — the one place this icon actually
+             lives — not .sb-item:hover's (slightly different) background,
+             since masking only needs to be exact at rest. -->
+        <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z" fill="var(--surface)" stroke="none"/>
+        <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/>
+        <path d="M6 17h12"/>
+      </svg>
+      <svg class="wk-utensils" x="7" y="15" width="9" height="9" viewBox="0 0 24 24" stroke-width="3.2">
+        <path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/>
+        <path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7"/>
+        <path d="m2.1 21.8 6.4-6.3"/>
+        <path d="m19 5-7 7"/>
+      </svg>
     </svg></span><span class="sb-label">Build custom widget</span></button>
     <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true" style="overflow:visible"><line x1="3" y1="3" x2="3.0" y2="21.5"/><line x1="3" y1="3" x2="10.1" y2="20.1"/><line x1="3" y1="3" x2="16.1" y2="16.1"/><line x1="3" y1="3" x2="20.1" y2="10.1"/><line x1="3" y1="3" x2="21.5" y2="3.0"/><path d="M3.0,12.0 Q5.0,13.0 6.4,11.3 Q8.7,11.5 9.4,9.4 Q11.5,8.7 11.3,6.4 Q13.0,5.0 12.0,3.0"/><path d="M3.0,18.5 Q6.2,19.3 8.9,17.3 Q12.2,16.8 14.0,14.0 Q16.8,12.2 17.3,8.9 Q19.3,6.2 18.5,3.0"/><line class="thread-line" x1="20.1" y1="10.1" x2="20.1" y2="20.9" stroke-width="0.7" style="transform-origin:20.1px 10.1px"/><g class="spider1-pos" style="transform-origin:20.1px 10.1px"><g class="spider1-legs" stroke-width="1" style="transform-origin:20.1px 20.9px"><circle cx="20.1" cy="20.9" r="0.6" fill="currentColor" stroke="none"/><line x1="20.1" y1="20.9" x2="22.0" y2="18.6"/><line x1="20.1" y1="20.9" x2="23.0" y2="20.0"/><line x1="20.1" y1="20.9" x2="23.0" y2="21.8"/><line x1="20.1" y1="20.9" x2="22.0" y2="23.2"/><line x1="20.1" y1="20.9" x2="18.2" y2="23.2"/><line x1="20.1" y1="20.9" x2="17.2" y2="21.8"/><line x1="20.1" y1="20.9" x2="17.2" y2="20.0"/><line x1="20.1" y1="20.9" x2="18.2" y2="18.6"/></g></g><g class="spider2-part" stroke-width="1.1"><circle cx="0" cy="0" r="0.9" fill="currentColor" stroke="none"/><line x1="0" y1="0" x2="2.3" y2="-2.3"/><line x1="0" y1="0" x2="3" y2="0"/><line x1="0" y1="0" x2="2.3" y2="2.3"/><line x1="0" y1="0" x2="0" y2="3"/><line x1="0" y1="0" x2="-2.3" y2="2.3"/><line x1="0" y1="0" x2="-3" y2="0"/><line x1="0" y1="0" x2="-2.3" y2="-2.3"/><line x1="0" y1="0" x2="0" y2="-3"/></g></svg></span><span class="sb-label">Archive</span></button>
     <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg class="gear-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
