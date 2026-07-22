@@ -1,5 +1,5 @@
 // Deletes the CALLING user's own account — all data rows across the app's
-// four owner-scoped tables, then the auth user itself. Never trusts a
+// five owner-scoped tables, then the auth user itself. Never trusts a
 // client-passed user id: the only identity this function acts on is
 // whatever the caller's own JWT resolves to via supabaseAdmin.auth.getUser().
 //
@@ -39,11 +39,12 @@ Deno.serve(async (req) => {
   const ownerId = userData.user.id;
 
   try {
-    // Delete this owner's rows across all four tables before the auth user
+    // Delete this owner's rows across all five tables before the auth user
     // itself, in dependency order (widgets/tabs reference pages, though
     // there's no DB-level cascade set up — anon-key-only project, no DDL
-    // access — so this function does the ordering by hand).
-    const tables = ['ec_widget_data', 'ec_page_widgets', 'ec_page_tabs', 'ec_pages'];
+    // access — so this function does the ordering by hand). ec_user_prefs
+    // has no dependents, so its position in the list doesn't matter.
+    const tables = ['ec_widget_data', 'ec_page_widgets', 'ec_page_tabs', 'ec_pages', 'ec_user_prefs'];
     for (const table of tables) {
       const { error } = await supabaseAdmin.from(table).delete().eq('owner_id', ownerId);
       if (error) throw new Error(`Failed deleting from ${table}: ${error.message}`);

@@ -235,16 +235,6 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
    mouse-leave for free, since this is just a plain :hover rule — no JS,
    same start/stop timing as the hover animations themselves. */
 #sb-new-btn:hover .sb-dot,#sb-kitchen-btn:hover .sb-dot,#sb-archive-btn:hover .sb-dot,#sb-settings-btn:hover .sb-dot{color:var(--accent-default)}
-/* Kitchen icon's hover reveal: a two-state CSS transition (not a looping
-   keyframe animation, unlike the other 3 icons) — the rat face is drawn
-   BEFORE the hat in paint order (see the markup) so it's simply covered by
-   the hat at rest, no opacity/visibility toggling involved. On hover the hat
-   group physically translates+rotates down-left, uncovering whatever was
-   already sitting underneath it the whole time. transform-box:fill-box is
-   needed so the rotation's transform-origin is relative to the hat's own
-   drawn shape rather than the full 24x24 SVG viewport. */
-.wk-hat{transition:transform .35s ease;transform-box:fill-box;transform-origin:center}
-#sb-kitchen-btn:hover .wk-hat{transform:translate(-2.4px,2.8px) rotate(-16deg)}
 .sb-item-edit{opacity:0;transition:opacity .15s ease;background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:4px;flex-shrink:0;display:none}
 .os-sb.open .sb-item-edit{display:block}
 .sb-page-wrap:hover .sb-item-edit{opacity:.85}
@@ -552,10 +542,6 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   .hub-star-btn:hover svg,.hub-star-btn:hover .star-shim{
     animation:none!important;
   }
-  /* The Kitchen icon's hover reveal is a transition, not an animation — still
-     motion, so it gets the same treatment here: hover still reveals the rat
-     (no functionality lost), just as an instant cut instead of an eased move. */
-  .wk-hat{transition:none!important;}
 }
 </style>
 <script>
@@ -606,38 +592,21 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
   <div id="sb-pages"></div>
   <div class="sb-footer">
     <button class="sb-item sb-action" type="button" id="sb-new-btn" onclick="openPageBuilder()" aria-label="New page"><span class="sb-dot np-icon"><span class="plus-glyph"><span class="plus-bar plus-bar-h"></span><span class="plus-bar plus-bar-v"></span></span><span class="np-dot np-dot-b"></span><span class="np-dot np-dot-m"></span><span class="np-dot np-dot-t"></span></span><span class="sb-label">New page</span></button>
-    <!-- Static glyph, deliberately no bespoke animation like its siblings
-         here (see the Widget Kitchen plan's addendum #1) — a plain build-
-         from-parts icon (3 solid blocks + 1 dashed "slot to fill in") is
-         enough for this entry point. -->
+    <!-- Static glyph, no hover animation (tried a hat-shift/rat-peek reveal
+         and a hover-color shift; both reverted — see git history — since
+         fine detail doesn't survive at 24x24 and the static hat + crossed
+         utensils reads cleanly on its own). -->
     <button class="sb-item sb-action" type="button" id="sb-kitchen-btn" onclick="openWidgetKitchen()" aria-label="Build custom widget" title="Build custom widget (Widget Kitchen)"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="overflow:visible">
-      <!-- Rat face, drawn FIRST (behind, in paint order) so the hat group
-           painted after it fully covers it at rest — no opacity/visibility
-           toggling needed, the hat physically sits on top until it moves. -->
-      <g class="wk-rat">
-        <circle cx="8.3" cy="11.7" r="0.85" stroke-width="0.8"/>
-        <path d="M9.3 13.5 C9.3 12.5 8 12 6.8 12.6 C5.6 13.1 4.7 13.9 5.3 14.4 C5.9 14.8 8.5 14.6 9.1 14.1 C9.3 13.9 9.3 13.7 9.3 13.5 Z" stroke-width="0.9"/>
-        <circle cx="7.6" cy="13" r="0.32" fill="currentColor" stroke="none"/>
-        <path d="M5.2 13 L3.1 12.4 M5 13.6 L2.9 13.6 M5.2 14.2 L3.2 14.8" stroke-width="0.5"/>
-      </g>
-      <!-- Chef hat, drawn AFTER (on top) — hides the rat at rest, and on
-           hover the whole group translates+rotates down-left to reveal it. -->
-      <g class="wk-hat">
-        <path d="M7 11.2 C5.3 11.2 4.6 9.3 5.7 8.1 C4.8 6.5 6 4.8 7.8 5.1 C8.3 3.3 11.7 3.1 12.4 4.8 C14 4.3 15.8 5.6 15.2 7.3 C16.4 8.4 15.9 11.2 14 11.2 Z"/>
-        <line x1="8.7" y1="6.5" x2="8.3" y2="10" stroke-width="1"/>
-        <line x1="12.3" y1="6.3" x2="12.7" y2="10" stroke-width="1"/>
-        <rect x="6.3" y="11.2" width="11.4" height="2.6" rx="1.1"/>
-      </g>
-      <!-- Crossed fork/knife — always visible, unaffected by the hat's hover
-           transform. -->
-      <g class="wk-utensils">
-        <line x1="5.9" y1="14" x2="5.9" y2="16.4" stroke-width="1"/>
-        <line x1="7.7" y1="14" x2="7.7" y2="16.4" stroke-width="1"/>
-        <line x1="9.5" y1="14" x2="9.5" y2="16.4" stroke-width="1"/>
-        <path d="M5.9 16.4 C5.9 17.2 9.5 17.2 9.5 16.4" stroke-width="1"/>
-        <line x1="7.7" y1="17.2" x2="17.3" y2="22" stroke-width="1"/>
-        <path d="M17.8 14.3 C19 15.9 18.4 17.8 16.6 18.8 L6.9 22" stroke-width="1"/>
-      </g>
+      <path d="M7 11.2 C5.3 11.2 4.6 9.3 5.7 8.1 C4.8 6.5 6 4.8 7.8 5.1 C8.3 3.3 11.7 3.1 12.4 4.8 C14 4.3 15.8 5.6 15.2 7.3 C16.4 8.4 15.9 11.2 14 11.2 Z"/>
+      <line x1="8.7" y1="6.5" x2="8.3" y2="10" stroke-width="1"/>
+      <line x1="12.3" y1="6.3" x2="12.7" y2="10" stroke-width="1"/>
+      <rect x="6.3" y="11.2" width="11.4" height="2.6" rx="1.1"/>
+      <line x1="5.9" y1="14" x2="5.9" y2="16.4" stroke-width="1"/>
+      <line x1="7.7" y1="14" x2="7.7" y2="16.4" stroke-width="1"/>
+      <line x1="9.5" y1="14" x2="9.5" y2="16.4" stroke-width="1"/>
+      <path d="M5.9 16.4 C5.9 17.2 9.5 17.2 9.5 16.4" stroke-width="1"/>
+      <line x1="7.7" y1="17.2" x2="17.3" y2="22" stroke-width="1"/>
+      <path d="M17.8 14.3 C19 15.9 18.4 17.8 16.6 18.8 L6.9 22" stroke-width="1"/>
     </svg></span><span class="sb-label">Build custom widget</span></button>
     <button class="sb-item sb-action" type="button" id="sb-archive-btn" onclick="openArchiveOverlay()" aria-label="Archived pages"><span class="sb-dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true" style="overflow:visible"><line x1="3" y1="3" x2="3.0" y2="21.5"/><line x1="3" y1="3" x2="10.1" y2="20.1"/><line x1="3" y1="3" x2="16.1" y2="16.1"/><line x1="3" y1="3" x2="20.1" y2="10.1"/><line x1="3" y1="3" x2="21.5" y2="3.0"/><path d="M3.0,12.0 Q5.0,13.0 6.4,11.3 Q8.7,11.5 9.4,9.4 Q11.5,8.7 11.3,6.4 Q13.0,5.0 12.0,3.0"/><path d="M3.0,18.5 Q6.2,19.3 8.9,17.3 Q12.2,16.8 14.0,14.0 Q16.8,12.2 17.3,8.9 Q19.3,6.2 18.5,3.0"/><line class="thread-line" x1="20.1" y1="10.1" x2="20.1" y2="20.9" stroke-width="0.7" style="transform-origin:20.1px 10.1px"/><g class="spider1-pos" style="transform-origin:20.1px 10.1px"><g class="spider1-legs" stroke-width="1" style="transform-origin:20.1px 20.9px"><circle cx="20.1" cy="20.9" r="0.6" fill="currentColor" stroke="none"/><line x1="20.1" y1="20.9" x2="22.0" y2="18.6"/><line x1="20.1" y1="20.9" x2="23.0" y2="20.0"/><line x1="20.1" y1="20.9" x2="23.0" y2="21.8"/><line x1="20.1" y1="20.9" x2="22.0" y2="23.2"/><line x1="20.1" y1="20.9" x2="18.2" y2="23.2"/><line x1="20.1" y1="20.9" x2="17.2" y2="21.8"/><line x1="20.1" y1="20.9" x2="17.2" y2="20.0"/><line x1="20.1" y1="20.9" x2="18.2" y2="18.6"/></g></g><g class="spider2-part" stroke-width="1.1"><circle cx="0" cy="0" r="0.9" fill="currentColor" stroke="none"/><line x1="0" y1="0" x2="2.3" y2="-2.3"/><line x1="0" y1="0" x2="3" y2="0"/><line x1="0" y1="0" x2="2.3" y2="2.3"/><line x1="0" y1="0" x2="0" y2="3"/><line x1="0" y1="0" x2="-2.3" y2="2.3"/><line x1="0" y1="0" x2="-3" y2="0"/><line x1="0" y1="0" x2="-2.3" y2="-2.3"/><line x1="0" y1="0" x2="0" y2="-3"/></g></svg></span><span class="sb-label">Archive</span></button>
     <button class="sb-item sb-action" type="button" id="sb-settings-btn" onclick="openSettingsOverlay()" aria-label="Settings"><span class="sb-dot"><svg class="gear-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6" stroke-width="1.3"/><circle cx="12" cy="12" r="2.2" stroke-width="1.3"/><line x1="18" y1="12" x2="21" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="16.24" x2="18.36" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="18" x2="12" y2="21" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="16.24" x2="5.64" y2="18.36" stroke-width="2.2" stroke-linecap="square"/><line x1="6" y1="12" x2="3" y2="12" stroke-width="2.2" stroke-linecap="square"/><line x1="7.76" y1="7.76" x2="5.64" y2="5.64" stroke-width="2.2" stroke-linecap="square"/><line x1="12" y1="6" x2="12" y2="3" stroke-width="2.2" stroke-linecap="square"/><line x1="16.24" y1="7.76" x2="18.36" y2="5.64" stroke-width="2.2" stroke-linecap="square"/></svg></span><span class="sb-label">Settings</span></button>
@@ -1290,18 +1259,71 @@ const reflectThemeSettingsUI=()=>{
   if(spectrum&&document.activeElement!==spectrum) spectrum.value=accent;
   if(hex&&document.activeElement!==hex) hex.value=accent.toUpperCase();
 };
+// --- Server-synced theme prefs (added 2026-07-22) ---
+// Appearance settings used to be pure localStorage (see scopedGet/scopedSet
+// above) — that's genuinely fine within ONE browser/device (signOut() only
+// ever clears the 'sb_session' key, confirmed by reading it, so logging out
+// and back in on the same browser was never actually the problem), but it
+// can never survive a different browser, a different device, private
+// browsing, or a browser silently evicting old site storage — all of which
+// read as "my accent color reset" from the user's side. ec_user_prefs (one
+// row per owner, same owner_id+RLS pattern as every other table here) is now
+// the source of truth; localStorage stays only as a same-device cache the
+// <head> flash-prevention script can read synchronously before any network
+// request could possibly resolve.
+//
+// Requires a table Eli has to create by hand (no DDL access from here, same
+// constraint as every other table) — see the deploy notes for the exact SQL.
+const THEME_PREF_KEYS=['theme_mode','theme_dark_time','theme_light_time','theme_accent'];
+const pushThemePrefsToServer=async fields=>{
+  try{
+    const resp=await fetch(`${SB_URL}/rest/v1/ec_user_prefs?on_conflict=owner_id`,{method:'POST',headers:buildHeaders({extra:{'Prefer':'resolution=merge-duplicates'}}),body:JSON.stringify(fields)});
+    if(!resp.ok) throw new Error(`Theme prefs save failed ${resp.status}`);
+  }catch(e){
+    console.error('pushThemePrefsToServer failed',e);
+  }
+};
+// Called once per load, after auth is confirmed (see the Init block below).
+// The server row wins over whatever's cached locally — EXCEPT the very
+// first time this runs for an account that predates this fix (no server row
+// yet), where the account is seeded FROM the local cache instead of letting
+// an empty server response reset an existing user to THEME_DEFAULTS.
+const syncThemePrefsFromServer=async()=>{
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_user_prefs?select=*`);
+    const row=rows[0];
+    if(row){
+      THEME_PREF_KEYS.forEach(key=>{if(row[key]!=null)scopedSet(key,row[key]);});
+    }else{
+      await pushThemePrefsToServer({
+        theme_mode:getThemeMode(),
+        theme_dark_time:getThemeDarkTime(),
+        theme_light_time:getThemeLightTime(),
+        theme_accent:getThemeAccent(),
+      });
+    }
+    applyTheme();
+  }catch(e){
+    console.error('syncThemePrefsFromServer failed',e);
+  }
+};
 const setThemeMode=mode=>{
   scopedSet('theme_mode',mode);
   applyTheme();
+  pushThemePrefsToServer({theme_mode:mode});
 };
 const onThemeTimeChange=()=>{
-  scopedSet('theme_dark_time',document.getElementById('theme-dark-time').value||THEME_DEFAULTS.darkTime);
-  scopedSet('theme_light_time',document.getElementById('theme-light-time').value||THEME_DEFAULTS.lightTime);
+  const darkTime=document.getElementById('theme-dark-time').value||THEME_DEFAULTS.darkTime;
+  const lightTime=document.getElementById('theme-light-time').value||THEME_DEFAULTS.lightTime;
+  scopedSet('theme_dark_time',darkTime);
+  scopedSet('theme_light_time',lightTime);
   applyTheme();
+  pushThemePrefsToServer({theme_dark_time:darkTime,theme_light_time:lightTime});
 };
 const setThemeAccent=hex=>{
   scopedSet('theme_accent',hex);
   applyTheme();
+  pushThemePrefsToServer({theme_accent:hex});
 };
 const onThemeAccentSpectrum=hex=>setThemeAccent(hex);
 // No contrast/safety validation on purpose — a deliberate call, not an
@@ -4785,6 +4807,7 @@ const archiveThisPage=async()=>{
   document.getElementById('hdr-date').textContent=hdrDateBase;
   const authed=await initAuth();
   if(!authed){window.location.href=LOGIN_ENTRY_POINT;return;}
+  syncThemePrefsFromServer(); // fire-and-forget — re-applies theme once the server round trip resolves, doesn't block the rest of page load
   renderPagesSidebar();
   renderPbColors();
   renderPbWidgetTypes();

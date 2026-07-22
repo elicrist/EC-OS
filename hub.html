@@ -197,6 +197,42 @@ setInterval(()=>{
   document.documentElement.setAttribute('data-theme',visual);
 },30000);
 
+// Read-only counterpart to page.html's syncThemePrefsFromServer — hub.html
+// has no Appearance UI of its own to WRITE ec_user_prefs, but it should
+// still reflect whatever the server has (e.g. a color changed from a
+// different device) rather than only ever showing this device's local
+// cache. Applies the same visual update the flash-prevention script above
+// already did synchronously from cache, just re-run once the server value
+// (the actual source of truth) is in.
+const hubSyncThemeFromServer=async()=>{
+  try{
+    const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_user_prefs?select=*`);
+    const row=rows[0];
+    if(!row)return; // no server row yet — page.html seeds one on its own next load
+    const uid=authSession?.user?.id;
+    ['theme_mode','theme_dark_time','theme_light_time','theme_accent'].forEach(key=>{
+      if(row[key]==null)return;
+      localStorage.setItem(uid?`${key}:${uid}`:key,row[key]);
+    });
+    const mode=hubOwnerScopedGet('theme_mode','dark');
+    let visual=mode;
+    if(mode==='auto'){
+      const now=new Date();
+      const dt=hubOwnerScopedGet('theme_dark_time','20:00').split(':').map(Number);
+      const lt=hubOwnerScopedGet('theme_light_time','07:00').split(':').map(Number);
+      const nowMin=now.getHours()*60+now.getMinutes();
+      const darkMin=dt[0]*60+dt[1],lightMin=lt[0]*60+lt[1];
+      visual=darkMin>lightMin?(nowMin>=darkMin||nowMin<lightMin?'dark':'light'):(nowMin>=darkMin&&nowMin<lightMin?'dark':'light');
+    }
+    document.documentElement.setAttribute('data-theme',visual);
+    const accent=hubOwnerScopedGet('theme_accent','#B3A369');
+    document.documentElement.style.setProperty('--accent',accent);
+    document.documentElement.style.setProperty('--accent-default',accent);
+  }catch(e){
+    console.error('hubSyncThemeFromServer failed',e);
+  }
+};
+
 // Derived from the actual signed-in session, never a hardcoded name — this
 // used to say a specific person's name unconditionally, which leaked to
 // every other account (caught live on a genuinely empty second account).
@@ -418,6 +454,7 @@ const KNOWN_STATIC_CARDS={'index.html':'os-card-summer'};
 (async()=>{
   const authed=await initAuth();
   if(!authed) return; // anon RLS sees nothing
+  hubSyncThemeFromServer(); // fire-and-forget, same reasoning as page.html's call
   try{
     const rows=await sbFetchJson(`${SB_URL}/rest/v1/ec_pages?archived=eq.false&select=*&order=sort_order.asc`);
     const extra=[];
