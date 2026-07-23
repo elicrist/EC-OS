@@ -200,6 +200,23 @@ textarea{resize:vertical;min-height:70px;font-family:'DM Mono',monospace}
 .log-table td{padding:7px 7px;border-bottom:1px solid var(--faint);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;vertical-align:middle}
 .log-table tr:last-child td{border-bottom:none}
 .log-table tr:hover td{background:var(--surface)}
+/* Kitchen's field-arrangement grid. wk-field-grid/wk-field-item/
+   wk-field-item-content are OUR OWN class names, always present, plain CSS
+   Grid by default (see renderKitchenWidget's inline grid-column/grid-row
+   styles, computed straight from field.layout) — deliberately NOT
+   grid-stack/grid-stack-item/grid-stack-item-content, because gridstack.min.css
+   ships a bare `.grid-stack-item{position:absolute}` rule with no .grid-stack
+   ancestor requirement (confirmed by reading the shipped CSS directly), so
+   using its literal class names for our always-present baseline would
+   collapse every non-arranging Kitchen widget's fields to 0x0 the moment
+   Gridstack's stylesheet loads anywhere on the page — caught in testing,
+   not hypothetical. renderKitchenWidget adds the real grid-stack-item*
+   classes ALONGSIDE these only on the specific render where GridStack.init
+   is about to run; Gridstack's own injected inline styles then take over
+   positioning for that element, superseding ours. */
+.wk-field-item-content{height:100%;padding:2px}
+.wk-arranging .wk-field-item-content{border:1px dashed var(--border-light);border-radius:7px;padding:6px}
+.wk-arrange-btn.on{background:color-mix(in srgb,var(--accent) 16%,var(--card));border-color:var(--accent);color:var(--accent)}
 .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 3px}
 .del:hover{color:var(--danger)}
 .empty{text-align:center;padding:1.5rem;color:var(--muted);font-size:12px}
@@ -3407,6 +3424,123 @@ const kitchenFieldTypeAt=(field,loggedAt)=>{
   return hit||field.typeHistory[field.typeHistory.length-1];
 };
 const kitchenLiveFields=w=>(w.config?.fields||[]).filter(f=>!f.removed);
+// Default grid position for a field with no config.fields[].layout yet
+// (every widget built before Phase 2 shipped) — auto-stacked single column,
+// reproducing the pre-Phase-2 flat-stack look exactly so nothing visually
+// changes until a user actually drags something. One constant height works
+// uniformly since all 9 field types render as single-line inputs.
+const wkFieldDefaultLayout=(field,index)=>({x:0,y:index*2,w:4,h:2});
+// PR detection — only ever called for a field whose CURRENT type is
+// number_dir. Compares against prior entries within the field's own
+// CURRENT, still-open typeHistory era only (era.activeFrom onward) — never
+// across a type-change boundary, and never against an OLDER number_dir era
+// from before an intervening type change (which could have used the
+// opposite direction). priorEntries is data.entries BEFORE the new entry
+// is added.
+const kitchenComputePR=(field,fieldValue,priorEntries)=>{
+  const era=field.typeHistory[field.typeHistory.length-1];
+  const direction=era.options?.direction==='lower'?'lower':'higher';
+  const eraStart=new Date(era.activeFrom).getTime();
+  const priorInEra=priorEntries
+    .filter(e=>typeof e.values?.[field.id]==='number'&&new Date(e.loggedAt).getTime()>=eraStart)
+    .map(e=>e.values[field.id]);
+  if(!priorInEra.length)return null; // first entry of this era — nothing to beat, not a PR
+  const best=direction==='lower'?Math.min(...priorInEra):Math.max(...priorInEra);
+  const isPR=direction==='lower'?fieldValue<best:fieldValue>best;
+  if(!isPR)return null;
+  const delta=direction==='lower'?best-fieldValue:fieldValue-best; // always positive when isPR
+  return {isPR:true,delta,previousBest:best};
+};
+// Deleting an entry can change who the "true" record-holder was for every
+// LATER entry in the same era — this replays a field's entire number_dir
+// history (every era it's ever had, each independently) in chronological
+// order against whatever entries remain post-deletion, so the remaining
+// chain is always correct (deleting the all-time-best promotes the actual
+// next-best remaining entry, not "nothing changes"). Called for every field
+// that's ever had a number_dir era on every deletion — deliberately the
+// simple/blanket version rather than narrowing to exactly the affected
+// field(s), since Kitchen widgets have few enough fields/entries that this
+// is not a performance concern.
+const kitchenRecomputeEraPR=(field,entries)=>{
+  field.typeHistory.filter(h=>h.type==='number_dir').forEach(era=>{
+    const eraStart=new Date(era.activeFrom).getTime();
+    const eraEnd=era.activeUntil?new Date(era.activeUntil).getTime():Infinity;
+    const direction=era.options?.direction==='lower'?'lower':'higher';
+    const eraEntries=entries
+      .filter(e=>{
+        const t=new Date(e.loggedAt).getTime();
+        return t>=eraStart&&t<eraEnd&&typeof e.values?.[field.id]==='number';
+      })
+      .sort((a,b)=>new Date(a.loggedAt)-new Date(b.loggedAt)); // oldest first — replay in the order they actually happened
+    let best=null;
+    eraEntries.forEach(e=>{
+      const v=e.values[field.id];
+      const isPR=best!==null&&(direction==='lower'?v<best:v>best);
+      if(isPR){
+        e.pr=e.pr||{};
+        e.pr[field.id]={isPR:true,delta:direction==='lower'?best-v:v-best,previousBest:best};
+      }else if(e.pr){
+        delete e.pr[field.id]; // no longer a record under the replayed chain — clear a stale flag
+      }
+      if(best===null||(direction==='lower'?v<best:v>best))best=v;
+    });
+  });
+};
+// Grid column count follows the widget's own card size (small/quarter/half/
+// full, same sizing concept computeWidgetRows already uses elsewhere) AND
+// the existing app-wide 720px mobile breakpoint — mobile wins outright
+// regardless of nominal card size, since every card renders full-viewport-
+// width at that point anyway.
+const KITCHEN_COLUMNS_BY_SIZE={small:1,quarter:2,half:3,full:4};
+const kitchenColumnsForWidget=w=>{
+  if(window.matchMedia('(max-width:720px)').matches)return 1;
+  return KITCHEN_COLUMNS_BY_SIZE[widgetSize(w)]||4;
+};
+// Crossing the 720px breakpoint doesn't trigger any of the app's existing
+// re-renders on its own (unlike setWidgetSize, which already calls
+// renderWidgets() and so already picks up a new column count for free) — a
+// bare browser-window resize needs its own listener. Re-rendering each
+// visible Kitchen widget (rather than reaching into wkGridInstances
+// directly) covers BOTH the plain-CSS-grid case (recomputes the baked-in
+// grid-template-columns) and any live GridStack instance in one pass, since
+// renderKitchenWidget already destroys/recreates both correctly.
+window.matchMedia('(max-width:720px)').addEventListener('change',()=>{
+  pageWidgets.filter(w=>w.widget_type==='kitchen').forEach(w=>renderWidgetById(w.id));
+});
+// Lazy Gridstack loader — fetched only the first time a user actually clicks
+// "Arrange" on any Kitchen widget, never on page load and never merely from
+// a Kitchen widget existing/rendering. This is deliberate: every Kitchen
+// widget's base display (below) is plain CSS Grid with zero dependency on
+// this ever succeeding, so a slow/unreachable CDN can only ever affect the
+// Arrange feature itself, never data entry, never any other part of the app.
+let gridstackLoadPromise=null;
+const loadGridstack=()=>{
+  if(window.GridStack)return Promise.resolve();
+  if(gridstackLoadPromise)return gridstackLoadPromise;
+  gridstackLoadPromise=new Promise((resolve,reject)=>{
+    const link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack.min.css';
+    link.integrity='sha384-3466xzONp5jWI9wRY4i5C4LQqPF7wQiNl2TPqqWNEKMxqleN1p3y+uCjs5rObTFv';
+    link.crossOrigin='anonymous';
+    document.head.appendChild(link);
+    const script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/gridstack@10.3.1/dist/gridstack-all.js';
+    script.integrity='sha384-nK6N0YlXqSXYT4GJKLD6y4mPJ9w1v9DtgfsQHqltu+OHCjpKMRZ2koek3LRIcbCK';
+    script.crossOrigin='anonymous';
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error('Gridstack failed to load'));
+    document.head.appendChild(script);
+  });
+  return gridstackLoadPromise;
+};
+// widget id -> boolean, in-memory only, never persisted — Arrange mode is a
+// transient interaction mode, not data, and always resets to off on reload.
+let wkArrangeState={};
+// widget id -> live GridStack instance. Only ever populated while that
+// widget's wkArrangeState is true — see renderKitchenWidget's render
+// condition below, which is what actually creates/destroys these.
+let wkGridInstances={};
 const kitchenFieldInputHtml=(widgetId,field)=>{
   const id=`wk-in-${widgetId}-${field.id}`;
   if(field.type==='number'||field.type==='number_dir')return `<input type="number" id="${id}">`;
@@ -3434,7 +3568,13 @@ const kitchenRenderEntryValue=(field,entry)=>{
   if(Array.isArray(raw))return raw.length?raw.join(', '):'—';
   if(typeof raw==='number'){
     const historical=kitchenFieldTypeAt(field,entry.loggedAt);
-    if(historical?.type==='number_dir')return `${raw} <span style="color:var(--muted);font-size:9px">(${historical.options?.direction==='lower'?'lower':'higher'} is better)</span>`;
+    const dirNote=historical?.type==='number_dir'?` <span style="color:var(--muted);font-size:9px">(${historical.options?.direction==='lower'?'lower':'higher'} is better)</span>`:'';
+    // Detection layer only — no badge/toast/icon, just a small annotation in
+    // the same visual register as the direction label above it. Celebratory
+    // UI (streaks, confetti, etc.) is a future Gamification phase's job,
+    // consuming entry.pr as an event — not built here.
+    const prNote=entry.pr?.[field.id]?` <span style="color:var(--ok);font-size:9px">(new best, +${entry.pr[field.id].delta})</span>`:'';
+    return `${raw}${dirNote}${prNote}`;
   }
   return String(raw);
 };
@@ -3444,10 +3584,43 @@ function renderKitchenWidget(w){
   const entries=data.entries||[];
   const fields=w.config?.fields||[];
   const liveFields=kitchenLiveFields(w);
-  const inputsHtml=liveFields.map(f=>{
+  const columns=kitchenColumnsForWidget(w);
+  const arranging=!!wkArrangeState[w.id];
+  // willInitGridstack must match the SAME condition used below to decide
+  // whether GridStack.init actually runs — see that comment for why both
+  // window.GridStack and arranging are required together.
+  const willInitGridstack=!!(window.GridStack&&arranging);
+  // Base classes here are wk-field-grid/wk-field-item/wk-field-item-content
+  // — deliberately NOT grid-stack/grid-stack-item/grid-stack-item-content.
+  // gridstack.min.css's own .grid-stack-item{position:absolute} rule is a
+  // bare, unscoped selector (confirmed by reading the actual shipped CSS) —
+  // it applies to ANY element with that class anywhere on the page, with no
+  // requirement of a .grid-stack ancestor. Once that stylesheet loads (the
+  // first time ANY Kitchen widget's Arrange is clicked), using the literal
+  // grid-stack-item class name for the always-present plain-CSS-grid
+  // baseline would collapse every OTHER (non-arranging) Kitchen widget's
+  // fields to 0x0 permanently for the rest of the session — a real bug
+  // caught in testing, not a hypothetical. The gridstack-recognized class
+  // names are added ONLY when willInitGridstack is true, i.e. only on the
+  // specific render where GridStack.init is about to actually run.
+  const gridClass=willInitGridstack?'grid-stack wk-field-grid':'wk-field-grid';
+  const itemClass=willInitGridstack?'grid-stack-item wk-field-item':'wk-field-item';
+  const itemContentClass=willInitGridstack?'grid-stack-item-content wk-field-item-content':'wk-field-item-content';
+  // Plain CSS Grid, computed directly from field.layout — this is the
+  // COMPLETE, correct, fully-functional-for-data-entry display regardless of
+  // whether Gridstack has ever loaded. gs-x/gs-y/gs-w/gs-h attributes are
+  // ALSO written (Gridstack reads them at init if/when Arrange is turned
+  // on), but nothing about seeing the form or logging an entry ever depends
+  // on them or on window.GridStack existing.
+  const inputsHtml=`<div class="${gridClass}" id="wk-grid-${w.id}" style="display:grid;grid-template-columns:repeat(${columns},1fr);gap:8px">${liveFields.map((f,i)=>{
+    const layout=f.layout||wkFieldDefaultLayout(f,i);
     const dirNote=f.type==='number_dir'?` <span style="color:var(--muted);font-size:10px">(${f.options?.direction==='lower'?'lower':'higher'} is better)</span>`:'';
-    return `<div class="form-row"><div class="field" style="flex:1"><label>${f.name}${dirNote}</label>${kitchenFieldInputHtml(w.id,f)}</div></div>`;
-  }).join('');
+    return `<div class="${itemClass}" gs-id="${f.id}" gs-x="${layout.x}" gs-y="${layout.y}" gs-w="${layout.w}" gs-h="${layout.h}" style="grid-column:${layout.x+1}/span ${Math.min(layout.w,columns)};grid-row:${layout.y+1}/span ${layout.h}">
+      <div class="${itemContentClass}">
+        <div class="field"><label>${f.name}${dirNote}</label>${kitchenFieldInputHtml(w.id,f)}</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
   // Log columns = every live field, PLUS any removed field that still has a
   // logged value somewhere — hiding a removed field from the log entirely
   // would delete historical visibility, not just stop collecting new values.
@@ -3468,8 +3641,74 @@ function renderKitchenWidget(w){
         <td><button class="del" onclick="delKitchenEntry(${w.id},'${e.id}')">×</button></td>
       </tr>`).join('')}</tbody>
     </table></div>` : '<div class="empty">No entries yet.</div>';
-  body.innerHTML=`${inputsHtml}<button class="btn btn-primary" onclick="addKitchenEntry(${w.id})">Log entry</button><div style="margin-top:1rem">${logHtml}</div>`;
+  // Arrange toggle button itself lives in the widget-card HEADER (widgetCardHtml,
+  // alongside Edit/Delete) — this is just the error placeholder for a failed
+  // Gridstack load, which needs to sit near the grid itself, not the tiny header icon.
+  const arrangeErrorHtml=`<div id="wk-arrange-error-${w.id}" style="color:var(--danger);font-size:11px;margin-bottom:.4rem"></div>`;
+
+  if(wkGridInstances[w.id]){ wkGridInstances[w.id].destroy(false); delete wkGridInstances[w.id]; }
+  body.innerHTML=`${arrangeErrorHtml}${inputsHtml}<button class="btn btn-primary" style="margin-top:.75rem" onclick="addKitchenEntry(${w.id})">Log entry</button><div style="margin-top:1rem">${logHtml}</div>`;
+  if(arranging)body.querySelector(`#wk-grid-${w.id}`)?.classList.add('wk-arranging');
+
+  // Only ever touch GridStack if it's both loaded AND this specific widget
+  // is currently in Arrange mode (same condition as willInitGridstack
+  // above). Neither alone is enough: GridStack could already be loaded
+  // (another Kitchen widget on the same page was arranged first) while
+  // THIS widget was never arranged. If this is false, nothing further
+  // happens — the plain CSS grid above is already the complete display,
+  // whether this widget has never been arranged, is currently not
+  // arranging, or Gridstack failed to load earlier.
+  if(willInitGridstack){
+    const grid=GridStack.init({column:columns,cellHeight:56,margin:8,float:false,removable:false},`#wk-grid-${w.id}`);
+    wkGridInstances[w.id]=grid;
+    grid.on('change',()=>wkGridChanged(w.id));
+  }
 }
+const wkGridChanged=async widgetId=>{
+  const grid=wkGridInstances[widgetId];
+  const w=findWidget(widgetId);
+  if(!grid||!w)return;
+  const saved=grid.save(false); // positions only, not HTML content
+  const posById={};
+  (Array.isArray(saved)?saved:saved.children||[]).forEach(item=>{ posById[item.id]={x:item.x,y:item.y,w:item.w,h:item.h}; });
+  const newConfig=JSON.parse(JSON.stringify(w.config));
+  (newConfig.fields||[]).filter(f=>!f.removed).forEach(f=>{
+    if(posById[f.id])f.layout=posById[f.id];
+  });
+  try{await patchWidgetConfig(widgetId,newConfig);w.config=newConfig;}
+  catch(e){console.error('wkGridChanged save failed',e);alert('Save failed — try again.');}
+};
+// renderWidgetById only re-renders a widget's own BODY (widget-body-${id}),
+// not its card header — same as toggleWidgetFavorite above, this button's
+// visual state is updated directly via DOM manipulation rather than relying
+// on a re-render to reach it.
+const wkToggleArrange=async widgetId=>{
+  const btn=document.getElementById(`wk-arrange-${widgetId}`);
+  const errEl=document.getElementById(`wk-arrange-error-${widgetId}`);
+  if(errEl)errEl.textContent='';
+  if(!wkArrangeState[widgetId]){
+    if(btn){btn.disabled=true;btn.title='Loading…';}
+    try{
+      await loadGridstack();
+    }catch(e){
+      console.error('loadGridstack failed',e);
+      if(btn){btn.disabled=false;btn.title='Arrange fields';btn.setAttribute('aria-label','Arrange fields');}
+      if(errEl)errEl.textContent="Couldn't load the layout editor — try refreshing.";
+      return; // wkArrangeState stays false — invariant preserved, nothing else on the page is affected
+    }
+    wkArrangeState[widgetId]=true;
+  }else{
+    wkArrangeState[widgetId]=false; // no load needed to turn off
+  }
+  if(btn){
+    btn.disabled=false;
+    const label=wkArrangeState[widgetId]?'Done arranging fields':'Arrange fields';
+    btn.classList.toggle('on',!!wkArrangeState[widgetId]);
+    btn.title=label;
+    btn.setAttribute('aria-label',label);
+  }
+  renderWidgetById(widgetId);
+};
 const addKitchenEntry=async id=>{
   const w=findWidget(id);
   if(!w)return;
@@ -3488,13 +3727,24 @@ const addKitchenEntry=async id=>{
   });
   const data=widgetDataMap[id].data;
   if(!data.entries)data.entries=[];
-  data.entries.unshift({id:'e_'+Date.now()+'_'+Math.random().toString(36).slice(2),loggedAt:new Date().toISOString(),values});
+  const prByField={};
+  kitchenLiveFields(w).filter(f=>f.type==='number_dir').forEach(f=>{
+    const v=values[f.id];
+    if(typeof v!=='number')return;
+    const pr=kitchenComputePR(f,v,data.entries);
+    if(pr)prByField[f.id]=pr;
+  });
+  const newEntry={id:'e_'+Date.now()+'_'+Math.random().toString(36).slice(2),loggedAt:new Date().toISOString(),values};
+  if(Object.keys(prByField).length)newEntry.pr=prByField;
+  data.entries.unshift(newEntry);
   renderWidgetById(id);
   try{await saveWidgetData(id);}catch(e){console.error('addKitchenEntry save failed',e);alert('Save failed — try again.');}
 };
 const delKitchenEntry=async(id,entryId)=>{
+  const w=findWidget(id);
   const data=widgetDataMap[id].data;
   data.entries=(data.entries||[]).filter(e=>String(e.id)!==String(entryId));
+  if(w){(w.config?.fields||[]).filter(f=>(f.typeHistory||[]).some(h=>h.type==='number_dir')).forEach(f=>kitchenRecomputeEraPR(f,data.entries));}
   renderWidgetById(id);
   try{await saveWidgetData(id);}catch(e){console.error('delKitchenEntry save failed',e);alert('Save failed — try again.');}
 };
@@ -3789,6 +4039,7 @@ const renderWidgets=()=>{
           <div class="section-title" id="widget-title-${w.id}" style="margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0" title="${(w.title||w.widget_type).replace(/"/g,'&quot;')}">${w.title||w.widget_type}</div>
         </div>
         <div style="display:flex;gap:6px">
+          ${w.widget_type==='kitchen'?`<button class="btn btn-sm wk-arrange-btn${wkArrangeState[w.id]?' on':''}" id="wk-arrange-${w.id}" onclick="wkToggleArrange(${w.id})" aria-label="${wkArrangeState[w.id]?'Done arranging fields':'Arrange fields'}" title="${wkArrangeState[w.id]?'Done arranging fields':'Arrange fields'}">⤢</button>`:''}
           <button class="btn btn-sm widget-edit-btn" onclick="${w.widget_type==='kitchen'?`openWkFieldsEditor(${w.id})`:`openWidgetSettings(${w.id})`}" aria-label="${w.widget_type==='kitchen'?'Edit fields':'Edit widget settings'}">${pencilIconSvg(8.68,13.08)}</button>
           <button class="btn btn-sm btn-danger" onclick="deleteWidgetInstance(${w.id})" aria-label="Delete widget">×</button>
         </div>
